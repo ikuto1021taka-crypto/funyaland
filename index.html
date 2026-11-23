@@ -172,12 +172,17 @@
   #rvBoard { display: grid; grid-template-columns: repeat(8, var(--rv)); grid-template-rows: repeat(8, var(--rv)); --rv: min(52px, 10.5vw, 10.5vh); background: #1a6a3a; border: 6px solid #6a4a2a; border-radius: 8px; gap: 2px; padding: 2px; }
   .rvC { background: #2a9a4a; display: flex; align-items: center; justify-content: center; position: relative; }
   .rvC.ok { cursor: pointer; }
-  .rvC.ok::after { content: ""; width: 26%; height: 26%; border-radius: 50%; background: rgba(255,255,255,.35); }
+  .rvC.hint::after { content: ""; width: 26%; height: 26%; border-radius: 50%; background: rgba(255,255,255,.35); }
   .rvC.ok:hover { background: #3ab85a; }
   .rvC.last { box-shadow: inset 0 0 0 3px #ffd84a; }
   .rvS { width: 82%; height: 82%; border-radius: 50%; box-shadow: 0 3px 0 rgba(0,0,0,.35); animation: gcPop .2s; }
   .rvS.k { background: radial-gradient(circle at 35% 30%, #555, #111); }
   .rvS.w { background: radial-gradient(circle at 35% 30%, #fff, #ccc); }
+  #rvBoard.bg-gomoku { background: #8a6a3a; } .bg-gomoku .rvC { background: #e8c27a; }
+  #rvBoard.bg-connect4 { background: #2a5ad8; } .bg-connect4 .rvC { background: #1a3a9a; border-radius: 50%; } .bg-connect4 .rvC.ok:hover { background: #2a4ab8; }
+  .rvS.r { background: radial-gradient(circle at 35% 30%, #ff9a9a, #d02a2a); }
+  .rvS.y { background: radial-gradient(circle at 35% 30%, #fff4a0, #e0b020); }
+  #shopP { z-index: 11; } #rvP { z-index: 12 !important; } #msgP { z-index: 13; }
   #rvSide { display: flex; flex-direction: column; gap: 12px; align-items: center; min-width: 180px; text-align: center; }
   #rvInfo { font-size: 20px; line-height: 1.7; }
   /* チャット */
@@ -245,7 +250,7 @@
 </div>
 <div id="rvP" hidden>
   <div id="rvBoard"></div>
-  <div id="rvSide"><h2 style="margin:0;color:#ffd84a">♟️ オセロ</h2><div id="rvInfo"></div><button id="rvClose" class="pink">やめる</button></div>
+  <div id="rvSide"><h2 id="rvTitle" style="margin:0;color:#ffd84a">♟️ オセロ</h2><div id="rvInfo"></div><button id="rvClose" class="pink">やめる</button></div>
 </div>
 <div id="chatLog"></div>
 <div id="chatBox" hidden><input id="chatIn" type="text" maxlength="60" placeholder="メッセージ（Enter で送る）" autocomplete="off"><button id="chatSend">送る</button><button id="chatClose" class="pink">とじる</button><div id="chatQuick"></div></div>
@@ -1474,7 +1479,7 @@ function joinRoom(code) {
     conn.on("open", () => {
       clearTimeout(timer);
       net.online = true;
-      conn.send({ t: "join", name: myName, paint: smallPaint() });
+      conn.send({ t: "join", name: myName, paint: smallPaint(), v: GAME_VER });
       $("joinP").hidden = true;
       showWaiting();
     });
@@ -1496,6 +1501,7 @@ function onNet(d, conn) {
   if (net.isHost && conn && (["shot", "peel", "peelGone", "chat", "msg"].includes(d.t) || d.all)) for (const c of net.conns) if (c !== conn && c.open) c.send(d);
   switch (d.t) {
     case "join": // （ホスト）新しい人が来た
+      if (d.v !== GAME_VER) { conn.send({ t: "oldver" }); setTimeout(() => { try { conn.close(); } catch (e) {} }, 800); break; }
       if (roomCount() >= MAX_PLAYERS) { conn.send({ t: "full" }); setTimeout(() => { try { conn.close(); } catch (e) {} }, 800); break; }
       addRemote(conn.peer, d.name, d.paint);
       conn.send({ t: "welcome", id: conn.peer, players: [{ id: net.myId, name: myName, paint: smallPaint() }, ...Object.entries(net.players).filter(([id]) => id !== conn.peer).map(([id, p]) => ({ id, name: p.name, paint: p.paint }))], mode, stage: story.index });
@@ -1511,6 +1517,7 @@ function onNet(d, conn) {
       break;
     case "player": addRemote(d.id, d.name, d.paint); setTimeout(broadcastIsland, 1500); break;
     case "leave": removeRemote(d.id); break;
+    case "oldver": oldVerMsg(); break;
     case "full": net.full = true; net.online = false; showMsg("満員！", `この部屋は ${MAX_PLAYERS}人でいっぱいです`, [{ label: "タイトルへ", fn: () => location.reload() }]); break;
     case "msg": onChatMsg(d, conn); break;
     case "s": // （ホスト）だれかの状態
@@ -2502,7 +2509,7 @@ function openPanel(title, sub, rows, reopen) {
   });
   $("shopP").hidden = false;
 }
-function closeShop() { $("shopP").hidden = true; panelReopen = null; if (slotSpin) { clearInterval(slotSpin); slotSpin = null; } controls = true; lockPointer(); }
+function closeShop() { $("shopP").hidden = true; if (typeof fr !== "undefined" && fr.fromTitle) { fr.fromTitle = false; if (!mode && $("joinP").hidden && $("modeP").hidden) $("titleP").hidden = false; } panelReopen = null; if (slotSpin) { clearInterval(slotSpin); slotSpin = null; } controls = true; lockPointer(); }
 function pay(v) {
   if (wallet < v) { toast(`コインが足りない！（${v}まい必要・いま${wallet}まい）`, 1600); return false; }
   wallet -= v; saveWallet(); play("buy"); return true;
@@ -3114,6 +3121,7 @@ function explode(p, mine) {
 function getHit(d) {
   if (!me || me.ko > 0 || mode !== "town") return;
   if (d.from === "ぬい" || d.from === "わるもの" || d.why === "撃たれた！") noteBotHit();
+  else if (typeof d.fromId === "string" && net.players[d.fromId]) noteBotHit(d.fromId);
   if (me.buffs.small > 0 && Math.random() < 0.4) { toast("ちびなので、よけた！", 900); return; }
   if (me.wash || me.bowl || me.ufo) return;
   if (me.buffs.fluffy > 0) d = { ...d, dmg: Math.ceil(d.dmg * 0.5) };
@@ -5846,6 +5854,7 @@ function townUpdate(dt) {
   cityUpdate(dt);
   funyaUpdate(dt);
   nightUpdate(dt);
+  treasureUpdate(dt);
   funTownUpdate(dt);
   chatUpdate(dt);
   // ---- KO から復活 ----
@@ -6246,7 +6255,7 @@ function nightHud() {
   }
   if (townSave.trust) r += `<br>🤝 信用 ${townSave.trust}（${trustTitle()}）`;
   const MS = missionsToday(), md = MS.list.filter((m) => m.done).length;
-  r += `<br>📋 ミッション ${md}/${MS.list.length}${md === MS.list.length ? " ✅" : "（広場の掲示板）"}`;
+  r += `<br>📋 ミッション ${md}/${MS.list.length}${md === MS.list.length ? " ✅" : "（広場の掲示板）"}` + treasureHud();
   return r + "<br>";
 }
 
@@ -6532,83 +6541,238 @@ function rvCpu(b, p, lv) {
   for (const m of ms) { const v = -rvSearch(rvPlay(b, m[0], m[1], p, m[2]), -p, depth - 1, -1e9, 1e9); if (v > bv) { bv = v; best = m; } }
   return best;
 }
+// ---- ボードゲーム（オセロ・五目ならべ・4目ならべ）：CPU／この画面で2人／部屋の人とネット対戦 ----
+const BGAMES = {
+  reversi: { name: "オセロ", icon: "⚫", w: 8, h: 8, desc: "はさんだ石を自分の色にする。最後に多いほうが勝ち" },
+  gomoku: { name: "五目ならべ", icon: "⚪", w: 11, h: 11, desc: "たて・よこ・ななめに、5つならべたら勝ち" },
+  connect4: { name: "4目ならべ", icon: "🔴", w: 7, h: 6, desc: "上からコマを落とす。4つならべたら勝ち" },
+};
+const bg = { g: "reversi", b: null, turn: 1, mode: "cpu", lv: 1, bet: 0, over: true, last: null, busy: false, opp: null, oppName: "", side: 1, inv: null };
+function bgNew(g) { if (g === "reversi") return rvNew(); const G = BGAMES[g]; return Array.from({ length: G.h }, () => Array(G.w).fill(0)); }
+function bgMoves(g, b, p) {
+  if (g === "reversi") return rvMoves(b, p);
+  const H = b.length, W = b[0].length, m = [];
+  if (g === "connect4") { for (let c = 0; c < W; c++) for (let r = H - 1; r >= 0; r--) if (!b[r][c]) { m.push([r, c]); break; } return m; }
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) if (!b[r][c]) m.push([r, c]);
+  return m;
+}
+function bgTarget(g, b, r, c, p) {
+  if (!(r >= 0 && r < b.length && c >= 0 && c < b[0].length)) return null;
+  if (g === "reversi") { const f = rvFlips(b, r, c, p); return f.length ? [r, c, f] : null; }
+  if (g === "connect4") { for (let y = b.length - 1; y >= 0; y--) if (!b[y][c]) return [y, c]; return null; }
+  return b[r][c] ? null : [r, c];
+}
+function bgPlay(g, b, m, p) { if (g === "reversi") return rvPlay(b, m[0], m[1], p, m[2]); const n = b.map((row) => row.slice()); n[m[0]][m[1]] = p; return n; }
+function lineLen(b, r, c, dr, dc, p) { let k = 0, y = r + dr, x = c + dc; while (y >= 0 && y < b.length && x >= 0 && x < b[0].length && b[y][x] === p) { k++; y += dr; x += dc; } return [k, y >= 0 && y < b.length && x >= 0 && x < b[0].length && b[y][x] === 0]; }
+function lineWin(b, r, c, need) { const p = b[r][c]; if (!p) return false; for (const [dr, dc] of [[0, 1], [1, 0], [1, 1], [1, -1]]) if (1 + lineLen(b, r, c, dr, dc, p)[0] + lineLen(b, r, c, -dr, -dc, p)[0] >= need) return true; return false; }
+function bgResult(g, b, last) {
+  if (g === "reversi") { if (rvMoves(b, 1).length || rvMoves(b, -1).length) return null; const [k, w] = rvCount(b); return k > w ? 1 : k < w ? -1 : 0; }
+  if (last && lineWin(b, last[0], last[1], g === "gomoku" ? 5 : 4)) return b[last[0]][last[1]];
+  if (b.every((row) => row.every((v) => v))) return 0;
+  return null;
+}
+// 五目ならべのCPU：ならび方に点数をつける
+function gmScore(b, r, c, p) {
+  let s = 0;
+  for (const [dr, dc] of [[0, 1], [1, 0], [1, 1], [1, -1]]) {
+    const [a, oa] = lineLen(b, r, c, dr, dc, p), [d, od] = lineLen(b, r, c, -dr, -dc, p), n = 1 + a + d, open = (oa ? 1 : 0) + (od ? 1 : 0);
+    s += n >= 5 ? 100000 : n === 4 ? (open === 2 ? 12000 : open ? 1500 : 0) : n === 3 ? (open === 2 ? 1300 : open ? 160 : 0) : n === 2 ? (open === 2 ? 110 : open ? 15 : 0) : open * 2;
+  }
+  return s;
+}
+function gmCands(b) {
+  const H = b.length, W = b[0].length, out = [];
+  let any = false;
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+    if (b[r][c]) { any = true; continue; }
+    let near = false;
+    for (let y = r - 2; y <= r + 2 && !near; y++) for (let x = c - 2; x <= c + 2; x++) if (y >= 0 && y < H && x >= 0 && x < W && b[y][x]) { near = true; break; }
+    if (near) out.push([r, c]);
+  }
+  return any ? out : [[H >> 1, W >> 1]];
+}
+function gmCpu(b, p, lv) {
+  const cs = gmCands(b);
+  const rated = cs.map(([r, c]) => [r, c, gmScore(b, r, c, p) * (lv === 0 ? 1 : 1.05) + gmScore(b, r, c, -p) * (lv === 0 ? 0.4 : 0.95) + rand(0, lv === 2 ? 3 : 40)]).sort((x, y) => y[2] - x[2]);
+  if (lv === 0 && Math.random() < 0.45) return pick(rated.slice(0, 8));
+  if (lv < 2) return rated[0];
+  // つよい：相手の一番いい返しも考える
+  let best = rated[0], bv = -1e9;
+  for (const m of rated.slice(0, 7)) {
+    if (gmScore(b, m[0], m[1], p) >= 100000) return m;
+    const nb = bgPlay("gomoku", b, m, p);
+    let opp = 0; for (const [r, c] of gmCands(nb)) opp = Math.max(opp, gmScore(nb, r, c, -p));
+    const v = m[2] - opp * 0.7; if (v > bv) { bv = v; best = m; }
+  }
+  return best;
+}
+// 4目ならべのCPU
+function c4Eval(b, p) {
+  const H = b.length, W = b[0].length; let s = 0;
+  for (let r = 0; r < H; r++) if (b[r][W >> 1] === p) s += 3; else if (b[r][W >> 1] === -p) s -= 3;
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) for (const [dr, dc] of [[0, 1], [1, 0], [1, 1], [1, -1]]) {
+    const er = r + dr * 3, ec = c + dc * 3; if (er < 0 || er >= H || ec < 0 || ec >= W) continue;
+    let mine = 0, his = 0; for (let k = 0; k < 4; k++) { const v = b[r + dr * k][c + dc * k]; if (v === p) mine++; else if (v === -p) his++; }
+    if (his === 0) s += mine === 4 ? 1000 : mine === 3 ? 6 : mine === 2 ? 2 : 0;
+    if (mine === 0) s -= his === 4 ? 1000 : his === 3 ? 5 : 0;
+  }
+  return s;
+}
+function c4Search(b, p, d, a, be) {
+  const ms = bgMoves("connect4", b, p);
+  if (!ms.length) return 0;
+  for (const m of ms) { const nb = bgPlay("connect4", b, m, p); if (lineWin(nb, m[0], m[1], 4)) return 100000 + d; }
+  if (d === 0) return c4Eval(b, p);
+  ms.sort((x, y) => Math.abs(x[1] - 3) - Math.abs(y[1] - 3));
+  for (const m of ms) { const v = -c4Search(bgPlay("connect4", b, m, p), -p, d - 1, -be, -a); if (v > a) a = v; if (a >= be) break; }
+  return a;
+}
+function c4Cpu(b, p, lv) {
+  const ms = bgMoves("connect4", b, p); if (!ms.length) return null;
+  if (lv === 0) return pick(ms);
+  for (const m of ms) if (lineWin(bgPlay("connect4", b, m, p), m[0], m[1], 4)) return m;
+  for (const m of ms) if (lineWin(bgPlay("connect4", b, m, -p), m[0], m[1], 4)) return m;
+  if (lv === 1) return ms.reduce((x, y) => (Math.abs(y[1] - 3) + rand(0, 2.5) < Math.abs(x[1] - 3) + rand(0, 2.5) ? y : x));
+  let best = ms[0], bv = -1e9;
+  for (const m of ms) { const v = -c4Search(bgPlay("connect4", b, m, p), -p, 5, -1e9, 1e9) - Math.abs(m[1] - 3) * 0.1; if (v > bv) { bv = v; best = m; } }
+  return best;
+}
+function bgCpu(g, b, p, lv) { return g === "reversi" ? rvCpu(b, p, lv) : g === "gomoku" ? gmCpu(b, p, lv) : c4Cpu(b, p, lv); }
+function bgWins() { return townSave.bgWin || townSave.rvWin || 0; }
+function hidePanel() { $("shopP").hidden = true; panelReopen = null; if (slotSpin) { clearInterval(slotSpin); slotSpin = null; } }
 function openBoardCafe() {
-  const win = townSave.rvWin || 0;
-  openPanel("♟️ ボードゲームカフェ「オセロ」", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい　CPUに勝った回数：${win}`, [
-    { html: "<span class='small'>黒（あなた）と白でこうたいに石を置く。はさんだ石は自分の色になる。最後に多いほうが勝ち！<br>CPUにかけて勝つと、かけたコインが2倍になって返ってくる</span>" },
-    { name: "🟢 CPU（よわい）", desc: "はじめての人に", btn: "あそぶ", fn: () => { askBet(0); return false; } },
-    { name: "🟡 CPU（ふつう）", desc: "ちょっと考えてくる", btn: "あそぶ", fn: () => { askBet(1); return false; } },
-    { name: "🔴 CPU（つよい）", desc: "かなり強い！ 勝つと称号「オセロ名人」", btn: "あそぶ", fn: () => { askBet(2); return false; } },
-    { name: "👫 2人で（この画面で）", desc: "友だちと1つの画面でこうたいに", btn: "あそぶ", fn: () => { closeShop(); startReversi("two", 0, 0); return false; } },
-  ], openBoardCafe);
+  openPanel("♟️ ボードゲームカフェ", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい　CPUに勝った回数：${bgWins()}`, Object.entries(BGAMES).map(([g, G]) => ({ name: `${G.icon} ${G.name}`, desc: G.desc, btn: "あそぶ", fn: () => { openGameMenu(g); return false; } })), openBoardCafe);
 }
-function askBet(lv) {
+function openGameMenu(g) {
+  const G = BGAMES[g], others = Object.entries(net.players).filter(([, r]) => r.state);
+  const rows = [
+    { html: `<span class="small">${G.desc}<br>CPUにコインをかけて勝つと、2倍になって返ってくる</span>` },
+    { name: "🟢 CPU（よわい）", desc: "はじめての人に", btn: "あそぶ", fn: () => { askBet(g, 0); return false; } },
+    { name: "🟡 CPU（ふつう）", desc: "ちょっと考えてくる", btn: "あそぶ", fn: () => { askBet(g, 1); return false; } },
+    { name: "🔴 CPU（つよい）", desc: g === "reversi" ? "かなり強い！ 勝つと称号「オセロ名人」" : "かなり強い！", btn: "あそぶ", fn: () => { askBet(g, 2); return false; } },
+    { name: "👫 この画面で2人", desc: "1つの画面でこうたいに", btn: "あそぶ", fn: () => { hidePanel(); bgStart(g, "two", 0, 0); return false; } },
+    { html: `<b>🌐 部屋の人とネット対戦</b><br><span class="small">${net.online ? "スマホとパソコンなど、ちがう機械どうしでも対戦できるよ。勝つと20コイン" : "部屋に入っていると、ほかの機械の友だちと対戦できるよ"}</span>` },
+  ];
+  for (const [id, r] of others) rows.push({ name: `${isFriend(r.name) ? "💛" : "🙂"} ${r.name}`, desc: "", btn: "対戦をもうしこむ", fn: () => { bg.inv = { id, g, t: Date.now() }; sendTo(id, { t: "bgInv", g, from: myName, fromId: net.myId }); toast(`📨 ${r.name} に「${G.name}」の対戦をもうしこんだ！ 返事をまってね`, 3000); return false; } });
+  openPanel(`${G.icon} ${G.name}`, `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい`, rows, () => openGameMenu(g));
+}
+function askBet(g, lv) {
   const bets = [0, 20, 50, 100, 300].filter((v) => v <= wallet);
-  openPanel("♟️ いくらかける？", `CPU（${["よわい", "ふつう", "つよい"][lv]}）　持っているコイン：${wallet}まい`, bets.map((v) => ({ name: v ? `${v}コイン かける` : "かけない（れんしゅう）", desc: v ? `勝つと +${v}・負けると −${v}` : "", btn: "これで", fn: () => { if (v && !pay(v)) return false; closeShop(); startReversi("cpu", lv, v); return false; } })), null);
+  openPanel(`${BGAMES[g].icon} いくらかける？`, `CPU（${["よわい", "ふつう", "つよい"][lv]}）　持っているコイン：${wallet}まい`, bets.map((v) => ({ name: v ? `${v}コイン かける` : "かけない（れんしゅう）", desc: v ? `勝つと +${v}・負けると −${v}` : "", btn: "これで", fn: () => { if (v && !pay(v)) return false; hidePanel(); bgStart(g, "cpu", lv, v); return false; } })), null);
 }
-function startReversi(m, lv, bet) {
-  Object.assign(rv, { b: rvNew(), turn: 1, mode: m, lv, bet, busy: false, last: null, over: false });
+function bgStart(g, m, lv, bet, opp = null, side = 1, oppName = "") {
+  Object.assign(bg, { g, b: bgNew(g), turn: 1, mode: m, lv, bet, over: false, last: null, busy: false, opp, side, oppName, endText: "" });
+  if (fish.state) endFishing();
+  hidePanel(); $("msgP").hidden = true;
   controls = false; if (document.exitPointerLock) document.exitPointerLock();
-  $("rvP").hidden = false; rvDraw();
+  $("rvP").hidden = false; bgDraw();
 }
-function rvDraw() {
-  const ms = rv.over ? [] : rvMoves(rv.b, rv.turn), can = new Set(ms.map((m) => m[0] * 8 + m[1]));
-  const showHints = rv.mode === "two" || rv.turn === 1;
+function bgMyTurn() { return !bg.over && !bg.busy && (bg.mode === "two" || bg.turn === (bg.mode === "online" ? bg.side : 1)); }
+function bgDraw() {
+  const G = BGAMES[bg.g], B = $("rvBoard");
+  B.style.setProperty("--rv", `min(52px, ${(74 / G.w).toFixed(1)}vw, ${(84 / G.h).toFixed(1)}vh)`);
+  B.style.gridTemplateColumns = `repeat(${G.w}, var(--rv))`; B.style.gridTemplateRows = `repeat(${G.h}, var(--rv))`;
+  B.className = "bg-" + bg.g;
+  const mine = bgMyTurn();
+  const legal = bg.g === "reversi" && mine ? new Set(rvMoves(bg.b, bg.turn).map((m) => m[0] * 8 + m[1])) : null;
   let h = "";
-  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
-    const v = rv.b[r][c], last = rv.last && rv.last[0] === r && rv.last[1] === c;
-    h += `<div class="rvC${can.has(r * 8 + c) && showHints && !rv.busy ? " ok" : ""}${last ? " last" : ""}" data-r="${r}" data-c="${c}">${v ? `<div class="rvS ${v === 1 ? "k" : "w"}"></div>` : ""}</div>`;
+  for (let r = 0; r < G.h; r++) for (let c = 0; c < G.w; c++) {
+    const v = bg.b[r][c], last = bg.last && bg.last[0] === r && bg.last[1] === c;
+    const ok = mine && (legal ? legal.has(r * 8 + c) : bg.g === "connect4" ? !bg.b[0][c] : !v);
+    const cls = bg.g === "connect4" ? (v === 1 ? "r" : "y") : (v === 1 ? "k" : "w");
+    h += `<div class="rvC${ok ? " ok" : ""}${legal && ok ? " hint" : ""}${last ? " last" : ""}" data-r="${r}" data-c="${c}">${v ? `<div class="rvS ${cls}"></div>` : ""}</div>`;
   }
-  $("rvBoard").innerHTML = h;
-  const [k, w] = rvCount(rv.b);
-  const who = rv.mode === "cpu" ? (rv.turn === 1 ? "あなた（黒）の番" : "CPU（白）が考え中…") : rv.turn === 1 ? "黒の番" : "白の番";
-  $("rvInfo").innerHTML = `⚫ ${k}　⚪ ${w}<br>${rv.over ? "" : who}${rv.bet ? `<br><span class="small">かけ金：${rv.bet}コイン</span>` : ""}`;
-  $("rvBoard").querySelectorAll(".rvC.ok").forEach((el) => el.onclick = () => rvHuman(+el.dataset.r, +el.dataset.c));
+  B.innerHTML = h;
+  B.querySelectorAll(".rvC.ok").forEach((el) => el.onclick = () => bgClick(+el.dataset.r, +el.dataset.c));
+  const P1 = bg.g === "connect4" ? "🔴" : "⚫", P2 = bg.g === "connect4" ? "🟡" : "⚪";
+  let who;
+  if (bg.mode === "cpu") who = bg.turn === 1 ? `あなた（${P1}）の番` : `CPU（${P2}）が考え中…`;
+  else if (bg.mode === "online") who = bg.turn === bg.side ? `あなた（${bg.side === 1 ? P1 : P2}）の番` : `${bg.oppName}（${bg.side === 1 ? P2 : P1}）の番…`;
+  else who = bg.turn === 1 ? `${P1} の番` : `${P2} の番`;
+  let score = "";
+  if (bg.g === "reversi") { const [k, w] = rvCount(bg.b); score = `⚫ ${k}　⚪ ${w}<br>`; }
+  $("rvTitle").textContent = `${G.icon} ${G.name}`;
+  $("rvInfo").innerHTML = `${score}${bg.over ? "" : who}${bg.bet ? `<br><span class="small">かけ金：${bg.bet}コイン</span>` : ""}${bg.mode === "online" ? `<br><span class="small">🌐 ${bg.oppName} とネット対戦</span>` : ""}${bg.endText ? `<br><b>${bg.endText}</b>` : ""}`;
 }
-function rvHuman(r, c) {
-  if (rv.busy || rv.over || (rv.mode === "cpu" && rv.turn !== 1)) return;
-  const f = rvFlips(rv.b, r, c, rv.turn); if (!f.length) return;
-  rv.b = rvPlay(rv.b, r, c, rv.turn, f); rv.last = [r, c]; play("place");
-  rvNext();
+function bgClick(r, c) {
+  if (!bgMyTurn()) return;
+  const m = bgTarget(bg.g, bg.b, r, c, bg.turn); if (!m) return;
+  bgApply(m, true);
 }
-function rvNext() {
-  rv.turn = -rv.turn;
-  if (!rvMoves(rv.b, rv.turn).length) {
-    if (!rvMoves(rv.b, -rv.turn).length) { rvEnd(); return; }
-    toast(rv.mode === "cpu" ? (rv.turn === 1 ? "あなたは置ける場所がないので、パス！" : "CPU はパス！") : `${rv.turn === 1 ? "黒" : "白"}は置ける場所がないので、パス！`, 1600);
-    rv.turn = -rv.turn;
-  }
-  rvDraw();
-  if (rv.mode === "cpu" && rv.turn === -1) {
-    rv.busy = true; rvDraw();
+function bgApply(m, mine) {
+  bg.b = bgPlay(bg.g, bg.b, m, bg.turn); bg.last = [m[0], m[1]]; play("place");
+  if (bg.mode === "online" && mine) sendTo(bg.opp, { t: "bgMove", r: m[0], c: m[1], fromId: net.myId });
+  bgNext();
+}
+function bgNext() {
+  bg.endText = "";
+  const res = bgResult(bg.g, bg.b, bg.last); if (res !== null) { bgEnd(res); return; }
+  bg.turn = -bg.turn;
+  if (bg.g === "reversi" && !rvMoves(bg.b, bg.turn).length) { toast(`${bg.turn === 1 ? "⚫" : "⚪"} は置ける場所がないので、パス！`, 1600); bg.turn = -bg.turn; }
+  bgDraw();
+  if (bg.mode === "cpu" && bg.turn === -1) {
+    bg.busy = true; bgDraw();
     setTimeout(() => {
-      if ($("rvP").hidden) return;
-      const m = rvCpu(rv.b, -1, rv.lv);
-      rv.busy = false;
-      if (m) { rv.b = rvPlay(rv.b, m[0], m[1], -1, m[2]); rv.last = [m[0], m[1]]; play("place"); }
-      rvNext();
-    }, 550);
+      if ($("rvP").hidden || bg.over) return;
+      const m = bgCpu(bg.g, bg.b, -1, bg.lv); bg.busy = false;
+      if (m) bgApply(m, false); else bgNext();
+    }, 450);
   }
 }
-function rvEnd() {
-  rv.over = true; rvDraw();
-  const [k, w] = rvCount(rv.b);
-  let text;
-  if (rv.mode === "two") text = k > w ? `⚫ 黒の勝ち！（${k} 対 ${w}）` : k < w ? `⚪ 白の勝ち！（${w} 対 ${k}）` : `ひきわけ！（${k} 対 ${w}）`;
-  else if (k > w) {
-    text = `🎉 あなたの勝ち！（${k} 対 ${w}）`;
-    const prize = rv.bet * 2 + [10, 25, 60][rv.lv];
-    wallet += prize; saveWallet(); text += `<br>コイン +${prize}（かけ金×2 ＋ 勝利ボーナス）`;
-    townSave.rvWin = (townSave.rvWin || 0) + 1; saveTown(true); missionAdd("reversi", 1);
-    if (rv.lv === 2) giveTitle(2);
+function bgEnd(res) {
+  bg.over = true;
+  const G = BGAMES[bg.g], me1 = bg.mode === "online" ? bg.side : 1;
+  let text, extra = "";
+  if (bg.g === "reversi") { const [k, w] = rvCount(bg.b); extra = `（${Math.max(k, w)} 対 ${Math.min(k, w)}）`; }
+  if (bg.mode === "two") text = res === 0 ? `ひきわけ！${extra}` : `${res === 1 ? (bg.g === "connect4" ? "🔴" : "⚫") : (bg.g === "connect4" ? "🟡" : "⚪")} の勝ち！${extra}`;
+  else if (res === me1) {
+    text = `🎉 あなたの勝ち！${extra}`;
+    if (bg.mode === "cpu") {
+      const prize = bg.bet * 2 + [10, 25, 60][bg.lv];
+      wallet += prize; saveWallet(); text += `<br>コイン +${prize}（かけ金×2 ＋ 勝利ボーナス）`;
+      townSave.bgWin = bgWins() + 1; saveTown(true); missionAdd("reversi", 1);
+      if (bg.lv === 2 && bg.g === "reversi") giveTitle(2);
+    } else { wallet += 20; saveWallet(); text += "<br>対戦ボーナス コイン +20"; }
     play("clear");
-  } else if (k < w) { text = `😵 CPUの勝ち…（${k} 対 ${w}）${rv.bet ? `<br>かけた ${rv.bet}コイン は CPU のもの…` : ""}`; play("hmm"); }
-  else { text = `ひきわけ！（${k} 対 ${w}）${rv.bet ? "<br>かけ金は返ってきた" : ""}`; if (rv.bet) { wallet += rv.bet; saveWallet(); } }
-  $("rvInfo").innerHTML += `<br><b>${text}</b>`;
+  } else if (res === 0) { text = `ひきわけ！${extra}`; if (bg.mode === "cpu" && bg.bet) { wallet += bg.bet; saveWallet(); text += "<br>かけ金は返ってきた"; } }
+  else { text = `😵 ${bg.mode === "cpu" ? "CPU" : bg.oppName}の勝ち…${extra}${bg.mode === "cpu" && bg.bet ? `<br>かけた ${bg.bet}コイン は CPU のもの…` : ""}`; play("hmm"); }
+  bg.endText = text; bgDraw();
 }
 function closeReversi() {
-  if (!rv.over && rv.mode === "cpu" && rv.bet) toast(`とちゅうでやめたので、かけた ${rv.bet}コイン は返ってこない…`, 2200);
-  rv.over = true; $("rvP").hidden = true; controls = true; lockPointer();
+  if (!bg.over && bg.mode === "cpu" && bg.bet) toast(`とちゅうでやめたので、かけた ${bg.bet}コイン は返ってこない…`, 2200);
+  if (!bg.over && bg.mode === "online" && bg.opp) sendTo(bg.opp, { t: "bgQuit", fromId: net.myId });
+  bg.over = true; $("rvP").hidden = true;
+  if (mode) { controls = true; lockPointer(); }
+}
+// ネット対戦のメッセージ
+function onNetBoard(d, conn) {
+  const from = typeof d.fromId === "string" ? d.fromId : conn && conn.peer;
+  if (d.t === "bgInv") {
+    if (!BGAMES[d.g]) return true;
+    const name = (net.players[from] && net.players[from].name) || cleanName(d.from) || "だれか";
+    if (!$("rvP").hidden || fish.state || !mode) { sendTo(from, { t: "bgNo", fromId: net.myId }); return true; }
+    play("item");
+    showMsg("🌐 対戦のもうしこみ", `<b>${name}</b> から「${BGAMES[d.g].icon} ${BGAMES[d.g].name}」で対戦しよう！ってきたよ`, [
+      { label: "やる！", fn: () => { sendTo(from, { t: "bgAcc", g: d.g, fromId: net.myId }); bgStart(d.g, "online", 0, 0, from, -1, name); } },
+      { label: "ことわる", fn: () => { controls = true; sendTo(from, { t: "bgNo", fromId: net.myId }); } },
+    ]);
+    return true;
+  }
+  if (d.t === "bgAcc") {
+    if (!bg.inv || bg.inv.id !== from || bg.inv.g !== d.g || Date.now() - bg.inv.t > 120000) return true;
+    const name = (net.players[from] && net.players[from].name) || "あいて";
+    bg.inv = null; play("item"); toast(`🌐 ${name} が対戦をうけた！ あなたが先手だよ`, 2500);
+    bgStart(d.g, "online", 0, 0, from, 1, name);
+    return true;
+  }
+  if (d.t === "bgNo") { if (bg.inv && bg.inv.id === from) { bg.inv = null; toast("対戦はことわられた…（いそがしいみたい）", 2200); } return true; }
+  if (d.t === "bgMove") {
+    if (bg.mode !== "online" || bg.over || bg.opp !== from || bg.turn !== -bg.side) return true;
+    const m = bgTarget(bg.g, bg.b, d.r | 0, d.c | 0, bg.turn); if (m) bgApply(m, false);
+    return true;
+  }
+  if (d.t === "bgQuit") { if (bg.mode === "online" && bg.opp === from && !bg.over) { bg.over = true; bg.endText = `${bg.oppName} がやめちゃった…`; bgDraw(); } return true; }
+  return false;
 }
 
 // =====================================================================
@@ -6619,7 +6783,8 @@ const MISSIONS = [
   { k: "earn", n: 400, t: "コインを400まいかせぐ", r: 80 },
   { k: "fish", n: 2, t: "魚を2ひきつる", r: 50 },
   { k: "gacha", n: 1, t: "ガチャを1回まわす", r: 40 },
-  { k: "reversi", n: 1, t: "オセロでCPUに1回勝つ", r: 60 },
+  { k: "reversi", n: 1, t: "ボードゲームでCPUに1回勝つ", r: 60 },
+  { k: "treasure", n: 1, t: "宝の地図の宝をほり出す", r: 60 },
   { k: "photo", n: 3, t: "写真を3まいとる", r: 30 },
   { k: "monhit", n: 100, t: "モンスターやわるものに100ダメージ", r: 70 },
   { k: "bad", n: 2, t: "わるものぬいを2人たおす（イベントのとき）", r: 70 },
@@ -6692,7 +6857,7 @@ function openFriends() {
   const online = {}; for (const id in net.players) online[net.players[id].name] = id;
   const rows = [];
   const t = titleOf(townSave.title);
-  rows.push({ html: `<div style="width:100%"><b>🙂 プロフィール</b>：${myName}${t ? "　［" + t + "］" : ""}<br><span class="small">信用 ${townSave.trust || 0}（${trustTitle()}）　オセロ ${townSave.rvWin || 0}勝　魚図鑑 ${Object.keys(townSave.fishDex || {}).length}/${FISH.length}　ガチャ図鑑 ${COLLECT.filter(gachaOwned).length}/${COLLECT.length}</span></div>` });
+  rows.push({ html: `<div style="width:100%"><b>🙂 プロフィール</b>：${myName}${t ? "　［" + t + "］" : ""}<br><span class="small">信用 ${townSave.trust || 0}（${trustTitle()}）　ボードゲーム ${bgWins()}勝　魚図鑑 ${Object.keys(townSave.fishDex || {}).length}/${FISH.length}　ガチャ図鑑 ${COLLECT.filter(gachaOwned).length}/${COLLECT.length}</span></div>` });
   if ((townSave.titles || []).length) rows.push({ name: "🏅 称号をつけかえる", desc: (townSave.titles || []).map((i) => TITLES[i]).join("・"), btn: "えらぶ", fn: () => { openTitles(); return false; } });
   rows.push(...friendRows(openFriends));
   for (const n of []) {
@@ -6731,17 +6896,36 @@ function isBuddy(i) { return !townSave.buddyOff && (townSave.botLove || {})[i] >
 //  12-6. けいさつを呼ぶ（けんか好きになぐられたり、撃たれたりしたら C）
 // =====================================================================
 const callP = { hint: 0, cd: 0, cars: [] };
-function noteBotHit() { if (mode === "town" && !me.jail) { if (callP.hint <= 0 && callP.cd <= 0) toast("📞 C（スマホは 📞）で けいさつを呼べるよ！", 2200); callP.hint = 10; } }
+// 何かされたら10秒の間だけ通報できる（by：なぐってきたプレイヤー）
+function noteBotHit(by) {
+  if (mode !== "town" || me.jail) return;
+  if (callP.hint <= 0 && callP.cd <= 0) toast("📞 なにかされた！ C（スマホは 📞）で けいさつを呼べるよ（10秒以内）", 2400);
+  callP.hint = 10;
+  if (by) { callP.lastBy = by; callP.lastByT = gameTime; }
+}
 function callPolice() {
-  if (mode !== "town") return;
+  if (mode !== "town" || me.jail) return;
   if (callP.cd > 0) { toast(`📞 けいさつは今いそがしい…（あと${Math.ceil(callP.cd)}秒）`, 1500); return; }
   if (wantedStars()) { toast("🚨 手配中のときに呼んだら、自分がつかまっちゃうよ！", 2000); return; }
-  if (me.jail) return;
-  // 近くの、あばれているぬいをさがす
+  // なにもされていないのに呼んだら、いたずら電話で罰金
+  if (callP.hint <= 0) {
+    const f = Math.min(wallet, 50); wallet -= f; saveWallet(); callP.cd = 15; play("hmm");
+    toast(`📞 「なにもされていないのに呼んじゃだめ！」<br>いたずら電話で 罰金 ${f}コイン…`, 3000);
+    return;
+  }
+  // プレイヤーになぐられた → そのプレイヤーが手配される
+  if (callP.lastBy && gameTime - callP.lastByT < 10 && net.players[callP.lastBy]) {
+    const r = net.players[callP.lastBy];
+    sendTo(callP.lastBy, { t: "reported", by: myName, fromId: net.myId });
+    callP.cd = 40; callP.hint = 0; callP.lastBy = null; play("siren");
+    toast(`📞 「わかりました！ ${r.name} をつかまえに行きます！」 🚓`, 2600);
+    return;
+  }
+  // 近くの、あばれているぬい・わるものをさがす
   let best = -1, bd = 22;
   for (let i = 0; i < 8; i++) { const b = town.bots[i]; if (botKO(i) || !b) continue; const angry = b.type === "brawler" || b.angry > 0 || b.gun; const d = Math.hypot(b.pos.x - me.pos.x, b.pos.z - me.pos.z); if (angry && d < bd) { bd = d; best = i; } }
   const badI = nearestBad(22);
-  if (best < 0 && badI < 0) { toast("📞 「近くにあばれている人はいないみたいですね…」", 2000); return; }
+  if (best < 0 && badI < 0) { toast("📞 「その人はもう、どこかへ行っちゃったみたいですね…」", 2000); return; }
   callP.cd = 40; callP.hint = 0; play("siren");
   toast("📞 「はい、けいさつです！ すぐ行きます！」 🚓", 2500);
   if (net.isHost) dispatchHelp(best, badI, net.myId); else netSend({ t: "callPol", i: best, b: badI });
@@ -6905,6 +7089,11 @@ function funTownUpdate(dt) {
   if (wallet >= 10000) giveTitle(11);
 }
 function onNetFun(d, conn) {
+  if (onNetBoard(d, conn)) return true;
+  if (d.t === "reported") {
+    if (mode === "town" && !me.jail) { const by = cleanName(d.by) || "だれか"; me.wanted = Math.min(240, (me.wanted || 0) + 60); play("siren"); toast(`🚨 なぐったのを ${by} に通報された！ けいさつが追いかけてくる！`, 3000); }
+    return true;
+  }
   switch (d.t) {
     case "hitbad": if (net.isHost && Number.isInteger(d.i)) applyBadHit(d.i, clamp(Number(d.dmg) || 0, 0, 60), clamp(Number(d.dx) || 0, -1, 1), clamp(Number(d.dz) || 0, -1, 1), conn.peer); return true;
     case "badKO": missionAdd("bad", 1); return true;
@@ -6946,9 +7135,9 @@ const GUIDE = [
   { t: "🕹️ そうさ", h: () => touchMode
     ? `<div class="gd"><span>🕹️</span><div><b>うごく</b>：左がわをさわって動かす<br><b>見回す</b>：右がわをなぞる（2本指でズーム）</div></div><div class="gd"><span>✊</span><div><b>パンチ／使う</b>・<b>つかむ→投げる</b>・<b>調べる</b>・<b>乗り物</b>は右下のボタン</div></div><div class="gd"><span>🔝</span><div>上のボタン：👁一人称 🗺️地図 📸写真 🍙食べる 👋💃エモート 🤝わたす 📞けいさつ 📖あそびかた</div></div>`
     : `<div class="gd"><span>🕹️</span><div><kbd>WASD</kbd> うごく　<kbd>スペース</kbd> ジャンプ　マウス：見回す　ホイール：ズーム</div></div><div class="gd"><span>✊</span><div><b>クリック</b>：パンチ・使う（長おしでぐるぐるパンチ）<br><b>右クリック</b>：つかむ → はなすとぶん投げる！</div></div><div class="gd"><span>⌨️</span><div><kbd>E</kbd> 調べる・入る　<kbd>F</kbd> 乗り物　<kbd>Q</kbd> 食べる　<kbd>1</kbd>〜<kbd>5</kbd> 持ちかえ　<kbd>Tab</kbd> 地図<br><kbd>R</kbd> わたす・フレンド　<kbd>C</kbd> けいさつを呼ぶ　<kbd>H</kbd> このガイド　<kbd>P</kbd> 写真　<kbd>V</kbd> 一人称　<kbd>Shift</kbd> 力をぬく</div></div>` },
-  { t: "🗺️ 町の場所", h: () => `<div class="gd"><span>🏪</span><div><b>広場のまわり</b>：服屋・ご飯屋・おもちゃ屋・乗り物屋　<b>道ぞい</b>：武器屋・空の乗り物屋・ハローワーク</div></div><div class="gd"><span>🎰</span><div><b>ガチャ屋</b>（東）・<b>ボードゲームカフェ</b>（西）・<b>📋掲示板</b>（広場）</div></div><div class="gd"><span>🎡</span><div><b>南</b>：遊園地（観覧車・レース）・<b>🎣つり場</b>（南の桟橋の先）<br><b>西</b>：サッカー場・ゲームセンター・コインランドリー　<b>東</b>：けいさつ署・ろうや</div></div><div class="gd"><span>🏝️</span><div>海の<b>小島</b>には番人と金庫。<b>大砲</b>で飛んでいける。お金をためたら<b>自分の島</b>も！</div></div>` },
-  { t: "💰 お金", h: () => `<div class="gd"><span>⬆️</span><div><b>かせぐ</b>：コインを拾う・仕事（ハローワーク）・つり・オセロ・ミッション・わるもの退治・モンスター退治・おばけの写真</div></div><div class="gd"><span>⬇️</span><div><b>使う</b>：🎰ガチャ（ぼうし・エフェクト・金ピカ）・お店・武器・乗り物・つりのエサ・オセロのかけ・ぬいへのプレゼント・自分の島</div></div><div class="gd"><span>📋</span><div><b>きょうのミッション</b>：毎日3つ。ぜんぶクリアで🎫ガチャ券！（広場の掲示板）</div></div>` },
-  { t: "⚡ イベント", h: () => `<div class="gd"><span>😈</span><div><b>わるものぬい団</b>：何人もせめてくる。みんなでやっつけよう</div></div><div class="gd"><span>🦖</span><div><b>モンスター</b>／<b>👑キングモンスター</b>（まれ）／<b>💀最強の魔王モンスター</b>（すごくまれ）</div></div><div class="gd"><span>✨</span><div>金色のぬい・ダンスパーティー・家族が来る・天気（雨・雷・マグマ・お金の雨）</div></div><div class="gd"><span>🚨</span><div>悪いことを見られると<b>けいさつ</b>が追ってくる。つかまると<b>ろうや</b>→脱獄！<br>けんか好きにやられたら <b>C で通報</b>できる</div></div>` },
+  { t: "🗺️ 町の場所", h: () => `<div class="gd"><span>🏪</span><div><b>広場のまわり</b>：服屋・ご飯屋・おもちゃ屋・乗り物屋　<b>道ぞい</b>：武器屋・空の乗り物屋・ハローワーク</div></div><div class="gd"><span>🎰</span><div><b>ガチャ屋</b>（東）・<b>ボードゲームカフェ</b>（西：オセロ・五目ならべ・4目ならべ。ちがう機械の友だちとネット対戦も！）・<b>📋掲示板</b>（広場：ミッション・宝の地図・フレンド）</div></div><div class="gd"><span>🎡</span><div><b>南</b>：遊園地（観覧車・レース）・<b>🎣つり場</b>（南の桟橋の先）<br><b>西</b>：サッカー場・ゲームセンター・コインランドリー　<b>東</b>：けいさつ署・ろうや</div></div><div class="gd"><span>🏝️</span><div>海の<b>小島</b>には番人と金庫。<b>大砲</b>で飛んでいける。お金をためたら<b>自分の島</b>も！</div></div>` },
+  { t: "💰 お金", h: () => `<div class="gd"><span>⬆️</span><div><b>かせぐ</b>：コインを拾う・仕事（ハローワーク）・つり・ボードゲーム・🗺️宝の地図・ミッション・わるもの退治・モンスター退治・おばけの写真</div></div><div class="gd"><span>⬇️</span><div><b>使う</b>：🎰ガチャ（ぼうし・エフェクト・金ピカ）・お店・武器・乗り物・つりのエサ・オセロのかけ・ぬいへのプレゼント・自分の島</div></div><div class="gd"><span>📋</span><div><b>きょうのミッション</b>：毎日3つ。ぜんぶクリアで🎫ガチャ券！（広場の掲示板）</div></div>` },
+  { t: "⚡ イベント", h: () => `<div class="gd"><span>😈</span><div><b>わるものぬい団</b>：何人もせめてくる。みんなでやっつけよう</div></div><div class="gd"><span>🦖</span><div><b>モンスター</b>／<b>👑キングモンスター</b>（まれ）／<b>💀最強の魔王モンスター</b>（すごくまれ）</div></div><div class="gd"><span>✨</span><div>金色のぬい・ダンスパーティー・家族が来る・天気（雨・雷・マグマ・お金の雨）</div></div><div class="gd"><span>🚨</span><div>悪いことを見られると<b>けいさつ</b>が追ってくる。つかまると<b>ろうや</b>→脱獄！<br>なぐられたり撃たれたら、10秒以内に <b>C で通報</b>できる（なにもされていないのに呼ぶと<b>罰金</b>！）</div></div>` },
   { t: "🌙 朝と夜", h: () => `<div class="gd"><span>🌅</span><div>1日＝12分。毎朝おこづかい。<b>日曜日はお祭り</b>（コイン2倍）</div></div><div class="gd"><span>🎆</span><div>夜は<b>花火大会</b>・<b>👻おばけぬい</b>（P で写真にとるとコイン）・<b>🌠流れ星</b>（Z でおねがい）・夜だけの魚</div></div><div class="gd"><span>📜</span><div><b>やくそく書</b>：相手のそばで R。3日以内にわたさないと…ろうや！</div></div>` },
   { t: "👫 フレンド", h: () => `<div class="gd"><span>💛</span><div>部屋で友だちのそばで <b>R →「フレンドになろう」</b>。いっしょに遊ぶとレベルが上がってコインがもらえる。掲示板からそばにワープもできる</div></div><div class="gd"><span>🧸</span><div>町のぬいに <b>R →「プレゼント」</b>。❤5で<b>親友</b>になって、ついてきていっしょに戦ってくれる</div></div><div class="gd"><span>🏅</span><div><b>称号</b>：いろいろなことをすると手に入る。名札に出るよ</div></div>` },
 ];
@@ -6985,6 +7174,7 @@ function buildBoard() {
 function openBoard() {
   openPanel("📋 広場の掲示板", `🕗 ${clockText(worldT())}`, [
     { html: `<div style="width:100%"><b>📋 きょうのミッション</b><br>${missionsHtml()}</div>` },
+    { name: "🗺️ 宝の地図", desc: townSave.treasure ? "持っている！ 右上のヒントをたよりにさがそう" : "町のどこかにうまっている宝箱の場所がわかる（コイン・ガチャ券・レアなぼうしなど）", btn: townSave.treasure ? "持っている" : "50🪙で買う", disabled: !!townSave.treasure, fn: () => { buyTreasureMap(); } },
     { name: "👫 フレンド・プロフィール・称号", desc: "", btn: "ひらく", fn: () => { openFriends(); return false; } },
     { name: "📖 あそびかた", desc: "そうさ・町の場所・お金・イベント…", btn: "ひらく", fn: () => { closeShop(); openGuide(0); return false; } },
   ], openBoard);
@@ -6997,7 +7187,7 @@ function buildFunTown() {
   buildFishing();
   buildBoard();
   Object.assign(badEv, { on: false, remote: null, meshes: [], timer: rand(260, 420) });
-  town.bad = []; callP.cars = []; fish.state = null;
+  town.bad = []; callP.cars = []; fish.state = null; town.trSpot = null; town.trSpark = null;
 }
 // R でえらぶ：友だち → フレンド・やくそく書　／　町のぬい → プレゼント・やくそく書・親友
 function personMenu(P) {
@@ -7066,7 +7256,7 @@ setTimeout(() => presenceStart(0), 1200);
 function presenceIn(d, c) {
   if (!d || typeof d !== "object") return;
   const fid = cleanFid(d.fid), fname = fid && friendByFid(fid);
-  if (d.t === "where") { c.send({ t: "here", name: myName, code: myRoomCode(), n: roomCount(), full: roomCount() >= MAX_PLAYERS, playing: !!mode }); return; }
+  if (d.t === "where") { c.send({ t: "here", v: GAME_VER, name: myName, code: myRoomCode(), n: roomCount(), full: roomCount() >= MAX_PLAYERS, playing: !!mode }); return; }
   if (!fname) return; // フレンドからだけ受けつける
   if (d.t === "play") {
     const code = myRoomCode();
@@ -7114,7 +7304,7 @@ function presenceAsk(fid, msg, wait = 6000, slot = null) {
 // 部屋をすぐ作る（ゲームの途中でもOK）
 function quickHost(cb) {
   if (net.online) { const c = myRoomCode(); if (c) cb(c); return; }
-  if (!mode) { readName(); $("titleP").hidden = true; closeShop(); showModeSelect(); }
+  if (!mode) { readName(); fr.fromTitle = false; $("titleP").hidden = true; closeShop(); showModeSelect(); }
   hostRoom();
   const t0 = Date.now();
   const iv = setInterval(() => {
@@ -7125,8 +7315,8 @@ function quickHost(cb) {
 // フレンドの部屋に入る（コードは自動）
 function joinFriendRoom(code, name) {
   if (net.online) { toast("いまの部屋から出てから入ってね（タイトルへ → 入りなおす）", 2600); if (mode) controls = true; return; }
-  if (!mode) { readName(); $("titleP").hidden = true; $("joinP").hidden = false; }
-  closeShop(); $("msgP").hidden = true;
+  if (!mode) { readName(); fr.fromTitle = false; $("titleP").hidden = true; $("joinP").hidden = false; }
+  hidePanel(); $("msgP").hidden = true;
   toast(`💛 ${name} の部屋につないでいます…`, 3000);
   joinRoom(code);
   setTimeout(() => { if (!net.online) { toast(`${name} の部屋につながらなかった…（ネットの種類によってはつながらないことがあります）`, 3500); if (mode) controls = true; else { $("joinP").hidden = true; $("titleP").hidden = false; } } }, 13000);
@@ -7138,7 +7328,7 @@ async function refreshFriendStatus(after) {
   await Promise.all(Object.keys(F).map(async (n) => {
     if (!F[n].fid) { pres.status[n] = { t: "noid" }; return; }
     const r = await presenceAsk(F[n].fid, { t: "where" }, 6000);
-    pres.status[n] = !r ? { t: "off" } : r.code ? { t: "room", code: String(r.code), n: r.n | 0, full: !!r.full, slot: r.slot } : { t: "on", playing: !!r.playing, slot: r.slot };
+    pres.status[n] = !r ? { t: "off" } : r.code ? { t: "room", code: String(r.code), n: r.n | 0, full: !!r.full, slot: r.slot, v: r.v } : { t: "on", playing: !!r.playing, slot: r.slot };
   }));
   pres.asking = false;
   if (after) after();
@@ -7153,7 +7343,7 @@ function friendRows(reopen) {
   for (const n of names) {
     const id = here[n], st = pres.status[n] || { t: "?" }, lv = friendLv(F[n]);
     if (id) { rows.push({ name: `🟢 ${n}　Lv.${lv}`, desc: "いっしょの部屋にいる！", btn: mode === "town" ? "そばにワープ" : "", fn: () => { const r = net.players[id]; if (r && r.pos && !me.jail && me.ko <= 0) { if (me.veh) setVehicle(null); spawnMe(r.pos.x + 1, r.pos.y + 0.5, r.pos.z + 1, camYaw); closeShop(); toast(`💛 ${n} のそばにワープした！`, 1500); } return false; } }); continue; }
-    if (st.t === "room") rows.push({ name: `🏠 ${n}　Lv.${lv}`, desc: `部屋にいる（${st.n}/${MAX_PLAYERS}人）${st.full ? "・満員" : ""}`, btn: st.full ? "満員" : "部屋に入る！", disabled: st.full, fn: () => { joinFriendRoom(st.code, n); return false; } });
+    if (st.t === "room") rows.push({ name: `🏠 ${n}　Lv.${lv}`, desc: st.v !== GAME_VER ? "部屋にいるけど、ゲームのバージョンがちがう（2人ともページを読みこみ直してね）" : `部屋にいる（${st.n}/${MAX_PLAYERS}人）${st.full ? "・満員" : ""}`, btn: st.v !== GAME_VER ? "バージョンちがい" : st.full ? "満員" : "部屋に入る！", disabled: st.full || st.v !== GAME_VER, fn: () => { joinFriendRoom(st.code, n); return false; } });
     else if (st.t === "on") rows.push({ name: `🟡 ${n}　Lv.${lv}`, desc: myCode ? "オンライン（ひとりで遊んでいる）" : "オンライン（部屋にいない）", btn: myCode ? "部屋にさそう" : "あそぼうと送る", fn: () => { askFriendPlay(n, !!myCode); return false; } });
     else if (st.t === "off") rows.push({ name: `⚪ ${n}　Lv.${lv}`, desc: "いまはゲームを開いていない", btn: "", fn: () => {} });
     else if (st.t === "noid") rows.push({ name: `⚪ ${n}　Lv.${lv}`, desc: "古いフレンドなので、もう一度いっしょに遊んで「フレンドになろう」をすると部屋に入れるようになるよ", btn: "", fn: () => {} });
@@ -7180,6 +7370,7 @@ async function askFriendPlay(n, invite) {
 }
 // タイトル画面の「フレンド」
 function openFriendsTitle() {
+  $("titleP").hidden = true; fr.fromTitle = true;
   const rows = friendRows(openFriendsTitle);
   rows.unshift({ html: `<span class="small">フレンドが部屋にいたら「部屋に入る！」で、<b>コードなしで</b>入れるよ。ひとりで遊んでいるフレンドには「あそぼうと送る」</span>` });
   openPanel("👫 フレンド", "", rows, openFriendsTitle);
@@ -7271,6 +7462,60 @@ addEventListener("keydown", (e) => {
   if (!mode || chat.open || !controls || e.repeat) return;
   if (e.code === "KeyT" || e.code === "Enter") { e.preventDefault(); openChat(); }
 });
+
+// =====================================================================
+//  14. 宝の地図・バージョンのたしかめ・マウスがつかまったままにならないように
+// =====================================================================
+const GAME_VER = 14;
+// ---- 宝の地図（掲示板で買う → 地図のヒントをたよりに、ほる！） ----
+function buyTreasureMap() {
+  if (townSave.treasure) { toast("もう宝の地図を持っているよ！ 先にその宝をほり出そう", 2200); return; }
+  if (!pay(50)) return;
+  let p = null;
+  for (let k = 0; k < 20 && !p; k++) { const q = randomTownSpot(74); if (q && Math.hypot(q[0], q[2]) > 12) p = q; }
+  if (!p) p = [30, 0, 30];
+  townSave.treasure = { x: +p[0].toFixed(1), z: +p[2].toFixed(1) }; saveTown(true);
+  play("item"); toast("🗺️ 宝の地図を手に入れた！<br>右上の「宝まで ◯m（方角）」をたよりにさがそう。近くに行くと ✨ が光るよ", 3800);
+}
+function compass(dx, dz) { const a = (Math.atan2(dx, -dz) * 180 / Math.PI + 360) % 360; return ["北", "北東", "東", "南東", "南", "南西", "西", "北西"][Math.round(a / 45) % 8]; }
+function treasureHud() {
+  const T = townSave.treasure; if (!T) return "";
+  const dx = T.x - me.pos.x, dz = T.z - me.pos.z, d = Math.hypot(dx, dz);
+  return `<br>🗺️ 宝まで ${d < 4 ? "すぐそこ！ E でほる" : `${Math.round(d / 5) * 5}m（${compass(dx, dz)}）`}`;
+}
+function treasureUpdate(dt) {
+  const T = townSave.treasure;
+  if (!T) { if (town.trSpot) { removeTrSpot(); } return; }
+  const d = Math.hypot(T.x - me.pos.x, T.z - me.pos.z);
+  if (d < 14 && !town.trSpot) {
+    const y = surfaceY(T.x, T.z);
+    town.trSpot = addSpot(T.x, T.z, () => "[E] ここをほる！", digTreasure, 2.2, y);
+    town.trSpark = makeLabel("✨", "#fff", 1.4); town.trSpark.position.set(T.x, y + 1, T.z); world.add(town.trSpark);
+  }
+  if (town.trSpark) { town.trSpark.position.y = surfaceY(T.x, T.z) + 0.8 + Math.sin(gameTime * 3) * 0.25; town.trSpark.material.opacity = 0.6 + Math.sin(gameTime * 6) * 0.4; }
+  if (d > 20 && town.trSpot) removeTrSpot();
+}
+function removeTrSpot() {
+  if (town.trSpot) { world.remove(town.trSpot.ring); town.spots = town.spots.filter((s) => s !== town.trSpot); town.trSpot = null; }
+  if (town.trSpark) { world.remove(town.trSpark); town.trSpark = null; }
+}
+function digTreasure() {
+  const T = townSave.treasure; if (!T) return;
+  delete townSave.treasure; saveTown(true); removeTrSpot();
+  puff(me.pos.x, me.pos.y + 0.3, me.pos.z, 20, 1.2); play("boom");
+  missionAdd("treasure", 1);
+  setTimeout(() => {
+    const r = Math.random();
+    if (r < 0.1) { townSave.gtix = (townSave.gtix || 0) + 1; saveTown(true); play("rare"); toast("💎 宝箱から 🎫ガチャ券 が出てきた！", 3000); }
+    else if (r < 0.16) { const pool = GACHA.filter((g) => g.rar >= 3 && (g.kind === "hat" || g.kind === "trail") && !gachaOwned(g)); if (pool.length) { const g = pick(pool); gachaGive(g); play("rare"); toast(`💎 宝箱から レアな「${g.name}」が出てきた！`, 3200); } else gotCoins(300, "💰 宝箱を見つけた！"); }
+    else gotCoins(Math.floor(rand(80, 260)), "💰 宝箱を見つけた！");
+  }, 700);
+}
+// ---- 部屋のかぎ（バージョンがちがうと、うまく遊べないので教える） ----
+function oldVerMsg() { net.full = true; net.online = false; showMsg("バージョンがちがうよ", "部屋を作った人と、ゲームのバージョンがちがうみたい。<br>2人とも同じアドレス（GitHub のページなど）で開いて、ページを<b>読みこみ直して</b>からためしてね。", [{ label: "タイトルへ", fn: () => location.reload() }]); }
+// ---- メニューが出ている間は、マウスをゲームの画面からはなす（ボタンがおせなくなるのをふせぐ） ----
+function anyUiOpen() { return !mode || !$("titleP").hidden || !$("modeP").hidden || !$("joinP").hidden || !$("msgP").hidden || !$("shopP").hidden || !$("rvP").hidden || chat.open || paintMode; }
+setInterval(() => { if (document.pointerLockElement && anyUiOpen() && document.exitPointerLock) document.exitPointerLock(); }, 200);
 
 // 町モードで届いたメッセージ（onNet から呼ばれる）
 function onNetTown(d, conn) {
