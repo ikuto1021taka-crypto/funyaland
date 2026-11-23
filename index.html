@@ -220,6 +220,19 @@
   .cmScore { display: flex; gap: 20px; font-size: 18px; } .cmScore span { padding: 4px 12px; border-radius: 10px; background: rgba(0,0,0,.25); } .cmScore span.on { background: #ffd84a; color: #222; }
   #cdBar { display: flex; flex-direction: column; align-items: center; gap: 6px; }
   #cdInfo { font-size: 15px; } #cdBtns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; } #cdBtns button { font-size: 15px; padding: 8px 18px; }
+  /* 肉球 */
+  .pawFx { position: fixed; z-index: 40; width: 46px; height: 42px; margin: -21px 0 0 -23px; border-radius: 50%; background: var(--pc); box-shadow: 0 3px 6px rgba(0,0,0,.35); pointer-events: none; animation: pawPress .6s ease-out forwards; }
+  .pawFx i, .pawHold i { position: absolute; width: 22%; height: 24%; border-radius: 50%; background: #ffb0c8; top: 10%; }
+  .pawFx i:nth-child(1), .pawHold i:nth-child(1) { left: 12%; top: 22%; } .pawFx i:nth-child(2), .pawHold i:nth-child(2) { left: 39%; top: 8%; } .pawFx i:nth-child(3), .pawHold i:nth-child(3) { left: 66%; top: 22%; }
+  .pawFx b, .pawHold b { position: absolute; left: 27%; top: 46%; width: 46%; height: 38%; border-radius: 50% 50% 45% 45%; background: #ffb0c8; }
+  @keyframes pawPress { 0% { transform: scale(1.6) translateY(-30px); opacity: 0; } 35% { transform: scale(1) translateY(0); opacity: 1; } 60% { transform: scale(.9); opacity: 1; } 100% { transform: scale(1) translateY(-14px); opacity: 0; } }
+  .pawHold { position: relative; flex: none; align-self: flex-end; width: calc(var(--cw) * .85); height: calc(var(--cw) * .8); border-radius: 50%; background: var(--pc); box-shadow: 0 3px 6px rgba(0,0,0,.35); z-index: 2; margin: 0 calc(var(--cw) * -.35); transform: translateY(calc(var(--cw) * .35)); animation: pawBob 2.4s ease-in-out infinite; }
+  .pawHold:last-child { animation-delay: -1.2s; }
+  @keyframes pawBob { 50% { transform: translateY(calc(var(--cw) * .28)) rotate(4deg); } }
+  .cdRow.handRow { flex-wrap: nowrap; align-items: flex-end; padding-bottom: calc(var(--cw) * .3); }
+  .bjnOthers { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .bjnSeat { background: rgba(0,0,0,.2); border-radius: 12px; padding: 4px 10px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .cdRow.mini2 .card { --cw: min(34px, 7vh, 8vw); }
 </style>
 <!-- 3D 表示の部品（Three.js）と、部屋コードで遊ぶための部品（PeerJS）。インターネットから読み込む -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -6285,7 +6298,7 @@ function nightHud() {
   }
   if (townSave.trust) r += `<br>🤝 信用 ${townSave.trust}（${trustTitle()}）`;
   const MS = missionsToday(), md = MS.list.filter((m) => m.done).length;
-  r += `<br>📋 ミッション ${md}/${MS.list.length}${md === MS.list.length ? " ✅" : "（広場の掲示板）"}` + treasureHud();
+  r += `<br>📋 ミッション ${md}/${MS.list.length}${md === MS.list.length ? " ✅" : "（広場の掲示板）"}` + treasureHud() + tagHud();
   return r + "<br>";
 }
 
@@ -6780,7 +6793,7 @@ function onNetBoard(d, conn) {
   if (d.t === "bgInv") {
     if (!BGAMES[d.g]) return true;
     const name = (net.players[from] && net.players[from].name) || cleanName(d.from) || "だれか";
-    if (!$("rvP").hidden || !$("cardP").hidden || fish.state || !mode) { sendTo(from, { t: "bgNo", fromId: net.myId }); return true; }
+    if (!$("rvP").hidden || cardBusy() || fish.state || !mode) { sendTo(from, { t: "bgNo", fromId: net.myId }); return true; }
     play("item");
     showMsg("🌐 対戦のもうしこみ", `<b>${name}</b> から「${BGAMES[d.g].icon} ${BGAMES[d.g].name}」で対戦しよう！ってきたよ`, [
       { label: "やる！", fn: () => { sendTo(from, { t: "bgAcc", g: d.g, fromId: net.myId }); bgStart(d.g, "online", 0, 0, from, -1, name); } },
@@ -6856,7 +6869,7 @@ function missionsHtml() {
 //  12-5. フレンド（友だちのプレイヤー）と、ぬいの親友
 // =====================================================================
 function isFriend(name) { return !!(townSave.friends && townSave.friends[name]); }
-function remoteTag(r, s) { const t = titleOf(s.tt); return `${isFriend(r.name) ? "💛" : ""}${t ? "［" + t + "］" : ""}${r.name}${s.wa ? " 🚨" + "★".repeat(Math.min(3, s.wa | 0)) : ""}`; }
+function remoteTag(r, s) { const t = titleOf(s.tt); return `${tag.on && net.players[tag.oni] === r ? "👹" : ""}${isFriend(r.name) ? "💛" : ""}${t ? "［" + t + "］" : ""}${r.name}${s.wa ? " 🚨" + "★".repeat(Math.min(3, s.wa | 0)) : ""}`; }
 function friendLv(f) { return 1 + Math.floor(Math.sqrt((f.xp || 0) / 30)); }
 function addFriend(name, fid) {
   townSave.friends = townSave.friends || {};
@@ -7113,6 +7126,7 @@ function badUpdate(dt) {
 // =====================================================================
 function funTownUpdate(dt) {
   trailsUpdate(dt);
+  tagUpdate(dt);
   fishUpdate(dt);
   friendsUpdate(dt);
   callUpdate(dt);
@@ -7121,6 +7135,8 @@ function funTownUpdate(dt) {
 }
 function onNetFun(d, conn) {
   if (onNetBoard(d, conn)) return true;
+  if (onNetCards(d, conn)) return true;
+  if (onNetTag(d, conn)) return true;
   if (d.t === "reported") {
     if (mode === "town" && !me.jail) { const by = cleanName(d.by) || "だれか"; me.wanted = Math.min(240, (me.wanted || 0) + 60); play("siren"); toast(`🚨 なぐったのを ${by} に通報された！ けいさつが追いかけてくる！`, 3000); }
     return true;
@@ -7167,7 +7183,7 @@ const GUIDE = [
   { t: "🕹️ そうさ", h: () => touchMode
     ? `<div class="gd"><span>🕹️</span><div><b>うごく</b>：左がわをさわって動かす<br><b>見回す</b>：右がわをなぞる（2本指でズーム）</div></div><div class="gd"><span>✊</span><div><b>パンチ／使う</b>・<b>つかむ→投げる</b>・<b>調べる</b>・<b>乗り物</b>は右下のボタン</div></div><div class="gd"><span>🔝</span><div>上のボタン：👁一人称 🗺️地図 📸写真 🍙食べる 👋💃エモート 🤝わたす 📞けいさつ 📖あそびかた</div></div>`
     : `<div class="gd"><span>🕹️</span><div><kbd>WASD</kbd> うごく　<kbd>スペース</kbd> ジャンプ　マウス：見回す　ホイール：ズーム</div></div><div class="gd"><span>✊</span><div><b>クリック</b>：パンチ・使う（長おしでぐるぐるパンチ）<br><b>右クリック</b>：つかむ → はなすとぶん投げる！</div></div><div class="gd"><span>⌨️</span><div><kbd>E</kbd> 調べる・入る　<kbd>F</kbd> 乗り物　<kbd>Q</kbd> 食べる　<kbd>1</kbd>〜<kbd>5</kbd> 持ちかえ　<kbd>Tab</kbd> 地図<br><kbd>R</kbd> わたす・フレンド　<kbd>C</kbd> けいさつを呼ぶ　<kbd>H</kbd> このガイド　<kbd>P</kbd> 写真　<kbd>V</kbd> 一人称　<kbd>Shift</kbd> 力をぬく</div></div>` },
-  { t: "🗺️ 町の場所", h: () => `<div class="gd"><span>🏪</span><div><b>広場のまわり</b>：服屋・ご飯屋・おもちゃ屋・乗り物屋　<b>道ぞい</b>：武器屋・空の乗り物屋・ハローワーク</div></div><div class="gd"><span>🎰</span><div><b>ガチャ屋</b>（東）・<b>ボードゲームカフェ</b>（西：オセロ・五目ならべ・4目ならべ・トランプ。ちがう機械の友だちとネット対戦も！）・<b>📋掲示板</b>（広場：ミッション・宝の地図・フレンド）</div></div><div class="gd"><span>🎡</span><div><b>南</b>：遊園地（観覧車・レース）・<b>🎣つり場</b>（南の桟橋の先）<br><b>西</b>：サッカー場・ゲームセンター・コインランドリー　<b>東</b>：けいさつ署・ろうや</div></div><div class="gd"><span>🏝️</span><div>海の<b>小島</b>には番人と金庫。<b>大砲</b>で飛んでいける。お金をためたら<b>自分の島</b>も！</div></div>` },
+  { t: "🗺️ 町の場所", h: () => `<div class="gd"><span>🏪</span><div><b>広場のまわり</b>：服屋・ご飯屋・おもちゃ屋・乗り物屋　<b>道ぞい</b>：武器屋・空の乗り物屋・ハローワーク</div></div><div class="gd"><span>🎰</span><div><b>ガチャ屋</b>（東）・<b>ボードゲームカフェ</b>（西：オセロ・五目ならべ・4目ならべ・トランプ。ちがう機械の友だちとネット対戦も！）・<b>📋掲示板</b>（広場：ミッション・宝の地図・スタンプラリー・おにごっこ・フレンド）</div></div><div class="gd"><span>🎡</span><div><b>南</b>：遊園地（観覧車・レース）・<b>🎣つり場</b>（南の桟橋の先）<br><b>西</b>：サッカー場・ゲームセンター・コインランドリー　<b>東</b>：けいさつ署・ろうや</div></div><div class="gd"><span>🏝️</span><div>海の<b>小島</b>には番人と金庫。<b>大砲</b>で飛んでいける。お金をためたら<b>自分の島</b>も！</div></div>` },
   { t: "💰 お金", h: () => `<div class="gd"><span>⬆️</span><div><b>かせぐ</b>：コインを拾う・仕事（ハローワーク）・つり・ボードゲーム・🗺️宝の地図・ミッション・わるもの退治・モンスター退治・おばけの写真</div></div><div class="gd"><span>⬇️</span><div><b>使う</b>：🎰ガチャ（ぼうし・エフェクト・金ピカ）・お店・武器・乗り物・つりのエサ・オセロのかけ・ぬいへのプレゼント・自分の島</div></div><div class="gd"><span>📋</span><div><b>きょうのミッション</b>：毎日3つ。ぜんぶクリアで🎫ガチャ券！（広場の掲示板）</div></div>` },
   { t: "⚡ イベント", h: () => `<div class="gd"><span>😈</span><div><b>わるものぬい団</b>：何人もせめてくる。みんなでやっつけよう</div></div><div class="gd"><span>🦖</span><div><b>モンスター</b>／<b>👑キングモンスター</b>（まれ）／<b>💀最強の魔王モンスター</b>（すごくまれ）</div></div><div class="gd"><span>✨</span><div>金色のぬい・ダンスパーティー・家族が来る・天気（雨・雷・マグマ・お金の雨）</div></div><div class="gd"><span>🚨</span><div>悪いことを見られると<b>けいさつ</b>が追ってくる。つかまると<b>ろうや</b>→脱獄！<br>なぐられたり撃たれたら、10秒以内に <b>C で通報</b>できる（なにもされていないのに呼ぶと<b>罰金</b>！）</div></div>` },
   { t: "🌙 朝と夜", h: () => `<div class="gd"><span>🌅</span><div>1日＝12分。毎朝おこづかい。<b>日曜日はお祭り</b>（コイン2倍）</div></div><div class="gd"><span>🎆</span><div>夜は<b>花火大会</b>・<b>👻おばけぬい</b>（P で写真にとるとコイン）・<b>🌠流れ星</b>（Z でおねがい）・夜だけの魚</div></div><div class="gd"><span>📜</span><div><b>やくそく書</b>：相手のそばで R。3日以内にわたさないと…ろうや！</div></div>` },
@@ -7206,6 +7222,8 @@ function buildBoard() {
 function openBoard() {
   openPanel("📋 広場の掲示板", `🕗 ${clockText(worldT())}`, [
     { html: `<div style="width:100%"><b>📋 きょうのミッション</b><br>${missionsHtml()}</div>` },
+    { html: stampCard() },
+    { name: "🏃 おにごっこ（部屋のみんなで）", desc: tag.on ? "いまおにごっこ中！" : net.online ? "部屋にいるみんなでおにごっこ！ にげきると30コイン" : "部屋に2人以上いるときにできるよ", btn: tag.on ? "やっている" : "はじめる", disabled: tag.on || !net.online, fn: () => { startTag(); closeShop(); return false; } },
     { name: "🗺️ 宝の地図", desc: townSave.treasure ? "持っている！ 右上のヒントをたよりにさがそう" : "町のどこかにうまっている宝箱の場所がわかる（コイン・ガチャ券・レアなぼうしなど）", btn: townSave.treasure ? "持っている" : "50🪙で買う", disabled: !!townSave.treasure, fn: () => { buyTreasureMap(); } },
     { name: "👫 フレンド・プロフィール・称号", desc: "", btn: "ひらく", fn: () => { openFriends(); return false; } },
     { name: "📖 あそびかた", desc: "そうさ・町の場所・お金・イベント…", btn: "ひらく", fn: () => { closeShop(); openGuide(0); return false; } },
@@ -7220,6 +7238,7 @@ function buildFunTown() {
   buildBoard();
   Object.assign(badEv, { on: false, remote: null, meshes: [], timer: rand(260, 420) });
   town.bad = []; callP.cars = []; fish.state = null; town.trSpot = null; town.trSpark = null;
+  buildStamps();
 }
 // R でえらぶ：友だち → フレンド・やくそく書　／　町のぬい → プレゼント・やくそく書・親友
 function personMenu(P) {
@@ -7579,6 +7598,7 @@ function openCards(game, title) {
 }
 function closeCards() {
   for (const t of cd.timers) clearTimeout(t); cd.timers = [];
+  ctOnClose(); cd.busy = false;
   if (cd.game === "bj" && bj.state === "play") toast(`とちゅうでやめたので、かけた ${bj.bet}コイン は返ってこない…`, 2200);
   cd.game = null; $("cardP").hidden = true;
   if (mode) { controls = true; lockPointer(); }
@@ -7595,7 +7615,7 @@ function bjDraw(msg = "") {
   const end = bj.state !== "play";
   $("cdTop").innerHTML = bj.state === "bet" ? "" : `<div class="cdLabel">ディーラー${end ? `（${bjVal(bj.d)}）` : ""}</div><div class="cdRow">${bj.d.map((c, i) => cardHtml(c, { back: i === 1 && !end })).join("")}</div>`;
   $("cdMid").innerHTML = bj.state === "bet" ? `<div class="cdRule">カードの合計を <b>21</b> に近づけよう！ 21をこえたら負け<br>J・Q・K は10、A は1か11。ディーラーは17以上になるまで引く<br>勝つと2倍・最初の2まいで21（ブラックジャック）なら2.5倍！</div>` : `<div class="cdMsg">${msg}</div>`;
-  $("cdHand").innerHTML = bj.state === "bet" ? "" : `<div class="cdLabel">あなた（${bjVal(bj.p)}）</div><div class="cdRow">${bj.p.map((c) => cardHtml(c)).join("")}</div>`;
+  $("cdHand").innerHTML = bj.state === "bet" ? "" : `<div class="cdLabel">あなた（${bjVal(bj.p)}）</div><div class="cdRow handRow">${pawHolders()}${bj.p.map((c) => cardHtml(c)).join("")}${pawHolders()}</div>`;
   $("cdInfo").innerHTML = `持っているコイン：${wallet}${bj.bet && bj.state !== "bet" ? `　かけ金：${bj.bet}` : ""}`;
   if (bj.state === "bet") cdButtons([10, 50, 100, 300].filter((v) => v <= wallet).map((v) => [`${v}コインかける`, () => bjStart(v)]));
   else if (bj.state === "play") cdButtons([["ヒット（もう1まい）", bjHit], ["スタンド（これで勝負）", bjStand, "sub"], ...(wallet >= bj.bet && bj.p.length === 2 ? [["ダブル（2倍かけて1まいだけ）", bjDouble, "pink"]] : [])]);
@@ -7624,93 +7644,229 @@ function bjEnd() {
   bjDraw(msg);
 }
 
-// ---- ババ抜き（あなた＋ぬい3人。最後にジョーカーを持っていたら負け） ----
-const om = { h: [[], [], [], []], fin: [], turn: 0, names: ["あなた", "ぬいA", "ぬいB", "ぬいC"], last: null, msg: "" };
+// ---- トランプのネット対戦（さそった人＝親が、ゲームをすすめる） ----
+const ct = { tid: null, g: null, host: false, hostId: null, seats: [], mySeat: 0, on: false };
+function cardBusy() { return !$("cardP").hidden && !((cd.game === "om" && om.over) || (cd.game === "cm" && cm.over) || (cd.game === "bj" && bj.state !== "play") || (cd.game === "bjn" && !bjn.remote && bjn.phase === "end") || (cd.game === "net")); }
+function cgName(g) { return g === "om" ? "ババ抜き" : g === "bj" ? "ブラックジャック" : "神経衰弱"; }
+function ctReset() { Object.assign(ct, { tid: null, g: null, host: false, hostId: null, seats: [], mySeat: 0, on: false }); }
+function ctHumans() { return ct.seats.filter((s) => !s.cpu && s.id !== net.myId); }
+function ctSend(seat, msg) { if (seat && !seat.cpu && seat.id !== net.myId) sendTo(seat.id, { ...msg, tid: ct.tid, fromId: net.myId }); }
+function openCardInvite(g) {
+  if (!net.online) { toast("ネット対戦は、部屋に入っているときだけできるよ", 2200); return; }
+  if (!ct.tid || ct.g !== g || !ct.host || ct.on) { ctReset(); Object.assign(ct, { tid: String(Date.now() % 1e9), g, host: true, seats: [{ id: net.myId, name: myName }] }); }
+  const max = g === "om" ? 4 : g === "bj" ? 5 : 2, gname = cgName(g);
+  const rows = [{ html: `<span class="small">${g === "om" ? "2〜4人で遊べるよ。足りないところはぬい（CPU）が入る" : g === "bj" ? "2〜5人で、みんなでディーラーと勝負！" : "2人で遊ぶよ"}。さそった人が「はじめる」をおすとスタート</span>` }];
+  rows.push({ html: `<b>参加する人（${ct.seats.length}/${max}）</b>：${ct.seats.map((s) => s.name).join("、")}` });
+  for (const [id, r] of Object.entries(net.players)) {
+    if (!r.state) continue;
+    const inSeat = ct.seats.some((s) => s.id === id);
+    rows.push({ name: `${isFriend(r.name) ? "💛" : "🙂"} ${r.name}`, desc: inSeat ? "参加する！" : "", btn: inSeat ? "参加中" : ct.seats.length >= max ? "満員" : "さそう", disabled: inSeat || ct.seats.length >= max, fn: () => { sendTo(id, { t: "ctInv", g, tid: ct.tid, from: myName, fromId: net.myId }); toast(`📨 ${r.name} を「${gname}」にさそった！`, 2000); } });
+  }
+  rows.push({ name: "▶ はじめる", desc: ct.seats.length < 2 ? "だれかが参加するのをまってね" : "", btn: "はじめる！", disabled: ct.seats.length < 2, fn: () => { ctStart(); return false; } });
+  openPanel(`🌐 ${gname}（ネット対戦）`, "", rows, () => openCardInvite(g));
+}
+function ctStart() {
+  ct.on = true;
+  if (ct.g === "om") { const cpu = ["ぬいA", "ぬいB", "ぬいC"]; let k = 0; while (ct.seats.length < 4) ct.seats.push({ cpu: true, name: cpu[k++] }); startOM(true); }
+  else if (ct.g === "bj") bjnStart();
+  else startCM("net", 1);
+  ctSendAll({ t: "ctStart", g: ct.g });
+}
+function ctSendAll(msg) { ct.seats.forEach((s, i) => ctSend(s, { ...msg, seat: i })); }
+// 親：みんなに、いまの様子を送る（ほかの人の手札は見せない）
+function ctBroadcast() {
+  if (!ct.on || !ct.host) return;
+  ct.seats.forEach((s, i) => {
+    if (s.cpu || s.id === net.myId) return;
+    let view;
+    if (ct.g === "om") view = { h: om.h.map((h, k) => (k === i ? h : h.length)), fin: om.fin, turn: om.turn, names: om.names, msg: om.msgs ? om.msgs[i] || om.msg : om.msg, over: !!om.over };
+    else if (ct.g === "bj") view = bjnView();
+    else view = { cards: cm.cards.map((c, k) => (cm.open.includes(k) || cm.taken[k] >= 0 ? c : null)), open: cm.open, taken: cm.taken, turn: cm.turn, score: cm.score, msg: cm.msgs ? cm.msgs[i] || cm.msg : cm.msg, over: cm.over, names: cmNames() };
+    ctSend(s, { t: "ctState", g: ct.g, seat: i, view });
+  });
+}
+function ctOnClose() {
+  if (!ct.tid) return;
+  if (ct.host) { if (ct.on) ctSendAll({ t: "ctEnd" }); }
+  else if (ct.hostId) sendTo(ct.hostId, { t: "ctLeave", tid: ct.tid, fromId: net.myId });
+  ctReset();
+}
+function onNetCards(d, conn) {
+  if (!["ctInv", "ctAcc", "ctStart", "ctState", "ctAct", "ctLeave", "ctEnd", "ctNo"].includes(d.t)) return false;
+  const from = typeof d.fromId === "string" ? d.fromId : conn && conn.peer;
+  const name = (net.players[from] && net.players[from].name) || cleanName(d.from) || "だれか";
+  if (d.t === "ctInv") {
+    if (d.g !== "om" && d.g !== "cm" && d.g !== "bj") return true;
+    if (cardBusy() || !$("rvP").hidden || fish.state || !mode) { sendTo(from, { t: "ctNo", tid: d.tid, fromId: net.myId }); return true; }
+    play("item");
+    showMsg("🌐 トランプのおさそい", `<b>${name}</b> から「🃏 ${cgName(d.g)}」しよう！ってきたよ`, [
+      { label: "やる！", fn: () => { ctReset(); Object.assign(ct, { tid: String(d.tid), g: d.g, host: false, hostId: from }); sendTo(from, { t: "ctAcc", tid: ct.tid, fromId: net.myId }); openCards("net", `🃏 ${cgName(d.g)}（ネット）`); cd.game = "net"; $("cdTop").innerHTML = ""; $("cdHand").innerHTML = ""; $("cdMid").innerHTML = `<div class="cdMsg">${name} が「はじめる」をおすのをまっています…</div>`; $("cdInfo").innerHTML = ""; cdButtons([]); } },
+      { label: "ことわる", fn: () => { controls = true; sendTo(from, { t: "ctNo", tid: d.tid, fromId: net.myId }); } },
+    ]);
+    return true;
+  }
+  if (d.t === "ctNo") { if (ct.host && d.tid === ct.tid) toast(`${name} はいま遊べないみたい…`, 2000); return true; }
+  if (d.t === "ctAcc") {
+    if (!ct.host || d.tid !== ct.tid || ct.on) return true;
+    const max = ct.g === "om" ? 4 : ct.g === "bj" ? 5 : 2;
+    if (!ct.seats.some((s) => s.id === from) && ct.seats.length < max) { ct.seats.push({ id: from, name }); play("item"); toast(`🃏 ${name} が参加する！`, 1800); }
+    if (panelReopen && !$("shopP").hidden && $("shopTitle").textContent.includes("ネット対戦")) panelReopen();
+    return true;
+  }
+  if (ct.tid == null || String(d.tid) !== ct.tid) return true;
+  if (!ct.host && from !== ct.hostId) return true;
+  if (d.t === "ctStart") { ct.on = true; ct.mySeat = d.seat | 0; return true; }
+  if (d.t === "ctState") {
+    ct.on = true; ct.mySeat = d.seat | 0;
+    const v = d.view || {};
+    if (d.g === "om") {
+      Object.assign(om, { net: true, remote: true, view: ct.mySeat, fin: v.fin || [], turn: v.turn, names: v.names || om.names, msg: v.msg || "", over: !!v.over, last: null });
+      om.h = (v.h || []).map((x) => (Array.isArray(x) ? x : Array(Math.max(0, Math.min(60, x | 0))).fill({ r: 0, s: 0 })));
+      cd.game = "om"; omDraw();
+    } else if (d.g === "bj") {
+      if (!v || !Array.isArray(v.seats) || !Array.isArray(v.d)) return true;
+      bjn.remote = true; bjn.view = v; cd.game = "bjn"; bjnDraw();
+    } else {
+      Object.assign(cm, { mode: "net", remote: true, cards: v.cards || [], open: v.open || [], taken: v.taken || [], turn: v.turn, score: v.score || [0, 0], msg: v.msg || "", over: !!v.over, netNames: v.names });
+      cd.game = "cm"; cmDraw();
+    }
+    return true;
+  }
+  if (d.t === "ctEnd") { toast(`${name} がトランプをやめた`, 2200); if (!$("cardP").hidden) { $("cdMid").innerHTML = `<div class="cdMsg">${name} がやめちゃった…</div>`; cdButtons([]); } ctReset(); return true; }
+  // ここから下は親だけ
+  if (!ct.host || !ct.on) return true;
+  const seat = ct.seats.findIndex((s) => s.id === from); if (seat < 0) return true;
+  if (d.t === "ctLeave") {
+    if (ct.g === "om") { ct.seats[seat] = { cpu: true, name: ct.seats[seat].name + "（CPU）" }; om.names[seat] = ct.seats[seat].name; toast(`${name} がぬけたので、CPU がかわりに入った`, 2200); omDraw(); if (om.turn === seat && !om.over) omStep(); }
+    else if (ct.g === "bj") {
+      const S = bjn.seats[seat]; if (S) { S.st = "out"; S.name += "（ぬけた）"; }
+      if (bjn.phase === "play" && bjn.seats.every((x) => x.st !== "play")) bjnDealer();
+      else if (bjn.phase === "bet" && bjn.seats.every((x) => x.st === "ready" || x.st === "out") && bjn.seats.some((x) => x.st === "ready")) bjnDeal();
+      bjnDraw();
+    }
+    else { cm.over = true; cm.msg = `${name} がやめちゃった…`; cmDraw(); }
+    return true;
+  }
+  if (d.t === "ctAct") {
+    if (ct.g === "om" && om.turn === seat && !om.over) { const t = omNext(seat), k = d.k | 0; if (t >= 0 && k >= 0 && k < om.h[t].length) omTake(seat, t, k); }
+    if (ct.g === "cm" && cm.turn === seat && !cm.over) cmFlip(d.i | 0);
+    if (ct.g === "bj") bjnAct(seat, String(d.a || ""), d.v);
+    return true;
+  }
+  return true;
+}
+
+// ---- ババ抜き（ひとり：ぬい3人と ／ ネット：2〜4人） ----
+const om = { h: [[], [], [], []], fin: [], turn: 0, names: ["あなた", "ぬいA", "ぬいB", "ぬいC"], last: null, msg: "", view: 0, net: false, remote: false };
 function omPairs(h) { const by = {}; for (const c of h) if (!c.j) (by[c.r] = by[c.r] || []).push(c); const out = []; for (const r in by) { const l = by[r]; while (l.length >= 2) out.push(l.pop(), l.pop()); } return h.filter((c) => !out.includes(c)); }
 function omNext(i) { for (let k = 1; k <= 3; k++) { const j = (i + k) % 4; if (om.h[j].length) return j; } return -1; }
 function omActive() { return om.h.filter((h) => h.length).length; }
-function startOM() {
-  openCards("om", "🃏 ババ抜き");
+function omIsCpu(i) { return om.net ? !!(ct.seats[i] && ct.seats[i].cpu) : i !== 0; }
+function startOM(net) {
+  openCards("om", net ? "🃏 ババ抜き（ネット）" : "🃏 ババ抜き");
   const d = newDeck(true); om.h = [[], [], [], []]; d.forEach((c, i) => om.h[i % 4].push(c));
-  om.h = om.h.map(omPairs); om.h[0].sort((a, b) => a.r - b.r);
-  for (let i = 1; i < 4; i++) shuffleArr(om.h[i]);
-  om.fin = []; om.turn = 0; om.last = null; om.over = false; om.msg = "同じ数字のペアは、はじめにすててあるよ";
+  om.h = om.h.map(omPairs);
+  for (let i = 0; i < 4; i++) shuffleArr(om.h[i]);
+  om.h[0].sort((a, b) => a.r - b.r);
+  Object.assign(om, { fin: [], turn: 0, last: null, over: false, msg: "同じ数字のペアは、はじめにすててあるよ", msgs: null, view: 0, net: !!net, remote: false, names: net ? ct.seats.map((s) => s.name) : ["あなた", "ぬいA", "ぬいB", "ぬいC"] });
   for (let i = 0; i < 4; i++) if (!om.h[i].length) om.fin.push(i);
   omDraw(); omStep();
 }
 function omDraw() {
-  const tgt = om.turn === 0 && om.h[0].length ? omNext(0) : -1;
-  $("cdTop").innerHTML = `<div class="omCpus">${[1, 2, 3].map((i) => `<div class="omCpu${om.turn === i ? " on" : ""}${i === tgt ? " tgt" : ""}"><div class="cdLabel">${om.names[i]}（${om.h[i].length}まい）${om.fin.includes(i) ? " 🏁" + (om.fin.indexOf(i) + 1) + "位" : ""}</div><div class="cdRow mini">${om.h[i].map((c, k) => cardHtml(c, { back: true, cls: i === tgt ? "pickable" : "", data: i === tgt ? ` data-k="${k}"` : "" })).join("")}</div></div>`).join("")}</div>`;
+  const me = om.view || 0, others = [1, 2, 3].map((k) => (me + k) % 4);
+  const tgt = om.turn === me && om.h[me] && om.h[me].length && !om.over ? omNext(me) : -1;
+  const nm = (i) => (om.net && i === me ? "あなた" : om.names[i]);
+  $("cdTop").innerHTML = `<div class="omCpus">${others.map((i) => `<div class="omCpu${om.turn === i ? " on" : ""}${i === tgt ? " tgt" : ""}"><div class="cdLabel">${nm(i)}（${om.h[i].length}まい）${om.fin.includes(i) ? " 🏁" + (om.fin.indexOf(i) + 1) + "位" : ""}</div><div class="cdRow mini">${om.h[i].map((c, k) => cardHtml(c, { back: true, cls: i === tgt ? "pickable" : "", data: i === tgt ? ` data-k="${k}"` : "" })).join("")}</div></div>`).join("")}</div>`;
   $("cdMid").innerHTML = `<div class="cdMsg">${om.msg}</div>`;
-  $("cdHand").innerHTML = `<div class="cdLabel">あなたの手札（${om.h[0].length}まい）${om.fin.includes(0) ? " 🏁" + (om.fin.indexOf(0) + 1) + "位！" : ""}</div><div class="cdRow">${om.h[0].map((c) => cardHtml(c, { cls: om.last === c ? "new" : "" })).join("")}</div>`;
-  $("cdInfo").innerHTML = tgt >= 0 ? `👉 <b>${om.names[tgt]}</b> のカードを1まいえらんで引こう！` : `持っているコイン：${wallet}`;
-  $("cdTop").querySelectorAll(".card.pickable").forEach((el) => el.onclick = () => { if (om.turn === 0) omTake(0, tgt, +el.dataset.k); });
-  if (om.over) cdButtons([["もう1回", startOM]]); else cdButtons([]);
+  const mine = (om.h[me] || []).slice().sort((a, b) => a.r - b.r);
+  $("cdHand").innerHTML = `<div class="cdLabel">あなたの手札（${mine.length}まい）${om.fin.includes(me) ? " 🏁" + (om.fin.indexOf(me) + 1) + "位！" : ""}</div><div class="cdRow handRow">${pawHolders()}${mine.map((c) => cardHtml(c, { cls: om.last === c ? "new" : "" })).join("")}${pawHolders()}</div>`;
+  $("cdInfo").innerHTML = tgt >= 0 ? `👉 <b>${nm(tgt)}</b> のカードを1まいえらんで引こう！` : om.over ? "" : om.turn >= 0 ? `${nm(om.turn)} の番…` : "";
+  $("cdTop").querySelectorAll(".card.pickable").forEach((el) => el.onclick = () => {
+    if (om.turn !== me) return;
+    if (om.remote) { sendTo(ct.hostId, { t: "ctAct", tid: ct.tid, k: +el.dataset.k, fromId: net.myId }); el.classList.remove("pickable"); }
+    else omTake(me, tgt, +el.dataset.k);
+  });
+  cdButtons(om.over && !om.remote ? [["もう1回", () => (om.net ? ctStartAgain() : startOM())]] : []);
+  if (om.net && !om.remote) ctBroadcast();
 }
+function ctStartAgain() { if (ct.on && ct.host) { startOM(true); ctSendAll({ t: "ctStart", g: "om" }); } }
 function omTake(cur, tgt, k) {
   const card = om.h[tgt].splice(k, 1)[0]; if (!card) return;
   play("place");
   const same = card.j ? null : om.h[cur].find((c) => !c.j && c.r === card.r);
-  if (same) { om.h[cur] = om.h[cur].filter((c) => c !== same); om.msg = `${om.names[cur]} が ${om.names[tgt]} から引いて、${RANKS[card.r]} のペアをすてた！`; om.last = null; }
-  else { om.h[cur].push(card); om.last = cur === 0 ? card : null; om.msg = cur === 0 ? (card.j ? "😱 ジョーカーを引いちゃった！" : `${om.names[tgt]} から ${RANKS[card.r]} を引いた`) : tgt === 0 && card.j ? `😆 ${om.names[cur]} がジョーカーを引いた！` : `${om.names[cur]} が ${om.names[tgt]} から1まい引いた`; }
-  if (cur === 0) om.h[0].sort((a, b) => a.r - b.r); else shuffleArr(om.h[cur]);
+  const nm = (i) => om.names[i];
+  if (same) { om.h[cur] = om.h[cur].filter((c) => c !== same); om.msg = `${nm(cur)} が ${nm(tgt)} から引いて、${RANKS[card.r]} のペアをすてた！`; om.last = null; }
+  else { om.h[cur].push(card); om.last = cur === 0 ? card : null; om.msg = card.j && !omIsCpu(cur) && cur === 0 && !om.net ? "😱 ジョーカーを引いちゃった！" : `${nm(cur)} が ${nm(tgt)} から1まい引いた`; }
+  shuffleArr(om.h[cur]);
   for (const i of [tgt, cur]) if (!om.h[i].length && !om.fin.includes(i)) { om.fin.push(i); if (i === 0) play("clear"); }
   if (omActive() <= 1) { omEnd(); return; }
   om.turn = omNext(cur);
   omDraw(); omStep();
 }
 function omStep() {
-  if (om.over) return;
+  if (om.over || om.remote) return;
   if (omActive() <= 1) { omEnd(); return; }
   if (!om.h[om.turn].length) om.turn = omNext(om.turn);
-  if (om.turn === 0) { omDraw(); return; }
-  cdLater(() => { const t = omNext(om.turn); omTake(om.turn, t, Math.floor(Math.random() * om.h[t].length)); }, om.fin.includes(0) ? 350 : 900);
+  if (!omIsCpu(om.turn)) { omDraw(); return; } // 人の番：クリック（ネットの人は ctAct）を待つ
+  const humansLeft = om.h.some((h, i) => h.length && !omIsCpu(i));
+  cdLater(() => { if (om.over) return; const t = omNext(om.turn); if (t >= 0) omTake(om.turn, t, Math.floor(Math.random() * om.h[t].length)); }, humansLeft ? 900 : 350);
 }
 function omEnd() {
   om.over = true;
   const loser = om.h.findIndex((h) => h.length);
-  const place = loser === 0 ? 4 : om.fin.indexOf(0) + 1;
-  const prize = [0, 60, 30, 10, 0][place];
-  om.msg = place === 4 ? "😱 ジョーカーが最後までのこった… あなたの負け！" : cardWin(`🏁 あなたは ${place}位！${loser >= 0 ? `（ババは ${om.names[loser]}）` : ""}`, prize);
-  if (place === 4) play("hmm");
+  const prizeOf = (i) => [0, 60, 30, 10, 0][i === loser ? 4 : om.fin.indexOf(i) + 1];
+  const placeOf = (i) => (i === loser ? 4 : om.fin.indexOf(i) + 1);
+  const textFor = (i) => placeOf(i) === 4 ? "😱 ジョーカーが最後までのこった… あなたの負け！" : `🏁 あなたは ${placeOf(i)}位！${loser >= 0 ? `（ババは ${om.names[loser]}）` : ""}`;
+  om.msgs = {};
+  if (om.net) ct.seats.forEach((s, i) => { if (!s.cpu && s.id !== net.myId) { om.msgs[i] = textFor(i) + (prizeOf(i) ? `<br>コイン +${prizeOf(i)}` : ""); if (prizeOf(i)) ctSend(s, { t: "got", v: prizeOf(i), why: "🃏 ババ抜きのごほうび" }); } });
+  om.msg = placeOf(0) === 4 ? textFor(0) : cardWin(textFor(0), prizeOf(0));
+  if (placeOf(0) === 4) play("hmm");
   om.turn = -1; omDraw();
 }
 
-// ---- 神経衰弱（同じ数字のカードを2まいめくる） ----
-const cm = { cards: [], open: [], taken: [], turn: 0, score: [0, 0], mode: "cpu", lv: 1, mem: new Map(), over: false, msg: "" };
+// ---- 神経衰弱（CPU ／ この画面で2人 ／ ネットで2人） ----
+const cm = { cards: [], open: [], taken: [], turn: 0, score: [0, 0], mode: "cpu", lv: 1, mem: new Map(), over: false, msg: "", remote: false };
 function startCM(m, lv) {
-  openCards("cm", "🃏 神経衰弱");
+  openCards("cm", m === "net" ? "🃏 神経衰弱（ネット）" : "🃏 神経衰弱");
   const ranks = shuffleArr([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]).slice(0, 10);
   const cards = []; for (const r of ranks) { const s = shuffleArr([0, 1, 2, 3]); cards.push({ r, s: s[0] }, { r, s: s[1] }); }
-  Object.assign(cm, { cards: shuffleArr(cards), open: [], taken: Array(20).fill(-1), turn: 0, score: [0, 0], mode: m, lv, mem: new Map(), over: false, msg: m === "cpu" ? "同じ数字を2まいそろえよう！ そろったらもう1回めくれる" : "1Pからスタート！" });
+  Object.assign(cm, { cards: shuffleArr(cards), open: [], taken: Array(20).fill(-1), turn: 0, score: [0, 0], mode: m, lv, mem: new Map(), over: false, remote: false, msgs: null, msg: m === "cpu" ? "同じ数字を2まいそろえよう！ そろったらもう1回めくれる" : `${m === "net" ? ct.seats[0].name : "1P"} からスタート！` });
   cmDraw();
 }
-function cmNames() { return cm.mode === "cpu" ? ["あなた", "CPU"] : ["1P", "2P"]; }
+function cmNames() { return cm.mode === "cpu" ? ["あなた", "CPU"] : cm.mode === "net" ? (cm.remote ? cm.netNames || ["?", "?"] : ct.seats.map((s) => s.name)) : ["1P", "2P"]; }
+function cmMySeat() { return cm.mode === "net" ? (cm.remote ? ct.mySeat : 0) : 0; }
 function cmDraw() {
-  const N = cmNames();
-  $("cdTop").innerHTML = `<div class="cmScore"><span class="${cm.turn === 0 ? "on" : ""}">${N[0]}：${cm.score[0]}ペア</span><span class="${cm.turn === 1 ? "on" : ""}">${N[1]}：${cm.score[1]}ペア</span></div>`;
-  $("cdMid").innerHTML = `<div class="cmGrid">${cm.cards.map((c, i) => cm.taken[i] >= 0 ? `<div class="card gone"></div>` : cm.open.includes(i) ? cardHtml(c) : cardHtml(c, { back: true, cls: "pickable", data: ` data-i="${i}"` })).join("")}</div>`;
+  const N = cmNames(), me = cmMySeat();
+  const label = (i) => (cm.mode === "net" && i === me ? `あなた（${N[i]}）` : N[i]);
+  $("cdTop").innerHTML = `<div class="cmScore"><span class="${cm.turn === 0 ? "on" : ""}">${label(0)}：${cm.score[0]}ペア</span><span class="${cm.turn === 1 ? "on" : ""}">${label(1)}：${cm.score[1]}ペア</span></div>`;
+  $("cdMid").innerHTML = `<div class="cmGrid">${cm.cards.map((c, i) => cm.taken[i] >= 0 ? `<div class="card gone"></div>` : cm.open.includes(i) && c ? cardHtml(c) : cardHtml(c, { back: true, cls: "pickable", data: ` data-i="${i}"` })).join("")}</div>`;
   $("cdHand").innerHTML = `<div class="cdMsg">${cm.msg}</div>`;
-  $("cdInfo").innerHTML = cm.over ? "" : `👉 ${N[cm.turn]} の番`;
-  $("cdMid").querySelectorAll(".card.pickable").forEach((el) => el.onclick = () => { if (cm.mode === "two" || cm.turn === 0) cmFlip(+el.dataset.i); });
-  cdButtons(cm.over ? [["もう1回", () => startCM(cm.mode, cm.lv)]] : []);
+  $("cdInfo").innerHTML = cm.over ? "" : cm.mode === "net" ? (cm.turn === me ? "👉 あなたの番！" : `${N[cm.turn]} の番…`) : `👉 ${N[cm.turn]} の番`;
+  $("cdMid").querySelectorAll(".card.pickable").forEach((el) => el.onclick = () => {
+    const i = +el.dataset.i;
+    if (cm.mode === "net") { if (cm.turn !== me) return; if (cm.remote) sendTo(ct.hostId, { t: "ctAct", tid: ct.tid, i, fromId: net.myId }); else cmFlip(i); return; }
+    if (cm.mode === "two" || cm.turn === 0) cmFlip(i);
+  });
+  cdButtons(cm.over && !cm.remote ? [["もう1回", () => { if (cm.mode === "net") { if (ct.on && ct.host) { startCM("net", 1); ctSendAll({ t: "ctStart", g: "cm" }); } } else startCM(cm.mode, cm.lv); }]] : []);
+  if (cm.mode === "net" && !cm.remote) ctBroadcast();
 }
 function cmSee(i) { if (Math.random() < [0.15, 0.4, 0.75][cm.lv]) cm.mem.set(i, cm.cards[i].r); }
 function cmFlip(i) {
-  if (cd.busy || cm.over || cm.open.length >= 2 || cm.open.includes(i) || cm.taken[i] >= 0) return;
+  if (cd.busy || cm.over || cm.open.length >= 2 || cm.open.includes(i) || !(cm.taken[i] < 0) || !cm.cards[i]) return;
   cm.open.push(i); cmSee(i); play("place"); cmDraw();
   if (cm.open.length < 2) { if (cm.mode === "cpu" && cm.turn === 1) cdLater(cmCpu, 700); return; }
   const [a, b] = cm.open; cd.busy = true;
+  const N = cmNames();
   if (cm.cards[a].r === cm.cards[b].r) {
     cdLater(() => {
       cm.taken[a] = cm.taken[b] = cm.turn; cm.score[cm.turn]++; cm.open = []; cd.busy = false; cm.mem.delete(a); cm.mem.delete(b);
-      cm.msg = `✨ ${cmNames()[cm.turn]} が ${RANKS[cm.cards[a].r]} をそろえた！ もう1回！`; play("coin");
+      cm.msg = `✨ ${N[cm.turn]} が ${RANKS[cm.cards[a].r]} をそろえた！ もう1回！`; play("coin");
       if (cm.taken.every((t) => t >= 0)) { cmEnd(); return; }
       cmDraw(); if (cm.mode === "cpu" && cm.turn === 1) cdLater(cmCpu, 700);
     }, 650);
   } else {
     cdLater(() => {
-      cm.open = []; cd.busy = false; cm.turn = 1 - cm.turn; cm.msg = `ざんねん… ${cmNames()[cm.turn]} の番`; cmDraw();
+      cm.open = []; cd.busy = false; cm.turn = 1 - cm.turn; cm.msg = `ざんねん… ${N[cm.turn]} の番`; cmDraw();
       if (cm.mode === "cpu" && cm.turn === 1) cdLater(cmCpu, 800);
     }, 1100);
   }
@@ -7732,6 +7888,12 @@ function cmEnd() {
   cm.over = true;
   const [a, b] = cm.score, N = cmNames();
   if (cm.mode === "two") cm.msg = a === b ? `ひきわけ！（${a} 対 ${b}）` : `🎉 ${a > b ? N[0] : N[1]} の勝ち！（${Math.max(a, b)} 対 ${Math.min(a, b)}）`;
+  else if (cm.mode === "net") {
+    const guest = ct.seats[1];
+    cm.msgs = { 1: b > a ? "🎉 あなたの勝ち！<br>コイン +40" : a === b ? `ひきわけ！（${a} 対 ${b}）` : `😵 ${N[0]} の勝ち…（${a} 対 ${b}）` };
+    if (b > a) ctSend(guest, { t: "got", v: 40, why: "🃏 神経衰弱のごほうび" });
+    cm.msg = a > b ? cardWin(`🎉 あなたの勝ち！（${a} 対 ${b}）`, 40) : a === b ? `ひきわけ！（${a} 対 ${b}）` : `😵 ${N[1]} の勝ち…（${a} 対 ${b}）`;
+  }
   else if (a > b) cm.msg = cardWin(`🎉 あなたの勝ち！（${a} 対 ${b}）`, [30, 50, 90][cm.lv]);
   else if (a === b) cm.msg = `ひきわけ！（${a} 対 ${b}）`;
   else { cm.msg = `😵 CPU の勝ち…（${a} 対 ${b}）`; play("hmm"); }
@@ -7739,15 +7901,310 @@ function cmEnd() {
 }
 // トランプのメニュー（ボードゲームカフェの中）
 function openTrump() {
-  openPanel("🃏 トランプ", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい`, [
+  const rows = [
     { name: "🃏 ババ抜き", desc: "ぬい3人と勝負！ 最後にジョーカーを持っていたら負け（1位60・2位30・3位10コイン）", btn: "あそぶ", fn: () => { startOM(); return false; } },
     { name: "🃏 神経衰弱（CPU よわい）", desc: "同じ数字を2まいそろえる。勝つと30コイン", btn: "あそぶ", fn: () => { startCM("cpu", 0); return false; } },
     { name: "🃏 神経衰弱（CPU ふつう）", desc: "勝つと50コイン", btn: "あそぶ", fn: () => { startCM("cpu", 1); return false; } },
     { name: "🃏 神経衰弱（CPU つよい）", desc: "記おく力がすごい！ 勝つと90コイン", btn: "あそぶ", fn: () => { startCM("cpu", 2); return false; } },
     { name: "👫 神経衰弱（この画面で2人）", desc: "友だちとこうたいに", btn: "あそぶ", fn: () => { startCM("two", 0); return false; } },
     { name: "🃏 ブラックジャック", desc: "コインをかけて、21に近いほうが勝ち！ 勝つと2倍", btn: "あそぶ", fn: () => { startBJ(); return false; } },
-  ], openTrump);
+    { html: `<b>🌐 ネット対戦（部屋の友だちと）</b><br><span class="small">${net.online ? "スマホとパソコンなど、ちがう機械どうしでも遊べるよ" : "部屋に入っていると、ほかの機械の友だちと遊べるよ"}</span>` },
+    { name: "🌐 ババ抜き（2〜4人）", desc: "足りないところはぬいが入る。順位でコインがもらえる", btn: net.online ? "人をさそう" : "部屋に入ってね", disabled: !net.online, fn: () => { openCardInvite("om"); return false; } },
+    { name: "🌐 ブラックジャック（2〜5人）", desc: "みんなでディーラーと勝負！ 勝つとかけ金が2倍", btn: net.online ? "人をさそう" : "部屋に入ってね", disabled: !net.online, fn: () => { openCardInvite("bj"); return false; } },
+    { name: "🌐 神経衰弱（2人）", desc: "勝つと40コイン", btn: net.online ? "人をさそう" : "部屋に入ってね", disabled: !net.online, fn: () => { openCardInvite("cm"); return false; } },
+  ];
+  openPanel("🃏 トランプ", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい`, rows, openTrump);
 }
+
+// =====================================================================
+//  16. おにごっこ（部屋のみんなで）・スタンプラリー
+// =====================================================================
+TITLES.push("スタンプマスター", "にげ足名人"); // 12, 13
+// ---- おにごっこ：おにがタッチすると、おにが交代。3分たったときのおに以外の勝ち ----
+const tag = { on: false, oni: null, left: 0, cd: 0, sendT: 0, hitT: 0, wins: 0 };
+function tagName(id) { return id === net.myId ? myName : (net.players[id] && net.players[id].name) || "だれか"; }
+function startTag() {
+  if (!net.online || roomCount() < 2) { toast("おにごっこは、部屋に2人以上いるときにできるよ", 2400); return; }
+  if (!net.isHost) { netSend({ t: "tagReq", fromId: net.myId }); toast("🏃 ホストに「おにごっこしよう！」と送った", 2000); return; }
+  if (tag.on) { toast("もうおにごっこ中だよ！", 1500); return; }
+  const ids = [net.myId, ...Object.keys(net.players).filter((id) => net.players[id].state)];
+  Object.assign(tag, { on: true, oni: pick(ids), left: 180, cd: 3, sendT: 0 });
+  const text = `🏃 おにごっこスタート！ おには <b>${tagName(tag.oni)}</b>！（3分）<br><span class="small">おにはだれかにタッチ！ 3分たったときにおにじゃなければ勝ち</span>`;
+  netSend({ t: "tag", on: 1, oni: tag.oni, left: tag.left, start: 1 }); onTagStart(text);
+}
+function onTagStart(text) { toast(text, 3500); play("clear"); }
+function tagUpdate(dt) {
+  if (!tag.on) return;
+  tag.left -= dt; if (tag.cd > 0) tag.cd -= dt;
+  if (net.isHost) {
+    tag.sendT -= dt;
+    if (tag.sendT <= 0) { tag.sendT = 1; netSend({ t: "tag", on: 1, oni: tag.oni, left: Math.round(tag.left), cd: tag.cd > 0 ? 1 : 0 }); }
+    if (!net.players[tag.oni] && tag.oni !== net.myId) { const ids = [net.myId, ...Object.keys(net.players)]; tag.oni = pick(ids); tag.cd = 3; netSend({ t: "tag", on: 1, oni: tag.oni, left: Math.round(tag.left), cd: 1 }); toast(`👹 おにが出ていったので、新しいおには ${tagName(tag.oni)}！`, 2000); }
+    if (tag.left <= 0) { tag.on = false; netSend({ t: "tagEnd", oni: tag.oni }); onTagEnd(tag.oni); return; }
+  }
+  // 自分がおに：近くの人にタッチ
+  if (tag.oni === net.myId && tag.cd <= 0 && me.ko <= 0) {
+    tag.hitT -= dt; if (tag.hitT > 0) return;
+    for (const id in net.players) {
+      const r = net.players[id]; if (!r.state || !r.pos) continue;
+      if (Math.hypot(r.pos.x - me.pos.x, r.pos.z - me.pos.z) < 1.4 && Math.abs(r.pos.y - me.pos.y) < 1.6) {
+        tag.hitT = 0.5;
+        if (net.isHost) applyTag(net.myId, id); else netSend({ t: "tagHit", target: id, fromId: net.myId });
+        break;
+      }
+    }
+  }
+}
+function applyTag(from, target) {
+  if (!tag.on || from !== tag.oni || tag.cd > 0 || target === from) return;
+  if (target !== net.myId && !net.players[target]) return;
+  tag.oni = target; tag.cd = 3;
+  netSend({ t: "tag", on: 1, oni: tag.oni, left: Math.round(tag.left), cd: 1, touch: 1, by: from });
+  onTagTouch(from, target);
+}
+function onTagTouch(from, target) {
+  play("punch");
+  if (target === net.myId) toast(`👹 ${tagName(from)} にタッチされた！ <b>あなたがおに！</b><br><span class="small">3秒まってから追いかけよう</span>`, 2500);
+  else toast(`👹 ${tagName(from)} が ${tagName(target)} にタッチ！ おには ${tagName(target)}`, 1800);
+}
+function onTagEnd(oni) {
+  tag.on = false;
+  if (oni === net.myId) { play("hmm"); toast("⏰ おにごっこ終了！ 最後のおにはあなただった…", 3000); }
+  else { tag.wins++; gotCoins(30, "⏰ おにごっこ終了！ にげきった！"); if (tag.wins >= 3) giveTitle(13); }
+}
+function onNetTag(d, conn) {
+  if (d.t === "tagReq") { if (net.isHost) startTag(); return true; }
+  if (d.t === "tagHit") { if (net.isHost) applyTag(typeof d.fromId === "string" ? d.fromId : conn.peer, String(d.target)); return true; }
+  if (d.t === "tag") {
+    const wasOn = tag.on, oldOni = tag.oni;
+    Object.assign(tag, { on: true, oni: String(d.oni), left: Number(d.left) || 0 }); if (d.cd) tag.cd = Math.max(tag.cd, 2.5);
+    if (d.start && !wasOn) onTagStart(`🏃 おにごっこスタート！ おには <b>${tagName(tag.oni)}</b>！（3分）`);
+    else if (d.touch && oldOni !== tag.oni) onTagTouch(String(d.by), tag.oni);
+    return true;
+  }
+  if (d.t === "tagEnd") { if (tag.on) onTagEnd(String(d.oni)); return true; }
+  return false;
+}
+function tagHud() {
+  if (!tag.on) return "";
+  const m = Math.max(0, Math.ceil(tag.left)), t = `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
+  return tag.oni === net.myId ? `<br><span style="color:#ff6a6a">👹 あなたがおに！ だれかにタッチ！（のこり ${t}）${tag.cd > 0 ? "　…3秒まって" : ""}</span>` : `<br><span style="color:#ffb0b0">🏃 おにごっこ中：おには ${tagName(tag.oni)}（のこり ${t}）</span>`;
+}
+
+// ---- スタンプラリー：町の名所9か所でスタンプを集める ----
+const STAMPS = [
+  { id: "fountain", name: "ふにゃふにゃ広場の噴水", e: "⛲", x: 0, z: -3.6 },
+  { id: "tower", name: "展望タワーのてっぺん", e: "🗼", x: -57, z: -57, y: 30.2 },
+  { id: "pier", name: "南の桟橋", e: "⚓", x: 1.2, z: 86 },
+  { id: "field", name: "サッカー場", e: "⚽", x: -57, z: 9 },
+  { id: "resort", name: "リゾート", e: "🏖️", x: 60, z: 52 },
+  { id: "skate", name: "スケートパーク", e: "🛹", x: 50, z: -57 },
+  { id: "parking", name: "ガソリンスタンド", e: "⛽", x: -53, z: 50 },
+  { id: "park", name: "遊園地", e: "🎡", x: 4, z: 50 },
+  { id: "skull", name: "どくろ島", e: "🏴‍☠️", x: 146, z: -26 },
+];
+function buildStamps() {
+  for (const S of STAMPS) {
+    const y = S.y != null ? S.y : 0;
+    addBox(S.x + 0.9, y, S.z, 0.18, 1.3, 0.18, 0xd84a4a, { collide: false });
+    const box = mesh(new THREE.BoxGeometry(0.5, 0.4, 0.4), 0xd84a4a); box.position.set(S.x + 0.9, y + 1.45, S.z);
+    const l = makeLabel(`📮 ${S.e}`, "#fff", 0.9); l.position.set(S.x + 0.9, y + 2.2, S.z); world.add(l);
+    addSpot(S.x, S.z, () => (townSave.stamps || []).includes(S.id) ? `${S.e} スタンプはおしたよ（${(townSave.stamps || []).length}/${STAMPS.length}）` : `[E] スタンプをおす（${S.name}）`, () => pressStamp(S), 1.8, y);
+  }
+}
+function pressStamp(S) {
+  townSave.stamps = townSave.stamps || [];
+  if (townSave.stamps.includes(S.id)) { toast(`${S.e} ここのスタンプはもうおしたよ！（${townSave.stamps.length}/${STAMPS.length}）`, 1800); return; }
+  townSave.stamps.push(S.id); saveTown(true);
+  play("item"); puff(me.pos.x, me.pos.y + 1, me.pos.z, 10, 0.8);
+  const n = townSave.stamps.length;
+  if (n >= STAMPS.length) { gotCoins(300, `${S.e} スタンプ ${n}/${STAMPS.length}！ 🎉 スタンプラリー コンプリート！`); giveTitle(12); }
+  else gotCoins(10, `${S.e} ${S.name}のスタンプをおした！（${n}/${STAMPS.length}）`);
+}
+function stampCard() {
+  const got = townSave.stamps || [];
+  return `<div style="width:100%"><b>📮 スタンプラリー（${got.length}/${STAMPS.length}）</b>　<span class="small">ぜんぶ集めると300コイン＋称号</span><br>${STAMPS.map((S) => got.includes(S.id) ? `<span class="gcBadge">${S.e} ${S.name}</span>` : `<span class="gcBadge off">❔ ${S.name}</span>`).join("")}</div>`;
+}
+
+// =====================================================================
+//  17. 一人称のときに見える「ぬいの手」・ミニゲームの肉球・ブラックジャックのネット対戦
+// =====================================================================
+scene.add(camera);
+const fpv = { g: null, R: null, L: null, mat: null, color: "", heldKind: null, heldG: null, wheel: null, wheelA: 0, t: 0, punchA: 0 };
+function fpMat(c) { return new THREE.MeshToonMaterial({ color: c, gradientMap: TOON_GRADIENT, depthTest: false, depthWrite: false }); }
+function fpArm(m, pad) {
+  const a = new THREE.Group();
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.085, 0.46, 12), m); arm.rotation.x = Math.PI / 2; arm.position.z = 0.25; a.add(arm);
+  const paw = new THREE.Mesh(new THREE.SphereGeometry(0.105, 14, 10), m); paw.scale.set(1, 0.82, 1.05); a.add(paw);
+  // 肉球（てのひらがわ）
+  const big = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), pad); big.position.set(0, -0.07, -0.03); big.scale.set(1, 0.45, 1); a.add(big);
+  for (const sx of [-0.05, 0, 0.05]) { const toe = new THREE.Mesh(new THREE.SphereGeometry(0.019, 8, 6), pad); toe.position.set(sx, -0.065, -0.085); toe.scale.set(1, 0.5, 1); a.add(toe); }
+  a.traverse((o) => { o.renderOrder = 20; o.frustumCulled = false; });
+  return a;
+}
+function fpBuild() {
+  if (fpv.g) camera.remove(fpv.g);
+  const color = myLook.limb || "#6bd66b";
+  fpv.mat = fpMat(color); fpv.color = color;
+  const pad = fpMat(0xffb0c8);
+  fpv.g = new THREE.Group(); camera.add(fpv.g);
+  fpv.R = fpArm(fpv.mat, pad); fpv.L = fpArm(fpv.mat, pad);
+  fpv.g.add(fpv.R, fpv.L);
+  fpv.wheel = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.025, 8, 28), fpMat(0x2a2a3a)); fpv.wheel.renderOrder = 19;
+  const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.03, 0.02), fpMat(0x3a3a4a)); spoke.renderOrder = 19; fpv.wheel.add(spoke);
+  fpv.wheel.position.set(0, -0.33, -0.72); fpv.wheel.rotation.x = -0.35; fpv.g.add(fpv.wheel);
+  fpv.heldKind = null;
+}
+// 手に持っているもの（武器など）
+function fpHeldMesh(k) {
+  const g = new THREE.Group(), M = (c) => fpMat(c);
+  const box = (w, h, d, c, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M(c)); m.position.set(x, y, z); g.add(m); return m; };
+  if (k === "hammer") { box(0.035, 0.035, 0.42, 0xd8a050, 0, 0.02, -0.16); box(0.16, 0.13, 0.13, 0xff5ca8, 0, 0.02, -0.4); }
+  else if (k === "katana") { box(0.03, 0.05, 0.16, 0x3a2a2a, 0, 0, -0.02); box(0.1, 0.012, 0.06, 0xd8a83a, 0, 0, -0.11); box(0.018, 0.045, 0.62, 0xe0e8f0, 0, 0, -0.45); }
+  else if (k === "sword") { box(0.04, 0.06, 0.18, 0x5a3a1a, 0, 0, -0.02); box(0.22, 0.03, 0.06, 0xd8a83a, 0, 0, -0.12); box(0.03, 0.12, 0.75, 0xd8e0ea, 0, 0, -0.52); }
+  else if (k === "gun") { box(0.07, 0.09, 0.26, 0x3a8ad8, 0, 0.05, -0.12); box(0.05, 0.12, 0.06, 0x23366a, 0, -0.03, 0); }
+  else if (k === "mgun") { box(0.08, 0.1, 0.46, 0x2a2a32, 0, 0.05, -0.2); box(0.04, 0.14, 0.06, 0x1a1a22, 0, -0.06, -0.05); box(0.03, 0.03, 0.2, 0x555560, 0, 0.06, -0.5); }
+  else if (k === "shotgun") { box(0.08, 0.08, 0.6, 0x7a4a2a, 0, 0.04, -0.25); box(0.03, 0.03, 0.3, 0x333338, -0.02, 0.09, -0.48); box(0.03, 0.03, 0.3, 0x333338, 0.02, 0.09, -0.48); }
+  else if (k === "bazooka") { const t = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.9, 14), M(0x4a7a3a)); t.rotation.x = Math.PI / 2; t.position.set(0, 0.12, -0.25); g.add(t); box(0.05, 0.12, 0.06, 0x2a3a2a, 0, -0.02, -0.1); }
+  else if (k === "peel") { const t = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.03, 8, 14, Math.PI), M(0xffe03a)); t.rotation.x = Math.PI / 2; t.position.set(0, 0.04, -0.08); g.add(t); }
+  else if (k === "balloon") { const b = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), M(0xff5c7a)); b.position.set(0, 0.55, -0.05); g.add(b); box(0.005, 0.45, 0.005, 0xffffff, 0, 0.25, -0.05); }
+  else return null;
+  g.traverse((o) => { o.renderOrder = 21; o.frustumCulled = false; });
+  return g;
+}
+function fpUpdate(dt) {
+  const show = firstPerson && !!mode && !paintMode && me && me.ko <= 0 && !me.wash && !me.bowl && !me.ufo;
+  if (!show) { if (fpv.g) fpv.g.visible = false; return; }
+  if (!fpv.g || fpv.color !== (myLook.limb || "#6bd66b")) fpBuild();
+  fpv.g.visible = true;
+  fpv.t += dt;
+  const t = fpv.t, R = fpv.R, L = fpv.L;
+  // 持っているもの
+  const held = mode === "town" && !me.car ? me.held || "hand" : "hand";
+  if (held !== fpv.heldKind) { if (fpv.heldG) R.remove(fpv.heldG); fpv.heldG = fpHeldMesh(held); if (fpv.heldG) R.add(fpv.heldG); fpv.heldKind = held; }
+  const isGun = GUNS.includes(held);
+  // 基本の位置
+  const bob = me.moving && me.onGround !== false ? Math.sin(t * 10) * 0.022 : Math.sin(t * 2) * 0.006;
+  let rx = 0.23, ry = -0.19 + bob, rz = -0.6, lx = -0.23, ly = -0.2 - bob, lz = -0.6, rrx = 0.18, rry = 0.18, rrz = 0.15, lrx = 0.18, lry = -0.18, lrz = -0.15;
+  fpv.wheel.visible = !!me.car;
+  if (me.car) {
+    // 車：両手でハンドル
+    const want = keys.KeyA || keys.ArrowLeft ? 0.7 : keys.KeyD || keys.ArrowRight ? -0.7 : 0;
+    fpv.wheelA += (want - fpv.wheelA) * Math.min(1, dt * 6); fpv.wheel.rotation.z = fpv.wheelA;
+    const c = Math.cos(fpv.wheelA), s = Math.sin(fpv.wheelA);
+    rx = 0.2 * c; ry = -0.33 + 0.2 * s; rz = -0.7; lx = -0.2 * c; ly = -0.33 - 0.2 * s; lz = -0.7;
+    rry = 0.22; lry = -0.22; rrx = lrx = 0.05; rrz = lrz = 0;
+  } else if (me.limp) { ry -= 0.2; ly -= 0.2; rrx = lrx = 0.6; }
+  else if (me.spin > 0) { const a = t * 22; rx = Math.cos(a) * 0.32; rz = -0.5 + Math.sin(a) * 0.12; lx = -Math.cos(a) * 0.32; lz = -0.5 - Math.sin(a) * 0.12; ry = ly = -0.22; }
+  else if (me.grab) { rx = 0.13; lx = -0.13; rz = lz = -0.68; ry = ly = -0.2; rry = 0.5; lry = -0.5; }
+  else if (me.emote === "wave") { rx = 0.3; ry = 0.02; rz = -0.6; rrz = Math.sin(t * 12) * 0.5; rrx = -0.9; }
+  else if (me.emote === "dance") { const a = Math.sin(t * 8); ry = -0.05 + a * 0.12; ly = -0.05 - a * 0.12; rrx = lrx = -0.8; }
+  else if (isGun) {
+    // 銃：右手で持って、左手でささえる
+    rx = held === "bazooka" ? 0.22 : 0.2; ry = held === "bazooka" ? -0.2 : -0.25; rz = -0.55; lx = 0.07; ly = -0.31; lz = -0.68; lry = 0.4; lrz = 0; lrx = 0; rry = 0.04; rrx = -0.04; rrz = 0;
+    if (me.punch > 0) { rz += 0.05; ry += 0.015; }
+  }
+  if (!me.onGround && !me.car) { ry += 0.05; ly += 0.05; }
+  // パンチ・ふる
+  if (!isGun && !me.car && me.punch > 0 && me.swing > 0) {
+    const k = clamp(me.punch / me.swing, 0, 1), th = Math.sin((1 - k) * Math.PI);
+    if (held === "hand") { rz -= 0.3 * th; rx -= 0.12 * th; ry += 0.06 * th; }
+    else { rrx = -1.1 + 1.6 * (1 - k); rrz = -0.4 * th; rz -= 0.15 * th; ry += 0.1 * th; }
+  }
+  const lerp = Math.min(1, dt * 18);
+  R.position.x += (rx - R.position.x) * lerp; R.position.y += (ry - R.position.y) * lerp; R.position.z += (rz - R.position.z) * lerp;
+  L.position.x += (lx - L.position.x) * lerp; L.position.y += (ly - L.position.y) * lerp; L.position.z += (lz - L.position.z) * lerp;
+  R.rotation.x += (rrx - R.rotation.x) * lerp; R.rotation.y += (rry - R.rotation.y) * lerp; R.rotation.z += (rrz - R.rotation.z) * lerp;
+  L.rotation.x += (lrx - L.rotation.x) * lerp; L.rotation.y += (lry - L.rotation.y) * lerp; L.rotation.z += (lrz - L.rotation.z) * lerp;
+}
+
+// ---- ミニゲームで「ぬいの手」が動く（カードを引く・石を置く・めくるときに肉球が出る） ----
+function pawColor() { return myLook.limb || "#6bd66b"; }
+function pawFx(el) {
+  if (!el || !el.getBoundingClientRect) return;
+  const r = el.getBoundingClientRect();
+  const p = document.createElement("div"); p.className = "pawFx";
+  p.style.setProperty("--pc", pawColor());
+  p.style.left = (r.left + r.width / 2) + "px"; p.style.top = (r.top + r.height / 2) + "px";
+  p.innerHTML = "<i></i><i></i><i></i><b></b>";
+  document.body.appendChild(p); setTimeout(() => p.remove(), 650);
+}
+addEventListener("pointerdown", (e) => {
+  const t = e.target && e.target.closest && e.target.closest("#rvBoard .rvC.ok, #cardP .card.pickable, #cdBtns button");
+  if (t) pawFx(t);
+}, true);
+// 手札をもつ肉球（トランプのあなたの手札の両わき）
+function pawHolders() { return `<div class="pawHold" style="--pc:${pawColor()}"><i></i><i></i><i></i><b></b></div>`; }
+
+// ---- ブラックジャックのネット対戦（2〜5人がディーラーと勝負。さそった人＝親がディーラーを動かす） ----
+const bjn = { seats: [], d: [], phase: "bet", deck: [], msg: "", remote: false, view: null };
+function bjnStart() {
+  bjn.seats = ct.seats.map((s) => ({ id: s.id, name: s.name, h: [], bet: 0, st: "bet", res: "" }));
+  Object.assign(bjn, { d: [], phase: "bet", msg: "みんな、かけるコインをえらんでね（ぜんいんえらぶと配られるよ）", remote: false });
+  openCards("bjn", "🃏 ブラックジャック（ネット）"); bjnDraw();
+}
+function bjnAct(seat, a, v) {
+  const S = bjn.seats[seat]; if (!S) return;
+  if (a === "bet" && bjn.phase === "bet" && S.st === "bet") { S.bet = clamp(v | 0, 10, 300); S.st = "ready"; bjn.msg = `${S.name} が ${S.bet}コインかけた`; }
+  else if (a === "sit" && bjn.phase === "bet" && S.st === "bet") { S.st = "out"; bjn.msg = `${S.name} は今回お休み`; }
+  else if (bjn.phase === "play" && S.st === "play") {
+    if (a === "hit") { S.h.push(bjn.deck.pop()); const v2 = bjVal(S.h); if (v2 > 21) S.st = "bust"; else if (v2 === 21) S.st = "stand"; bjn.msg = `${S.name} がもう1まい引いた${S.st === "bust" ? "…21をこえた！" : ""}`; }
+    else if (a === "stand") { S.st = "stand"; bjn.msg = `${S.name} はこれで勝負！`; }
+    else if (a === "double" && S.h.length === 2) { S.bet *= 2; S.h.push(bjn.deck.pop()); S.st = bjVal(S.h) > 21 ? "bust" : "stand"; bjn.msg = `${S.name} がダブル！`; }
+  }
+  play("place");
+  if (bjn.phase === "bet" && bjn.seats.every((x) => x.st === "ready" || x.st === "out")) { if (bjn.seats.some((x) => x.st === "ready")) bjnDeal(); }
+  else if (bjn.phase === "play" && bjn.seats.every((x) => x.st !== "play")) bjnDealer();
+  bjnDraw();
+}
+function bjnDeal() {
+  if (bjn.deck.length < 40) bjn.deck = newDeck().concat(newDeck(), newDeck());
+  bjn.d = [bjn.deck.pop(), bjn.deck.pop()];
+  for (const S of bjn.seats) { S.res = ""; if (S.st !== "ready") { S.h = []; S.st = "out"; continue; } S.h = [bjn.deck.pop(), bjn.deck.pop()]; S.st = bjVal(S.h) === 21 ? "stand" : "play"; }
+  bjn.phase = "play"; bjn.msg = "ヒットかスタンドをえらんでね（みんな同時に遊べるよ）";
+  if (bjn.seats.every((x) => x.st !== "play")) bjnDealer();
+}
+function bjnDealer() {
+  bjn.phase = "end";
+  while (bjVal(bjn.d) < 17) bjn.d.push(bjn.deck.pop());
+  const d = bjVal(bjn.d), dnat = d === 21 && bjn.d.length === 2;
+  bjn.seats.forEach((S, i) => {
+    if (S.st === "out") { S.res = "お休み"; return; }
+    const p = bjVal(S.h), natural = p === 21 && S.h.length === 2;
+    let pay = 0;
+    if (p > 21) S.res = "😵 バースト";
+    else if (natural && !dnat) { pay = Math.floor(S.bet * 2.5); S.res = "🎉 ブラックジャック！"; }
+    else if (d > 21 || p > d) { pay = S.bet * 2; S.res = "🎉 勝ち！"; }
+    else if (p === d) { pay = S.bet; S.res = "ひきわけ"; }
+    else S.res = "😵 負け";
+    S.pay = pay;
+    if (pay > 0) {
+      if (S.id === net.myId) { wallet += pay; saveWallet(); if (pay > S.bet) { missionAdd("cards", 1); play("clear"); } }
+      else ctSend(ct.seats[i], { t: "got", v: pay, why: `🃏 ブラックジャック：${S.res}` });
+    }
+  });
+  bjn.msg = `ディーラーは ${d > 21 ? "21をこえた！" : d}`;
+}
+function bjnDraw() {
+  const V = bjn.remote ? bjn.view : { seats: bjn.seats, d: bjn.phase === "end" ? bjn.d : bjn.d.length ? [bjn.d[0], null] : [], phase: bjn.phase, msg: bjn.msg };
+  if (!V) return;
+  const me2 = bjn.remote ? ct.mySeat : 0, mine = V.seats[me2] || { h: [], st: "out", bet: 0 };
+  const dv = V.phase === "end" ? ` （${bjVal(V.d.filter(Boolean))}）` : "";
+  $("cdTop").innerHTML = V.d.length ? `<div class="cdLabel">ディーラー${dv}</div><div class="cdRow">${V.d.map((c) => cardHtml(c, { back: !c })).join("")}</div>` : `<div class="cdRule">カードの合計を <b>21</b> に近づけよう！ ディーラーより近ければ勝ち（2倍）</div>`;
+  const others = V.seats.map((S, i) => ({ S, i })).filter(({ i }) => i !== me2);
+  $("cdMid").innerHTML = `<div class="bjnOthers">${others.map(({ S }) => `<div class="bjnSeat"><div class="cdLabel">${S.name}${S.bet ? `（${S.bet}）` : ""}　${S.h.length ? bjVal(S.h) : ""} ${bjnStText(S, V.phase)}</div><div class="cdRow mini2">${S.h.map((c) => cardHtml(c)).join("")}</div></div>`).join("")}</div><div class="cdMsg">${V.msg || ""}</div>`;
+  $("cdHand").innerHTML = `<div class="cdLabel">あなた${mine.bet ? `（かけ金 ${mine.bet}）` : ""}${mine.h.length ? `　合計 ${bjVal(mine.h)}` : ""} ${bjnStText(mine, V.phase)}</div><div class="cdRow handRow">${pawHolders()}${mine.h.map((c) => cardHtml(c)).join("")}${pawHolders()}</div>`;
+  $("cdInfo").innerHTML = `持っているコイン：${wallet}`;
+  const act = (a, v) => { if (bjn.remote) sendTo(ct.hostId, { t: "ctAct", tid: ct.tid, a, v, fromId: net.myId }); else bjnAct(0, a, v); };
+  let btns = [];
+  if (V.phase === "bet" && mine.st === "bet") btns = [10, 50, 100, 300].filter((v) => v <= wallet).map((v) => [`${v}かける`, () => { if (pay(v)) act("bet", v); }]).concat([["今回は休む", () => act("sit"), "sub"]]);
+  else if (V.phase === "play" && mine.st === "play") btns = [["ヒット", () => act("hit")], ["スタンド", () => act("stand"), "sub"], ...(mine.h.length === 2 && wallet >= mine.bet ? [["ダブル", () => { if (pay(mine.bet)) act("double"); }, "pink"]] : [])];
+  else if (V.phase === "end" && !bjn.remote) btns = [["もう1回", () => { for (const S of bjn.seats) { S.h = []; S.bet = 0; S.st = "bet"; S.res = ""; } bjn.d = []; bjn.phase = "bet"; bjn.msg = "みんな、かけるコインをえらんでね"; bjnDraw(); }]];
+  cdButtons(btns);
+  if (!bjn.remote) ctBroadcast();
+}
+function bjnStText(S, phase) { return phase === "end" ? (S.res || "") : S.st === "ready" ? "✅" : S.st === "bet" ? "（えらび中）" : S.st === "stand" ? "✋" : S.st === "bust" ? "💥" : S.st === "out" ? "（休み）" : ""; }
+function bjnView() { return { seats: bjn.seats.map((S) => ({ name: S.name, h: S.h, bet: S.bet, st: S.st, res: S.res })), d: bjn.phase === "end" ? bjn.d : bjn.d.length ? [bjn.d[0], null] : [], phase: bjn.phase, msg: bjn.msg }; }
 
 // 町モードで届いたメッセージ（onNet から呼ばれる）
 function onNetTown(d, conn) {
@@ -8143,6 +8600,7 @@ function loop() {
       sun.position.set(me.pos.x + 14, me.pos.y + 36, me.pos.z - 22); sun.target.position.copy(me.pos); // 影が手前（カメラがわ）に落ちるように
       updateHud();
     }
+    fpUpdate(dt);
     renderer.render(scene, camera);
   } catch (e) { console.error(e); }
   requestAnimationFrame(loop);
