@@ -195,6 +195,31 @@
   #chatQuick { width: 100%; display: flex; flex-wrap: wrap; gap: 5px; }
   #chatQuick button { font-size: 13px; padding: 5px 10px; background: #8ac8ff; }
   @media (max-height: 520px) { #chatLog { bottom: 120px; font-size: 12px; } }
+  /* トランプ */
+  #cardP { position: fixed; z-index: 12; inset: 0; background: radial-gradient(circle at 50% 40%, #2a8a4a, #145a2a); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 10px; box-sizing: border-box; gap: 6px; --cw: min(58px, 11vh, 12vw); overflow-y: auto; }
+  #cardP[hidden] { display: none; }
+  #cdHead { display: flex; gap: 16px; align-items: center; }
+  #cdHead button { font-size: 15px; padding: 7px 18px; }
+  #cdTop, #cdMid, #cdHand { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .cdRow { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; max-width: 96vw; }
+  .cdRow.mini .card { --cw: min(30px, 6vh, 7vw); margin-left: calc(var(--cw) * -0.45); } .cdRow.mini .card:first-child { margin-left: 0; }
+  .cdLabel { font-size: 14px; color: #fff6c0; }
+  .cdMsg, .cdRule { font-size: 16px; text-align: center; line-height: 1.6; background: rgba(0,0,0,.25); border-radius: 12px; padding: 6px 14px; }
+  .card { width: var(--cw); height: calc(var(--cw) * 1.4); background: #fff; color: #222; border-radius: calc(var(--cw) * .12); box-shadow: 0 3px 6px rgba(0,0,0,.4); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; font-size: calc(var(--cw) * .38); flex: none; animation: gcPop .2s; }
+  .card b { font-size: calc(var(--cw) * .36); } .card span { font-size: calc(var(--cw) * .42); }
+  .card.red { color: #d02a3a; }
+  .card.joker { background: linear-gradient(135deg, #fff6c0, #ffc0e0); } .card.joker small { font-size: calc(var(--cw) * .16); font-weight: bold; }
+  .card.back { background: repeating-linear-gradient(45deg, #c0306a 0 6px, #e05a8a 6px 12px); border: 3px solid #fff; box-sizing: border-box; }
+  .card.pickable { cursor: pointer; } .card.pickable:hover { transform: translateY(-6px); box-shadow: 0 0 0 3px #ffd84a; }
+  .card.new { box-shadow: 0 0 0 3px #ffd84a, 0 3px 6px rgba(0,0,0,.4); }
+  .card.gone { visibility: hidden; }
+  .omCpus { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .omCpu { background: rgba(0,0,0,.2); border-radius: 12px; padding: 6px 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .omCpu.on { box-shadow: 0 0 0 2px #fff8; } .omCpu.tgt { box-shadow: 0 0 0 3px #ffd84a; } .omCpu.tgt .cdRow.mini .card { --cw: min(42px, 9vh, 9vw); margin-left: 2px; }
+  .cmGrid { display: grid; grid-template-columns: repeat(5, var(--cw)); gap: 6px; --cw: min(60px, 13vh, 15vw); }
+  .cmScore { display: flex; gap: 20px; font-size: 18px; } .cmScore span { padding: 4px 12px; border-radius: 10px; background: rgba(0,0,0,.25); } .cmScore span.on { background: #ffd84a; color: #222; }
+  #cdBar { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  #cdInfo { font-size: 15px; } #cdBtns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; } #cdBtns button { font-size: 15px; padding: 8px 18px; }
 </style>
 <!-- 3D 表示の部品（Three.js）と、部屋コードで遊ぶための部品（PeerJS）。インターネットから読み込む -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -251,6 +276,11 @@
 <div id="rvP" hidden>
   <div id="rvBoard"></div>
   <div id="rvSide"><h2 id="rvTitle" style="margin:0;color:#ffd84a">♟️ オセロ</h2><div id="rvInfo"></div><button id="rvClose" class="pink">やめる</button></div>
+</div>
+<div id="cardP" hidden>
+  <div id="cdHead"><h2 id="cdTitle" style="margin:0;color:#ffd84a">🃏 トランプ</h2><button id="cdClose" class="pink">やめる</button></div>
+  <div id="cdTop"></div><div id="cdMid"></div><div id="cdHand"></div>
+  <div id="cdBar"><div id="cdInfo"></div><div id="cdBtns"></div></div>
 </div>
 <div id="chatLog"></div>
 <div id="chatBox" hidden><input id="chatIn" type="text" maxlength="60" placeholder="メッセージ（Enter で送る）" autocomplete="off"><button id="chatSend">送る</button><button id="chatClose" class="pink">とじる</button><div id="chatQuick"></div></div>
@@ -6641,7 +6671,7 @@ function bgCpu(g, b, p, lv) { return g === "reversi" ? rvCpu(b, p, lv) : g === "
 function bgWins() { return townSave.bgWin || townSave.rvWin || 0; }
 function hidePanel() { $("shopP").hidden = true; panelReopen = null; if (slotSpin) { clearInterval(slotSpin); slotSpin = null; } }
 function openBoardCafe() {
-  openPanel("♟️ ボードゲームカフェ", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい　CPUに勝った回数：${bgWins()}`, Object.entries(BGAMES).map(([g, G]) => ({ name: `${G.icon} ${G.name}`, desc: G.desc, btn: "あそぶ", fn: () => { openGameMenu(g); return false; } })), openBoardCafe);
+  openPanel("♟️ ボードゲーム＆トランプ", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい　CPUに勝った回数：${bgWins()}`, Object.entries(BGAMES).map(([g, G]) => ({ name: `${G.icon} ${G.name}`, desc: G.desc, btn: "あそぶ", fn: () => { openGameMenu(g); return false; } })).concat([{ name: "🃏 トランプ", desc: "ババ抜き・神経衰弱・ブラックジャック", btn: "あそぶ", fn: () => { openTrump(); return false; } }]), openBoardCafe);
 }
 function openGameMenu(g) {
   const G = BGAMES[g], others = Object.entries(net.players).filter(([, r]) => r.state);
@@ -6750,7 +6780,7 @@ function onNetBoard(d, conn) {
   if (d.t === "bgInv") {
     if (!BGAMES[d.g]) return true;
     const name = (net.players[from] && net.players[from].name) || cleanName(d.from) || "だれか";
-    if (!$("rvP").hidden || fish.state || !mode) { sendTo(from, { t: "bgNo", fromId: net.myId }); return true; }
+    if (!$("rvP").hidden || !$("cardP").hidden || fish.state || !mode) { sendTo(from, { t: "bgNo", fromId: net.myId }); return true; }
     play("item");
     showMsg("🌐 対戦のもうしこみ", `<b>${name}</b> から「${BGAMES[d.g].icon} ${BGAMES[d.g].name}」で対戦しよう！ってきたよ`, [
       { label: "やる！", fn: () => { sendTo(from, { t: "bgAcc", g: d.g, fromId: net.myId }); bgStart(d.g, "online", 0, 0, from, -1, name); } },
@@ -6785,6 +6815,7 @@ const MISSIONS = [
   { k: "gacha", n: 1, t: "ガチャを1回まわす", r: 40 },
   { k: "reversi", n: 1, t: "ボードゲームでCPUに1回勝つ", r: 60 },
   { k: "treasure", n: 1, t: "宝の地図の宝をほり出す", r: 60 },
+  { k: "cards", n: 1, t: "トランプで1回勝つ", r: 50 },
   { k: "photo", n: 3, t: "写真を3まいとる", r: 30 },
   { k: "monhit", n: 100, t: "モンスターやわるものに100ダメージ", r: 70 },
   { k: "bad", n: 2, t: "わるものぬいを2人たおす（イベントのとき）", r: 70 },
@@ -7123,6 +7154,7 @@ addEventListener("keydown", (e) => {
     return;
   }
   if (!$("rvP").hidden && e.code === "Escape") { closeReversi(); return; }
+  if (!$("cardP").hidden && e.code === "Escape") { closeCards(); return; }
   if (!controls || mode !== "town" || e.repeat) return;
   if (e.code === "KeyC") callPolice();
   if (e.code === "KeyH") openGuide(0);
@@ -7135,7 +7167,7 @@ const GUIDE = [
   { t: "🕹️ そうさ", h: () => touchMode
     ? `<div class="gd"><span>🕹️</span><div><b>うごく</b>：左がわをさわって動かす<br><b>見回す</b>：右がわをなぞる（2本指でズーム）</div></div><div class="gd"><span>✊</span><div><b>パンチ／使う</b>・<b>つかむ→投げる</b>・<b>調べる</b>・<b>乗り物</b>は右下のボタン</div></div><div class="gd"><span>🔝</span><div>上のボタン：👁一人称 🗺️地図 📸写真 🍙食べる 👋💃エモート 🤝わたす 📞けいさつ 📖あそびかた</div></div>`
     : `<div class="gd"><span>🕹️</span><div><kbd>WASD</kbd> うごく　<kbd>スペース</kbd> ジャンプ　マウス：見回す　ホイール：ズーム</div></div><div class="gd"><span>✊</span><div><b>クリック</b>：パンチ・使う（長おしでぐるぐるパンチ）<br><b>右クリック</b>：つかむ → はなすとぶん投げる！</div></div><div class="gd"><span>⌨️</span><div><kbd>E</kbd> 調べる・入る　<kbd>F</kbd> 乗り物　<kbd>Q</kbd> 食べる　<kbd>1</kbd>〜<kbd>5</kbd> 持ちかえ　<kbd>Tab</kbd> 地図<br><kbd>R</kbd> わたす・フレンド　<kbd>C</kbd> けいさつを呼ぶ　<kbd>H</kbd> このガイド　<kbd>P</kbd> 写真　<kbd>V</kbd> 一人称　<kbd>Shift</kbd> 力をぬく</div></div>` },
-  { t: "🗺️ 町の場所", h: () => `<div class="gd"><span>🏪</span><div><b>広場のまわり</b>：服屋・ご飯屋・おもちゃ屋・乗り物屋　<b>道ぞい</b>：武器屋・空の乗り物屋・ハローワーク</div></div><div class="gd"><span>🎰</span><div><b>ガチャ屋</b>（東）・<b>ボードゲームカフェ</b>（西：オセロ・五目ならべ・4目ならべ。ちがう機械の友だちとネット対戦も！）・<b>📋掲示板</b>（広場：ミッション・宝の地図・フレンド）</div></div><div class="gd"><span>🎡</span><div><b>南</b>：遊園地（観覧車・レース）・<b>🎣つり場</b>（南の桟橋の先）<br><b>西</b>：サッカー場・ゲームセンター・コインランドリー　<b>東</b>：けいさつ署・ろうや</div></div><div class="gd"><span>🏝️</span><div>海の<b>小島</b>には番人と金庫。<b>大砲</b>で飛んでいける。お金をためたら<b>自分の島</b>も！</div></div>` },
+  { t: "🗺️ 町の場所", h: () => `<div class="gd"><span>🏪</span><div><b>広場のまわり</b>：服屋・ご飯屋・おもちゃ屋・乗り物屋　<b>道ぞい</b>：武器屋・空の乗り物屋・ハローワーク</div></div><div class="gd"><span>🎰</span><div><b>ガチャ屋</b>（東）・<b>ボードゲームカフェ</b>（西：オセロ・五目ならべ・4目ならべ・トランプ。ちがう機械の友だちとネット対戦も！）・<b>📋掲示板</b>（広場：ミッション・宝の地図・フレンド）</div></div><div class="gd"><span>🎡</span><div><b>南</b>：遊園地（観覧車・レース）・<b>🎣つり場</b>（南の桟橋の先）<br><b>西</b>：サッカー場・ゲームセンター・コインランドリー　<b>東</b>：けいさつ署・ろうや</div></div><div class="gd"><span>🏝️</span><div>海の<b>小島</b>には番人と金庫。<b>大砲</b>で飛んでいける。お金をためたら<b>自分の島</b>も！</div></div>` },
   { t: "💰 お金", h: () => `<div class="gd"><span>⬆️</span><div><b>かせぐ</b>：コインを拾う・仕事（ハローワーク）・つり・ボードゲーム・🗺️宝の地図・ミッション・わるもの退治・モンスター退治・おばけの写真</div></div><div class="gd"><span>⬇️</span><div><b>使う</b>：🎰ガチャ（ぼうし・エフェクト・金ピカ）・お店・武器・乗り物・つりのエサ・オセロのかけ・ぬいへのプレゼント・自分の島</div></div><div class="gd"><span>📋</span><div><b>きょうのミッション</b>：毎日3つ。ぜんぶクリアで🎫ガチャ券！（広場の掲示板）</div></div>` },
   { t: "⚡ イベント", h: () => `<div class="gd"><span>😈</span><div><b>わるものぬい団</b>：何人もせめてくる。みんなでやっつけよう</div></div><div class="gd"><span>🦖</span><div><b>モンスター</b>／<b>👑キングモンスター</b>（まれ）／<b>💀最強の魔王モンスター</b>（すごくまれ）</div></div><div class="gd"><span>✨</span><div>金色のぬい・ダンスパーティー・家族が来る・天気（雨・雷・マグマ・お金の雨）</div></div><div class="gd"><span>🚨</span><div>悪いことを見られると<b>けいさつ</b>が追ってくる。つかまると<b>ろうや</b>→脱獄！<br>なぐられたり撃たれたら、10秒以内に <b>C で通報</b>できる（なにもされていないのに呼ぶと<b>罰金</b>！）</div></div>` },
   { t: "🌙 朝と夜", h: () => `<div class="gd"><span>🌅</span><div>1日＝12分。毎朝おこづかい。<b>日曜日はお祭り</b>（コイン2倍）</div></div><div class="gd"><span>🎆</span><div>夜は<b>花火大会</b>・<b>👻おばけぬい</b>（P で写真にとるとコイン）・<b>🌠流れ星</b>（Z でおねがい）・夜だけの魚</div></div><div class="gd"><span>📜</span><div><b>やくそく書</b>：相手のそばで R。3日以内にわたさないと…ろうや！</div></div>` },
@@ -7183,7 +7215,7 @@ function buildFunTown() {
   let b = building(35, 12, -1, 0, "🎰 ガチャ屋 ガラポン", 0xff5ca8, { short: "ガチャ", clerkName: "ガチャ屋さん", look: "gacha" });
   addSpot(b.sx, b.sz, () => "[E] ガチャをまわす・着せかえ", openGacha, 2);
   b = building(-35, -10, 1, 0, "♟️ ボードゲームカフェ", 0x2a8a4a, { short: "オセロ", clerkName: "マスター", look: "board" });
-  addSpot(b.sx, b.sz, () => "[E] オセロであそぶ", openBoardCafe, 2);
+  addSpot(b.sx, b.sz, () => "[E] ボードゲーム・トランプであそぶ", openBoardCafe, 2);
   buildFishing();
   buildBoard();
   Object.assign(badEv, { on: false, remote: null, meshes: [], timer: rand(260, 420) });
@@ -7514,8 +7546,208 @@ function digTreasure() {
 // ---- 部屋のかぎ（バージョンがちがうと、うまく遊べないので教える） ----
 function oldVerMsg() { net.full = true; net.online = false; showMsg("バージョンがちがうよ", "部屋を作った人と、ゲームのバージョンがちがうみたい。<br>2人とも同じアドレス（GitHub のページなど）で開いて、ページを<b>読みこみ直して</b>からためしてね。", [{ label: "タイトルへ", fn: () => location.reload() }]); }
 // ---- メニューが出ている間は、マウスをゲームの画面からはなす（ボタンがおせなくなるのをふせぐ） ----
-function anyUiOpen() { return !mode || !$("titleP").hidden || !$("modeP").hidden || !$("joinP").hidden || !$("msgP").hidden || !$("shopP").hidden || !$("rvP").hidden || chat.open || paintMode; }
+function anyUiOpen() { return !mode || !$("titleP").hidden || !$("modeP").hidden || !$("joinP").hidden || !$("msgP").hidden || !$("shopP").hidden || !$("rvP").hidden || !$("cardP").hidden || chat.open || paintMode; }
 setInterval(() => { if (document.pointerLockElement && anyUiOpen() && document.exitPointerLock) document.exitPointerLock(); }, 200);
+
+// =====================================================================
+//  15. ボタンのつなぎなおし（つり・ボードゲームの「やめる」）と、トランプ
+// =====================================================================
+addEventListener("pointerdown", (e) => { if (!fish.state || (e.target && (e.target.id === "fishStop" || e.target.closest && e.target.closest("#touchUI")))) return; if (fish.state === "reel") fish.hold = true; else fishPress(); });
+addEventListener("pointerup", () => { fish.hold = false; });
+addEventListener("pointercancel", () => { fish.hold = false; });
+$("fishStop").onclick = () => endFishing("つりをやめた");
+$("rvClose").onclick = () => closeReversi();
+
+// ---- トランプのカード ----
+const SUITS = ["♠", "♥", "♦", "♣"], RANKS = ["", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+function newDeck(joker) { const d = []; for (let s = 0; s < 4; s++) for (let r = 1; r <= 13; r++) d.push({ s, r }); if (joker) d.push({ j: true, r: 0, s: -1 }); return shuffleArr(d); }
+function shuffleArr(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function cardHtml(c, opt = {}) {
+  if (!c || opt.back) return `<div class="card back${opt.cls ? " " + opt.cls : ""}"${opt.data || ""}></div>`;
+  if (c.j) return `<div class="card joker${opt.cls ? " " + opt.cls : ""}"${opt.data || ""}><span>🃏</span><small>JOKER</small></div>`;
+  return `<div class="card${c.s === 1 || c.s === 2 ? " red" : ""}${opt.cls ? " " + opt.cls : ""}"${opt.data || ""}><b>${RANKS[c.r]}</b><span>${SUITS[c.s]}</span></div>`;
+}
+const cd = { game: null, busy: false, timers: [] };
+function cdLater(fn, ms) { const t = setTimeout(() => { if (!$("cardP").hidden) fn(); }, ms); cd.timers.push(t); }
+function openCards(game, title) {
+  for (const t of cd.timers) clearTimeout(t); cd.timers = [];
+  cd.game = game; cd.busy = false;
+  if (fish.state) endFishing();
+  hidePanel(); $("msgP").hidden = true;
+  controls = false; if (document.exitPointerLock) document.exitPointerLock();
+  $("cdTitle").textContent = title; $("cardP").hidden = false;
+}
+function closeCards() {
+  for (const t of cd.timers) clearTimeout(t); cd.timers = [];
+  if (cd.game === "bj" && bj.state === "play") toast(`とちゅうでやめたので、かけた ${bj.bet}コイン は返ってこない…`, 2200);
+  cd.game = null; $("cardP").hidden = true;
+  if (mode) { controls = true; lockPointer(); }
+}
+$("cdClose").onclick = () => closeCards();
+function cdButtons(list) { const B = $("cdBtns"); B.innerHTML = ""; for (const [label, fn, cls] of list) { const b = document.createElement("button"); b.textContent = label; if (cls) b.className = cls; b.onclick = () => { initAudio(); fn(); }; B.appendChild(b); } }
+function cardWin(text, coins) { if (coins > 0) { wallet += coins; saveWallet(); } missionAdd("cards", 1); play("clear"); return text + (coins > 0 ? `<br>コイン +${coins}` : ""); }
+
+// ---- ブラックジャック（21に近いほうが勝ち。コインをかける） ----
+const bj = { deck: [], p: [], d: [], bet: 0, state: "bet" };
+function bjVal(h) { let v = 0, a = 0; for (const c of h) { v += c.r === 1 ? 11 : Math.min(10, c.r); if (c.r === 1) a++; } while (v > 21 && a) { v -= 10; a--; } return v; }
+function startBJ() { openCards("bj", "🃏 ブラックジャック"); bj.state = "bet"; bjDraw(); }
+function bjDraw(msg = "") {
+  const end = bj.state !== "play";
+  $("cdTop").innerHTML = bj.state === "bet" ? "" : `<div class="cdLabel">ディーラー${end ? `（${bjVal(bj.d)}）` : ""}</div><div class="cdRow">${bj.d.map((c, i) => cardHtml(c, { back: i === 1 && !end })).join("")}</div>`;
+  $("cdMid").innerHTML = bj.state === "bet" ? `<div class="cdRule">カードの合計を <b>21</b> に近づけよう！ 21をこえたら負け<br>J・Q・K は10、A は1か11。ディーラーは17以上になるまで引く<br>勝つと2倍・最初の2まいで21（ブラックジャック）なら2.5倍！</div>` : `<div class="cdMsg">${msg}</div>`;
+  $("cdHand").innerHTML = bj.state === "bet" ? "" : `<div class="cdLabel">あなた（${bjVal(bj.p)}）</div><div class="cdRow">${bj.p.map((c) => cardHtml(c)).join("")}</div>`;
+  $("cdInfo").innerHTML = `持っているコイン：${wallet}${bj.bet && bj.state !== "bet" ? `　かけ金：${bj.bet}` : ""}`;
+  if (bj.state === "bet") cdButtons([10, 50, 100, 300].filter((v) => v <= wallet).map((v) => [`${v}コインかける`, () => bjStart(v)]));
+  else if (bj.state === "play") cdButtons([["ヒット（もう1まい）", bjHit], ["スタンド（これで勝負）", bjStand, "sub"], ...(wallet >= bj.bet && bj.p.length === 2 ? [["ダブル（2倍かけて1まいだけ）", bjDouble, "pink"]] : [])]);
+  else cdButtons([["もう1回", () => { bj.state = "bet"; bjDraw(); }]]);
+}
+function bjStart(bet) {
+  if (!pay(bet)) return;
+  if (bj.deck.length < 15) bj.deck = newDeck().concat(newDeck());
+  Object.assign(bj, { bet, p: [bj.deck.pop(), bj.deck.pop()], d: [bj.deck.pop(), bj.deck.pop()], state: "play" });
+  play("place");
+  if (bjVal(bj.p) === 21) { bjStand(); return; }
+  bjDraw("ヒットかスタンドをえらんでね");
+}
+function bjHit() { bj.p.push(bj.deck.pop()); play("place"); if (bjVal(bj.p) > 21) bjEnd(); else if (bjVal(bj.p) === 21) bjStand(); else bjDraw("ヒットかスタンドをえらんでね"); }
+function bjDouble() { if (!pay(bj.bet)) return; bj.bet *= 2; bj.p.push(bj.deck.pop()); play("place"); if (bjVal(bj.p) > 21) bjEnd(); else bjStand(); }
+function bjStand() { while (bjVal(bj.d) < 17) bj.d.push(bj.deck.pop()); bjEnd(); }
+function bjEnd() {
+  bj.state = "end";
+  const p = bjVal(bj.p), d = bjVal(bj.d), natural = p === 21 && bj.p.length === 2, dnat = d === 21 && bj.d.length === 2;
+  let msg;
+  if (p > 21) { msg = "😵 21をこえちゃった…（バースト）"; play("hmm"); }
+  else if (natural && !dnat) msg = cardWin("🎉 ブラックジャック！！", Math.floor(bj.bet * 2.5));
+  else if (d > 21 || p > d) msg = cardWin(d > 21 ? "🎉 ディーラーが21をこえた！ あなたの勝ち！" : "🎉 あなたの勝ち！", bj.bet * 2);
+  else if (p === d) { msg = "ひきわけ（かけ金は返ってきた）"; wallet += bj.bet; saveWallet(); }
+  else { msg = "😵 ディーラーの勝ち…"; play("hmm"); }
+  bjDraw(msg);
+}
+
+// ---- ババ抜き（あなた＋ぬい3人。最後にジョーカーを持っていたら負け） ----
+const om = { h: [[], [], [], []], fin: [], turn: 0, names: ["あなた", "ぬいA", "ぬいB", "ぬいC"], last: null, msg: "" };
+function omPairs(h) { const by = {}; for (const c of h) if (!c.j) (by[c.r] = by[c.r] || []).push(c); const out = []; for (const r in by) { const l = by[r]; while (l.length >= 2) out.push(l.pop(), l.pop()); } return h.filter((c) => !out.includes(c)); }
+function omNext(i) { for (let k = 1; k <= 3; k++) { const j = (i + k) % 4; if (om.h[j].length) return j; } return -1; }
+function omActive() { return om.h.filter((h) => h.length).length; }
+function startOM() {
+  openCards("om", "🃏 ババ抜き");
+  const d = newDeck(true); om.h = [[], [], [], []]; d.forEach((c, i) => om.h[i % 4].push(c));
+  om.h = om.h.map(omPairs); om.h[0].sort((a, b) => a.r - b.r);
+  for (let i = 1; i < 4; i++) shuffleArr(om.h[i]);
+  om.fin = []; om.turn = 0; om.last = null; om.over = false; om.msg = "同じ数字のペアは、はじめにすててあるよ";
+  for (let i = 0; i < 4; i++) if (!om.h[i].length) om.fin.push(i);
+  omDraw(); omStep();
+}
+function omDraw() {
+  const tgt = om.turn === 0 && om.h[0].length ? omNext(0) : -1;
+  $("cdTop").innerHTML = `<div class="omCpus">${[1, 2, 3].map((i) => `<div class="omCpu${om.turn === i ? " on" : ""}${i === tgt ? " tgt" : ""}"><div class="cdLabel">${om.names[i]}（${om.h[i].length}まい）${om.fin.includes(i) ? " 🏁" + (om.fin.indexOf(i) + 1) + "位" : ""}</div><div class="cdRow mini">${om.h[i].map((c, k) => cardHtml(c, { back: true, cls: i === tgt ? "pickable" : "", data: i === tgt ? ` data-k="${k}"` : "" })).join("")}</div></div>`).join("")}</div>`;
+  $("cdMid").innerHTML = `<div class="cdMsg">${om.msg}</div>`;
+  $("cdHand").innerHTML = `<div class="cdLabel">あなたの手札（${om.h[0].length}まい）${om.fin.includes(0) ? " 🏁" + (om.fin.indexOf(0) + 1) + "位！" : ""}</div><div class="cdRow">${om.h[0].map((c) => cardHtml(c, { cls: om.last === c ? "new" : "" })).join("")}</div>`;
+  $("cdInfo").innerHTML = tgt >= 0 ? `👉 <b>${om.names[tgt]}</b> のカードを1まいえらんで引こう！` : `持っているコイン：${wallet}`;
+  $("cdTop").querySelectorAll(".card.pickable").forEach((el) => el.onclick = () => { if (om.turn === 0) omTake(0, tgt, +el.dataset.k); });
+  if (om.over) cdButtons([["もう1回", startOM]]); else cdButtons([]);
+}
+function omTake(cur, tgt, k) {
+  const card = om.h[tgt].splice(k, 1)[0]; if (!card) return;
+  play("place");
+  const same = card.j ? null : om.h[cur].find((c) => !c.j && c.r === card.r);
+  if (same) { om.h[cur] = om.h[cur].filter((c) => c !== same); om.msg = `${om.names[cur]} が ${om.names[tgt]} から引いて、${RANKS[card.r]} のペアをすてた！`; om.last = null; }
+  else { om.h[cur].push(card); om.last = cur === 0 ? card : null; om.msg = cur === 0 ? (card.j ? "😱 ジョーカーを引いちゃった！" : `${om.names[tgt]} から ${RANKS[card.r]} を引いた`) : tgt === 0 && card.j ? `😆 ${om.names[cur]} がジョーカーを引いた！` : `${om.names[cur]} が ${om.names[tgt]} から1まい引いた`; }
+  if (cur === 0) om.h[0].sort((a, b) => a.r - b.r); else shuffleArr(om.h[cur]);
+  for (const i of [tgt, cur]) if (!om.h[i].length && !om.fin.includes(i)) { om.fin.push(i); if (i === 0) play("clear"); }
+  if (omActive() <= 1) { omEnd(); return; }
+  om.turn = omNext(cur);
+  omDraw(); omStep();
+}
+function omStep() {
+  if (om.over) return;
+  if (omActive() <= 1) { omEnd(); return; }
+  if (!om.h[om.turn].length) om.turn = omNext(om.turn);
+  if (om.turn === 0) { omDraw(); return; }
+  cdLater(() => { const t = omNext(om.turn); omTake(om.turn, t, Math.floor(Math.random() * om.h[t].length)); }, om.fin.includes(0) ? 350 : 900);
+}
+function omEnd() {
+  om.over = true;
+  const loser = om.h.findIndex((h) => h.length);
+  const place = loser === 0 ? 4 : om.fin.indexOf(0) + 1;
+  const prize = [0, 60, 30, 10, 0][place];
+  om.msg = place === 4 ? "😱 ジョーカーが最後までのこった… あなたの負け！" : cardWin(`🏁 あなたは ${place}位！${loser >= 0 ? `（ババは ${om.names[loser]}）` : ""}`, prize);
+  if (place === 4) play("hmm");
+  om.turn = -1; omDraw();
+}
+
+// ---- 神経衰弱（同じ数字のカードを2まいめくる） ----
+const cm = { cards: [], open: [], taken: [], turn: 0, score: [0, 0], mode: "cpu", lv: 1, mem: new Map(), over: false, msg: "" };
+function startCM(m, lv) {
+  openCards("cm", "🃏 神経衰弱");
+  const ranks = shuffleArr([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]).slice(0, 10);
+  const cards = []; for (const r of ranks) { const s = shuffleArr([0, 1, 2, 3]); cards.push({ r, s: s[0] }, { r, s: s[1] }); }
+  Object.assign(cm, { cards: shuffleArr(cards), open: [], taken: Array(20).fill(-1), turn: 0, score: [0, 0], mode: m, lv, mem: new Map(), over: false, msg: m === "cpu" ? "同じ数字を2まいそろえよう！ そろったらもう1回めくれる" : "1Pからスタート！" });
+  cmDraw();
+}
+function cmNames() { return cm.mode === "cpu" ? ["あなた", "CPU"] : ["1P", "2P"]; }
+function cmDraw() {
+  const N = cmNames();
+  $("cdTop").innerHTML = `<div class="cmScore"><span class="${cm.turn === 0 ? "on" : ""}">${N[0]}：${cm.score[0]}ペア</span><span class="${cm.turn === 1 ? "on" : ""}">${N[1]}：${cm.score[1]}ペア</span></div>`;
+  $("cdMid").innerHTML = `<div class="cmGrid">${cm.cards.map((c, i) => cm.taken[i] >= 0 ? `<div class="card gone"></div>` : cm.open.includes(i) ? cardHtml(c) : cardHtml(c, { back: true, cls: "pickable", data: ` data-i="${i}"` })).join("")}</div>`;
+  $("cdHand").innerHTML = `<div class="cdMsg">${cm.msg}</div>`;
+  $("cdInfo").innerHTML = cm.over ? "" : `👉 ${N[cm.turn]} の番`;
+  $("cdMid").querySelectorAll(".card.pickable").forEach((el) => el.onclick = () => { if (cm.mode === "two" || cm.turn === 0) cmFlip(+el.dataset.i); });
+  cdButtons(cm.over ? [["もう1回", () => startCM(cm.mode, cm.lv)]] : []);
+}
+function cmSee(i) { if (Math.random() < [0.15, 0.4, 0.75][cm.lv]) cm.mem.set(i, cm.cards[i].r); }
+function cmFlip(i) {
+  if (cd.busy || cm.over || cm.open.length >= 2 || cm.open.includes(i) || cm.taken[i] >= 0) return;
+  cm.open.push(i); cmSee(i); play("place"); cmDraw();
+  if (cm.open.length < 2) { if (cm.mode === "cpu" && cm.turn === 1) cdLater(cmCpu, 700); return; }
+  const [a, b] = cm.open; cd.busy = true;
+  if (cm.cards[a].r === cm.cards[b].r) {
+    cdLater(() => {
+      cm.taken[a] = cm.taken[b] = cm.turn; cm.score[cm.turn]++; cm.open = []; cd.busy = false; cm.mem.delete(a); cm.mem.delete(b);
+      cm.msg = `✨ ${cmNames()[cm.turn]} が ${RANKS[cm.cards[a].r]} をそろえた！ もう1回！`; play("coin");
+      if (cm.taken.every((t) => t >= 0)) { cmEnd(); return; }
+      cmDraw(); if (cm.mode === "cpu" && cm.turn === 1) cdLater(cmCpu, 700);
+    }, 650);
+  } else {
+    cdLater(() => {
+      cm.open = []; cd.busy = false; cm.turn = 1 - cm.turn; cm.msg = `ざんねん… ${cmNames()[cm.turn]} の番`; cmDraw();
+      if (cm.mode === "cpu" && cm.turn === 1) cdLater(cmCpu, 800);
+    }, 1100);
+  }
+}
+function cmCpu() {
+  if (cm.over || cm.turn !== 1) return;
+  const left = cm.cards.map((c, i) => i).filter((i) => cm.taken[i] < 0 && !cm.open.includes(i));
+  const known = [...cm.mem.entries()].filter(([i]) => cm.taken[i] < 0 && !cm.open.includes(i));
+  if (cm.open.length === 1) {
+    const r = cm.cards[cm.open[0]].r, k = known.find(([i, rr]) => rr === r);
+    const unk = left.filter((i) => !cm.mem.has(i)); cmFlip(k ? k[0] : pick(unk.length ? unk : left));
+    return;
+  }
+  for (const [i, r] of known) { const pair = known.find(([j, rr]) => j !== i && rr === r); if (pair) { cmFlip(i); return; } }
+  const unknown = left.filter((i) => !cm.mem.has(i));
+  cmFlip(pick(unknown.length ? unknown : left));
+}
+function cmEnd() {
+  cm.over = true;
+  const [a, b] = cm.score, N = cmNames();
+  if (cm.mode === "two") cm.msg = a === b ? `ひきわけ！（${a} 対 ${b}）` : `🎉 ${a > b ? N[0] : N[1]} の勝ち！（${Math.max(a, b)} 対 ${Math.min(a, b)}）`;
+  else if (a > b) cm.msg = cardWin(`🎉 あなたの勝ち！（${a} 対 ${b}）`, [30, 50, 90][cm.lv]);
+  else if (a === b) cm.msg = `ひきわけ！（${a} 対 ${b}）`;
+  else { cm.msg = `😵 CPU の勝ち…（${a} 対 ${b}）`; play("hmm"); }
+  cmDraw();
+}
+// トランプのメニュー（ボードゲームカフェの中）
+function openTrump() {
+  openPanel("🃏 トランプ", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい`, [
+    { name: "🃏 ババ抜き", desc: "ぬい3人と勝負！ 最後にジョーカーを持っていたら負け（1位60・2位30・3位10コイン）", btn: "あそぶ", fn: () => { startOM(); return false; } },
+    { name: "🃏 神経衰弱（CPU よわい）", desc: "同じ数字を2まいそろえる。勝つと30コイン", btn: "あそぶ", fn: () => { startCM("cpu", 0); return false; } },
+    { name: "🃏 神経衰弱（CPU ふつう）", desc: "勝つと50コイン", btn: "あそぶ", fn: () => { startCM("cpu", 1); return false; } },
+    { name: "🃏 神経衰弱（CPU つよい）", desc: "記おく力がすごい！ 勝つと90コイン", btn: "あそぶ", fn: () => { startCM("cpu", 2); return false; } },
+    { name: "👫 神経衰弱（この画面で2人）", desc: "友だちとこうたいに", btn: "あそぶ", fn: () => { startCM("two", 0); return false; } },
+    { name: "🃏 ブラックジャック", desc: "コインをかけて、21に近いほうが勝ち！ 勝つと2倍", btn: "あそぶ", fn: () => { startBJ(); return false; } },
+  ], openTrump);
+}
 
 // 町モードで届いたメッセージ（onNet から呼ばれる）
 function onNetTown(d, conn) {
@@ -7870,7 +8102,7 @@ function startMode(m, stage = 0) {
   mode = m;
   ["titleP", "modeP", "joinP", "msgP"].forEach((id) => ($(id).hidden = true));
   me.car = false; me.skate = false; me.veh = null; me.fly = false; me.ride = null; me.float = 0; me.emote = null; me.held = "hand"; me.dish = null; me.cooking = null; me.grab = null; me.heldBy = null; me.wash = null; me.bowl = null; me.ufo = null; me.spin = 0; me.flat = 0;
-  $("rvP").hidden = true; $("fishP").hidden = true; fish.state = null; hemi.intensity = 0.8; sun.intensity = 0.7; hemi.color.copy(HEMI_DAY); sun.color.copy(SUN_DAY); town.night = null; bigMap = false; $("mapP").hidden = true;
+  $("rvP").hidden = true; $("cardP").hidden = true; $("fishP").hidden = true; fish.state = null; hemi.intensity = 0.8; sun.intensity = 0.7; hemi.color.copy(HEMI_DAY); sun.color.copy(SUN_DAY); town.night = null; bigMap = false; $("mapP").hidden = true;
   $("crosshair").hidden = true;
   if (m === "story") { playMusic("sneak"); loadStage(stage || 0); }
   else {
