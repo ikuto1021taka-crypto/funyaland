@@ -492,7 +492,7 @@ function loadMyLook() {
     const d = JSON.parse(localStorage.getItem("funyaland_look") || "null");
     if (d && d.img) {
       const img = new Image();
-      img.onload = () => { pctx.drawImage(img, 0, 0); myTexture.needsUpdate = true; refreshMyModel(); };
+      img.onload = () => { pctx.drawImage(img, 0, 0, paintCv.width, paintCv.height); myTexture.needsUpdate = true; refreshMyModel(); };
       img.src = d.img;
       Object.assign(myLook, d.look || {});
       return true;
@@ -5297,16 +5297,71 @@ function openSync() {
   showMsg("🔄 データ連携", `${cloudLine}<br><br><b>引っこしコード</b>：いまのデータを文字に変えて、ほかの場所（オンライン版など）に持っていける。<br><span class="small">いまこの機械のコイン：${coins}まい</span>`, btns);
 }
 // ---- 引っこしコード（データを文字にして、ほかの場所へ持っていく） ----
-function makeMoveCode() {
-  const d = collectSave();
-  delete d.funyaland_savedAt;
-  // 絵は小さくしてから入れる
-  try { const l = JSON.parse(d.funyaland_look || "null"); if (l) { l.img = paintCv.toDataURL("image/jpeg", 0.85); d.funyaland_look = JSON.stringify(l); } } catch (e) {}
-  return "FUNYA1:" + btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+//  短いコード：データをぎゅっと小さくして、キャラの絵は小さい写真にして入れる
+//  QRコードにもなるので、スマホのカメラで画面をうつすだけで引っこしできる
+const GAME_URL = "https://ikuto1021taka-crypto.github.io/funyaland/";
+const CAN_ZIP = typeof CompressionStream === "function";
+function b64u(u8) { let s = ""; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode.apply(null, u8.subarray(i, i + 8192)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function unb64(t) { const s = atob(t.replace(/-/g, "+").replace(/_/g, "/")); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
+async function zipBytes(u8, unzip) {
+  const st = unzip ? new DecompressionStream("deflate-raw") : new CompressionStream("deflate-raw");
+  return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(st)).arrayBuffer());
 }
-function showMoveCode() {
-  const code = makeMoveCode();
-  showMsg("📋 引っこしコード", `下の「コピー」をおして、行き先（オンライン版など）の「引っこしコードで読みこむ」にはりつけてね。<br><textarea id="moveOut" readonly style="width:min(520px,86vw);height:90px;font-size:11px">${code}</textarea>`, [
+// [JSONの長さ2バイト][JSON（小さくしたもの）][キャラの絵（JPEG）]
+async function packSave(d, jpeg) {
+  let js = new TextEncoder().encode(JSON.stringify(d));
+  if (CAN_ZIP) js = await zipBytes(js);
+  const out = new Uint8Array(2 + js.length + jpeg.length);
+  out[0] = js.length >> 8; out[1] = js.length & 255; out.set(js, 2); out.set(jpeg, 2 + js.length);
+  return (CAN_ZIP ? "F2z" : "F2n") + b64u(out);
+}
+async function makeMoveCode() {
+  const d = collectSave(); delete d.funyaland_savedAt;
+  let l = null; try { l = JSON.parse(d.funyaland_look || "null"); } catch (e) {}
+  if (!l) return packSave(d, new Uint8Array(0));
+  delete l.img; d.funyaland_look = JSON.stringify(l);
+  let code = "";
+  for (const [w, h, q] of [[160, 80, 0.6], [128, 64, 0.6], [112, 56, 0.55], [96, 48, 0.5], [80, 40, 0.45], [64, 32, 0.4], [48, 24, 0.35]]) {
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    cv.getContext("2d").drawImage(paintCv, 0, 0, w, h);
+    code = await packSave(d, unb64(cv.toDataURL("image/jpeg", q).split(",")[1]));
+    if (code.length <= 2500) break;
+  }
+  return code;
+}
+// コードからデータにもどす（古い長いコード FUNYA1 も読める）
+async function readMoveCode(t) {
+  t = String(t || "").trim();
+  const at = t.indexOf("#m="); if (at >= 0) t = t.slice(at + 3);
+  t = t.replace(/\s+/g, "");
+  if (t.startsWith("FUNYA1:")) return JSON.parse(decodeURIComponent(escape(atob(t.slice(7)))));
+  if (!/^F2[zn]/.test(t)) return null;
+  const u = unb64(t.slice(3)), n = (u[0] << 8) | u[1];
+  let js = u.subarray(2, 2 + n); const jpeg = u.subarray(2 + n);
+  if (t[2] === "z") js = await zipBytes(js, true);
+  const d = JSON.parse(new TextDecoder().decode(js));
+  if (jpeg.length) {
+    let s = ""; for (let i = 0; i < jpeg.length; i += 8192) s += String.fromCharCode.apply(null, jpeg.subarray(i, i + 8192));
+    const l = JSON.parse(d.funyaland_look || "{}"); l.img = "data:image/jpeg;base64," + btoa(s); d.funyaland_look = JSON.stringify(l);
+  }
+  return d;
+}
+function loadQrLib() {
+  if (window.qrcode) return Promise.resolve(true);
+  return new Promise((ok) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"; s.onload = () => ok(!!window.qrcode); s.onerror = () => ok(false); document.head.appendChild(s); });
+}
+function drawQr(cv, text) {
+  const q = qrcode(0, "L"); q.addData(text); q.make();
+  const n = q.getModuleCount(), m = 4, sc = 4; cv.width = cv.height = (n + m * 2) * sc;
+  const c = cv.getContext("2d"); c.fillStyle = "#fff"; c.fillRect(0, 0, cv.width, cv.height); c.fillStyle = "#000";
+  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) c.fillRect((k + m) * sc, (r + m) * sc, sc, sc);
+}
+async function showMoveCode() {
+  toast("コードを作っています…", 1500);
+  let code; try { code = await makeMoveCode(); } catch (e) { toast("コードを作れなかった…", 2500); return; }
+  const base = location.protocol === "https:" && !ONLINE ? location.origin + location.pathname : GAME_URL;
+  const url = base + "#m=" + code;
+  showMsg("📋 引っこしコード", `<b>スマホなら：</b>スマホのカメラでこのQRコードをうつして、出てきたリンクをひらくだけ！<br><canvas id="moveQr" style="width:min(440px,64vh,86vw);image-rendering:pixelated;background:#fff;border-radius:6px;margin:6px 0"></canvas><br><span class="small">または「コピー」して、行き先の「引っこしコードで読みこむ」にはりつけてもOK<br>（このQRとコードは、友だちには見せないでね）</span><br><textarea id="moveOut" readonly style="width:min(520px,86vw);height:54px;font-size:11px">${code}</textarea>`, [
     { label: "コピー", fn: () => {} }, { label: "とじる", fn: () => {} },
   ]);
   const b = $("msgBtns").firstChild;
@@ -5316,22 +5371,41 @@ function showMoveCode() {
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done).catch(() => { ta.select(); try { document.execCommand("copy"); done(); } catch (e) {} });
     else { ta.select(); try { document.execCommand("copy"); done(); } catch (e) {} }
   };
+  const cv = $("moveQr");
+  if (await loadQrLib()) { try { drawQr(cv, url); } catch (e) { cv.remove(); } }
+  else cv.outerHTML = `<div class="small">（QRコードを出せなかった…インターネットにつながっているか確かめてね）</div>`;
+}
+function importMoveData(d) {
+  writeSave(d, Date.now());
+  toast(`📥 読みこんだよ！（コイン ${Number(d.funyaland_coins) || 0}まい）`, 2500);
+  if (cloud.ready) cloudTick();
 }
 function askMoveCode() {
-  showMsg("📋 引っこしコードで読みこむ", `コピーした引っこしコードを、下にはりつけてね。<br><b>この機械のいまのデータは、上書きされて消えるよ。</b><br><textarea id="moveIn" style="width:min(520px,86vw);height:90px;font-size:11px" placeholder="FUNYA1:…"></textarea>`, [
+  showMsg("📋 引っこしコードで読みこむ", `コピーした引っこしコードを、下にはりつけてね。<br><b>この機械のいまのデータは、上書きされて消えるよ。</b><br><textarea id="moveIn" style="width:min(520px,86vw);height:90px;font-size:11px" placeholder="F2z…"></textarea>`, [
     { label: "読みこむ", fn: () => {} }, { label: "やめる", fn: () => {} },
   ]);
-  $("msgBtns").firstChild.onclick = () => {
-    const t = ($("moveIn").value || "").trim();
+  $("msgBtns").firstChild.onclick = async () => {
     let d = null;
-    try { if (t.startsWith("FUNYA1:")) d = JSON.parse(decodeURIComponent(escape(atob(t.slice(7))))); } catch (e) { d = null; }
+    try { d = await readMoveCode($("moveIn").value); } catch (e) { d = null; }
     if (!d || typeof d !== "object") { toast("コードが読めなかった…ぜんぶコピーできているか確かめてね", 2500); return; }
     $("msgP").hidden = true;
-    writeSave(d, Date.now());
-    toast(`📥 読みこんだよ！（コイン ${Number(d.funyaland_coins) || 0}まい）`, 2500);
-    if (cloud.ready) cloudTick();
+    importMoveData(d);
   };
 }
+// QRコードのリンクからひらいたとき（アドレスの #m= のあと）
+(function () {
+  const m = location.hash.match(/#m=([A-Za-z0-9_\-:+\/=]+)/);
+  if (!m) return;
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+  setTimeout(async () => {
+    let d = null; try { d = await readMoveCode(m[1]); } catch (e) { d = null; }
+    if (!d || typeof d !== "object") { toast("QRコードのデータが読めなかった…", 3000); return; }
+    let nm = ""; try { nm = String(d.funyaland_name || "").replace(/[<>&]/g, ""); } catch (e) {}
+    showMsg("📥 引っこし", `QRコードのデータを、この機械に読みこむ？<br>名前：${nm || "（なし）"}　コイン：${Number(d.funyaland_coins) || 0}まい<br><b>この機械のいまのデータは、上書きされて消えるよ。</b>`, [
+      { label: "読みこむ", fn: () => importMoveData(d) }, { label: "やめる", fn: () => {} },
+    ]);
+  }, 800);
+})();
 // セーブデータをこの機械に書きこんで、すぐゲームに反映する
 function writeSave(d, savedAt) {
   try {
