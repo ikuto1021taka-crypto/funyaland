@@ -289,37 +289,41 @@
   #tutSkip { font-size: 12px; padding: 4px 12px; }
   body.touch #tutBox { top: calc(100px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(440px, 58vw); padding: 4px 10px; display: flex; align-items: center; gap: 8px; background: rgba(30, 20, 60, .75); } body.touch #tutBox[hidden] { display: none; } body.touch #tutStep { display: none; } body.touch #tutText { font-size: 12px; flex: 1; margin: 0; line-height: 1.35; } body.touch #tutSkip { font-size: 10px; padding: 3px 8px; flex: none; }
   /* ご飯を食べた！ */
-  #ateP { position: fixed; z-index: 7; left: 50%; top: 36%; transform: translate(-50%, 0); font-size: 34px; font-weight: bold; color: #fff; background: linear-gradient(#ff9a5a, #ff6a8a); border: 4px solid #fff; border-radius: 22px; padding: 8px 26px; box-shadow: 0 6px 18px rgba(0,0,0,.4); text-shadow: 0 2px 0 #b03a5a; pointer-events: none; white-space: nowrap; animation: atePop .35s ease-out; }
+  #ateP { position: fixed; z-index: 30; left: 50%; top: 36%; transform: translate(-50%, 0); font-size: 34px; font-weight: bold; color: #fff; background: linear-gradient(#ff9a5a, #ff6a8a); border: 4px solid #fff; border-radius: 22px; padding: 8px 26px; box-shadow: 0 6px 18px rgba(0,0,0,.4); text-shadow: 0 2px 0 #b03a5a; pointer-events: none; white-space: nowrap; animation: atePop .35s ease-out; }
   #ateP[hidden] { display: none; }
   @keyframes atePop { 0% { transform: translate(-50%, 0) scale(.3); } 70% { transform: translate(-50%, 0) scale(1.15); } 100% { transform: translate(-50%, 0) scale(1); } }
   body.touch #ateP { font-size: 22px; top: 40%; padding: 5px 18px; }
   /* ===== 画面の配置（左上：体力・おなか／右上：モード・お金・地図／右はし：持ち物） ===== */
-  html body #hpbar, html body #foodbar { left: calc(12px + env(safe-area-inset-left)); right: auto; transform: none; width: 240px; bottom: auto; height: 16px; border: 2px solid #fff8; box-sizing: border-box; }
-  html body #hpbar { top: calc(10px + env(safe-area-inset-top)); } html body #foodbar { top: calc(30px + env(safe-area-inset-top)); }
-  html body #hpbar span, html body #foodbar span { font-size: 11px; top: 0; line-height: 12px; }
-  html body #hudR { left: calc(12px + env(safe-area-inset-left)); right: auto; top: calc(54px + env(safe-area-inset-top)) !important; bottom: auto; text-align: left; }
-  html body #hud { left: auto; right: calc(12px + env(safe-area-inset-right)); top: calc(8px + env(safe-area-inset-top)); text-align: right; }
-  html body #minimap { right: calc(12px + env(safe-area-inset-right)); top: calc(86px + env(safe-area-inset-top)); }
-  html body #hotbar { left: auto; right: calc(12px + env(safe-area-inset-right)); top: auto; bottom: calc(84px + env(safe-area-inset-bottom)); transform: none; flex-direction: column; align-items: flex-end; }
-  html body #hotbar div { min-width: 0; text-align: right; }
+  html body:not(.oldUI) #hpbar, html body:not(.oldUI) #foodbar { left: calc(12px + env(safe-area-inset-left)); right: auto; transform: none; width: 240px; bottom: auto; height: 16px; border: 2px solid #fff8; box-sizing: border-box; }
+  html body:not(.oldUI) #hpbar { top: calc(10px + env(safe-area-inset-top)); } html body:not(.oldUI) #foodbar { top: calc(30px + env(safe-area-inset-top)); }
+  html body:not(.oldUI) #hpbar span, html body:not(.oldUI) #foodbar span { font-size: 11px; top: 0; line-height: 12px; }
+  html body:not(.oldUI) #hudR { left: calc(12px + env(safe-area-inset-left)); right: auto; top: calc(54px + env(safe-area-inset-top)) !important; bottom: auto; text-align: left; }
+  html body:not(.oldUI) #hud { left: auto; right: calc(12px + env(safe-area-inset-right)); top: calc(8px + env(safe-area-inset-top)); text-align: right; }
+  html body:not(.oldUI) #minimap { right: calc(12px + env(safe-area-inset-right)); top: calc(86px + env(safe-area-inset-top)); }
+  html body:not(.oldUI) #hotbar { left: auto; right: calc(12px + env(safe-area-inset-right)); top: auto; bottom: calc(84px + env(safe-area-inset-bottom)); transform: none; flex-direction: column; align-items: flex-end; }
+  html body:not(.oldUI) #hotbar div { min-width: 0; text-align: right; }
   /* スマホ */
-  html body.touch #hpbar, html body.touch #foodbar { width: 170px; height: 14px; }
-  html body.touch #hpbar { top: calc(6px + env(safe-area-inset-top)); } html body.touch #foodbar { top: calc(23px + env(safe-area-inset-top)); }
-  html body.touch #hpbar span, html body.touch #foodbar span { font-size: 10px; line-height: 10px; }
-  html body.touch #hudR { top: calc(42px + env(safe-area-inset-top)) !important; font-size: 11px; line-height: 1.45; }
-  html body.touch #hud { top: calc(4px + env(safe-area-inset-top)); font-size: 12px; line-height: 1.45; }
-  html body.touch #minimap { top: calc(46px + env(safe-area-inset-top)); width: 100px; height: 100px; }
-  html body.touch #bTitle { top: calc(48px + env(safe-area-inset-top)); right: calc(122px + env(safe-area-inset-right)); }
-  html body.touch #tFull { top: auto; right: auto; left: calc(24px + env(safe-area-inset-left)); bottom: calc(154px + env(safe-area-inset-bottom)); }
-  html body.touch #hotbar { top: calc(154px + env(safe-area-inset-top)); transform: none; right: calc(4px + env(safe-area-inset-right)); bottom: auto; gap: 4px; }
-  html body.touch #hotbar div { padding: 1px 6px; font-size: 16px; }
-  html body.touch #tBtns { right: calc(56px + env(safe-area-inset-right)); }
+  html body.touch:not(.oldUI) #hpbar, html body.touch:not(.oldUI) #foodbar { width: 170px; height: 14px; }
+  html body.touch:not(.oldUI) #hpbar { top: calc(6px + env(safe-area-inset-top)); } html body.touch:not(.oldUI) #foodbar { top: calc(23px + env(safe-area-inset-top)); }
+  html body.touch:not(.oldUI) #hpbar span, html body.touch:not(.oldUI) #foodbar span { font-size: 10px; line-height: 10px; }
+  html body.touch:not(.oldUI) #hudR { top: calc(42px + env(safe-area-inset-top)) !important; font-size: 11px; line-height: 1.45; }
+  html body.touch:not(.oldUI) #hud { top: calc(4px + env(safe-area-inset-top)); font-size: 12px; line-height: 1.45; }
+  html body.touch:not(.oldUI) #minimap { top: calc(46px + env(safe-area-inset-top)); width: 100px; height: 100px; }
+  html body.touch:not(.oldUI) #bTitle { top: calc(48px + env(safe-area-inset-top)); right: calc(122px + env(safe-area-inset-right)); }
+  html body.touch:not(.oldUI) #tFull { top: auto; right: auto; left: calc(24px + env(safe-area-inset-left)); bottom: calc(154px + env(safe-area-inset-bottom)); }
+  html body.touch:not(.oldUI) #hotbar { top: calc(154px + env(safe-area-inset-top)); transform: none; right: calc(4px + env(safe-area-inset-right)); bottom: auto; gap: 4px; }
+  html body.touch:not(.oldUI) #hotbar div { padding: 1px 6px; font-size: 16px; }
+  html body.touch:not(.oldUI) #tBtns { right: calc(56px + env(safe-area-inset-right)); }
   /* 上のボタンは、下のまん中に2だん */
-  html body #tTop { top: auto; bottom: calc(8px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: grid; grid-template-columns: repeat(6, auto); gap: 5px; }
-  html body #tTop button { width: 40px; height: 40px; font-size: 18px; }
-  html body.touch #tTop { left: calc(160px + env(safe-area-inset-left)); transform: none; gap: 4px; }
-  html body.touch #tTop button { width: 38px; height: 38px; font-size: 17px; }
-  @media (max-height: 560px) { html body:not(.touch) #minimap { width: 120px; height: 120px; } }
+  html body:not(.oldUI) #tTop { top: auto; bottom: calc(8px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: grid; grid-template-columns: repeat(6, auto); gap: 5px; }
+  html body:not(.oldUI) #tTop button { width: 40px; height: 40px; font-size: 18px; }
+  html body.touch:not(.oldUI) #tTop { left: calc(160px + env(safe-area-inset-left)); transform: none; gap: 4px; }
+  html body.touch:not(.oldUI) #tTop button { width: 38px; height: 38px; font-size: 17px; }
+  @media (max-height: 560px) { html body:not(.touch):not(.oldUI) #minimap { width: 120px; height: 120px; } }
+  #skHud { position: fixed; z-index: 6; left: 50%; top: calc(64px + env(safe-area-inset-top)); transform: translateX(-50%); background: rgba(30,20,60,.75); border: 3px solid #7cf0ff; border-radius: 14px; padding: 4px 16px; font-size: 18px; font-weight: bold; text-align: center; pointer-events: none; text-shadow: 0 0 3px #000; }
+  #skHud[hidden] { display: none; } #skHud b { color: #ffd84a; font-size: 24px; }
+  body.touch #skHud { font-size: 13px; top: calc(46px + env(safe-area-inset-top)); } body.touch #skHud b { font-size: 17px; }
+  #tBtns button.ico { font-size: 28px; line-height: 1; } #tBtns button.big.ico { font-size: 34px; }
 </style>
 <!-- 3D 表示の部品（Three.js）と、部屋コードで遊ぶための部品（PeerJS）。インターネットから読み込む -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -352,12 +356,12 @@
 <div id="touchUI" hidden>
   <div id="joyBase"><div id="joyKnob"></div></div>
   <div id="tBtns">
-    <button class="town" data-act="grab">つかむ<br>投げる</button>
-    <button class="town" data-k="KeyE">調べる<br>(E)</button>
-    <button class="town" data-k="KeyF">乗り物<br>(F)</button>
-    <button id="tbLimp" data-k="ShiftLeft">力をぬく</button>
-    <button class="big town" data-act="attack">パンチ<br>使う</button>
-    <button id="tbJump" class="big" data-k="Space">ジャンプ</button>
+    <button class="town ico" data-act="grab" title="つかむ・投げる">✋</button>
+    <button class="town ico" data-k="KeyE" title="調べる">🔍</button>
+    <button class="town ico" data-k="KeyF" title="乗り物">🚗</button>
+    <button id="tbLimp" class="ico" data-k="ShiftLeft" title="力をぬく">🧸</button>
+    <button id="tbAtk" class="big town ico" data-act="attack" title="パンチ・使う">👊</button>
+    <button id="tbJump" class="big ico" data-k="Space" title="ジャンプ">⬆️</button>
   </div>
   <div id="tTop" class="town">
     <button data-k="KeyV">👁</button><button data-k="Tab">🗺️</button><button data-k="KeyP">📸</button><button data-k="KeyQ">🍙</button><button data-k="KeyZ">👋</button><button data-k="KeyX">💃</button><button data-k="KeyR">🤝</button><button data-k="KeyC">📞</button><button data-k="KeyH">📖</button><button data-k="KeyT">💬</button><button data-k="KeyJ" id="tbHunt" style="display:none">🏹</button>
@@ -390,6 +394,7 @@
 <div id="movieP" hidden><div class="mvBar top"></div><div class="mvBar bot"></div><button id="mvSkip">スキップ ▶▶</button><div id="mvCap"></div><div id="mvTitle">ふにゃふにゃランド<small>ぬいぐるみたちの、ふにゃふにゃな毎日がはじまる！</small></div></div>
 <div id="tutBox" hidden><div id="tutStep"></div><div id="tutText"></div><button id="tutSkip" class="sub">スキップ</button></div>
 <div id="ateP" hidden></div>
+<div id="skHud" hidden></div>
 <div id="chatLog"></div>
 <div id="chatBox" hidden><input id="chatIn" type="text" maxlength="60" placeholder="メッセージ（Enter で送る）" autocomplete="off"><button id="chatSend">送る</button><button id="chatClose" class="pink">とじる</button><div id="chatQuick"></div></div>
 <div id="wanted" hidden></div>
@@ -417,6 +422,7 @@
     <button id="bFriends" class="pink">👫 フレンド</button>
     <button id="bGfx" class="sub">⚙️ 画質：ふつう</button>
     <button id="bMovie" class="pink">🎬 ムービー</button>
+    <button id="bUi" class="sub">🔀 ボタン配置：いまの</button>
   </div>
   <p class="small" id="libMsg"></p>
   <p id="fsHint" hidden></p>
@@ -1231,6 +1237,7 @@ function makePlush(texture, limbColor, label) {
     },
   };
   model.setOutfit = makeOutfitter(body, limbs, hands, limb);
+  model.skate = skate;
   toonify(parts, shadow);
   return model;
 }
@@ -3176,6 +3183,7 @@ function useTool() {
   const h = me.held || "hand";
   const w = WEAPONS[h];
   if (me.ride && !(w && w.type === "gun")) return; // うしろに乗っているときは銃だけ使える
+  if (me.skate && !me.onGround && skTrick()) return; // スケボーで空中 → 技！
   if (w && me.punch > 0) return; // 武器は少し待ってから
   if (w && w.type === "gun") { if (!me.car) shoot(h); return; }
   if (h === "peel") {
@@ -4276,6 +4284,8 @@ function buildCity() {
   // 北東：スケートパーク
   ramp(52, -52, 1, 0, 6, 2, 6, 0xb0b0b8); ramp(62, -62, -1, 0, 6, 2, 6, 0xb0b0b8); ramp(57, -62, 0, 1, 5, 1.2, 5, 0xb0b0b8);
   addBox(57, 0, -54, 4, 0.8, 2.5, 0xc8c8d0);
+  ramp(50, -62, 0, -1, 4, 1.6, 4, 0x8ab0d8); ramp(64, -52, 0, 1, 4, 1.6, 4, 0x8ab0d8);
+  { const sl = makeLabel("🛹 スケートパーク", "#fff", 2.2, { bg: "#6a7ab8" }); sl.position.set(57, 5, -57); world.add(sl); }
   town.mapRects.push({ x: 57, z: -57, w: 18, d: 18, color: 0xb0b0b8, label: "スケート", flat: true });
   // 北西：展望タワー（階段でぐるぐるのぼる）
   addBox(-57, 0, -57, 4, 30, 4, 0xd85a5a);
@@ -7259,6 +7269,7 @@ function badUpdate(dt) {
 // =====================================================================
 function funTownUpdate(dt) {
   trailsUpdate(dt);
+  skUpdate(dt);
   tutUpdate(dt);
   safeHint();
   liveUpdate(dt);
@@ -7325,7 +7336,7 @@ addEventListener("keydown", (e) => {
 // =====================================================================
 const GUIDE = [
   { t: "🕹️ そうさ", h: () => touchMode
-    ? `<div class="gd"><span>🕹️</span><div><b>うごく</b>：左がわをさわって動かす<br><b>見回す</b>：右がわをなぞる（2本指でズーム）</div></div><div class="gd"><span>✊</span><div><b>パンチ／使う</b>・<b>つかむ→投げる</b>・<b>調べる</b>・<b>乗り物</b>は右下のボタン</div></div><div class="gd"><span>🔽</span><div>下のまん中のボタン：👁一人称 🗺️地図 📸写真 🍙食べる 👋💃エモート 🤝わたす 📞けいさつ 📖あそびかた</div></div>`
+    ? `<div class="gd"><span>🕹️</span><div><b>うごく</b>：左がわをさわって動かす<br><b>見回す</b>：右がわをなぞる（2本指でズーム）</div></div><div class="gd"><span>✊</span><div><b>パンチ／使う</b>・<b>つかむ→投げる</b>・<b>調べる</b>・<b>乗り物</b>は右下のボタン</div></div><div class="gd"><span>🔽</span><div>小さいボタン：👁一人称 🗺️地図 📸写真 🍙食べる 👋💃エモート 🤝わたす 📞けいさつ 📖あそびかた</div></div>`
     : `<div class="gd"><span>🕹️</span><div><kbd>WASD</kbd> うごく　<kbd>スペース</kbd> ジャンプ　マウス：見回す　ホイール：ズーム</div></div><div class="gd"><span>✊</span><div><b>クリック</b>：パンチ・使う（長おしでぐるぐるパンチ）<br><b>右クリック</b>：つかむ → はなすとぶん投げる！</div></div><div class="gd"><span>⌨️</span><div><kbd>E</kbd> 調べる・入る　<kbd>F</kbd> 乗り物　<kbd>Q</kbd> 食べる　<kbd>1</kbd>〜<kbd>5</kbd> 持ちかえ　<kbd>Tab</kbd> 地図<br><kbd>R</kbd> わたす・フレンド　<kbd>C</kbd> けいさつを呼ぶ　<kbd>H</kbd> このガイド　<kbd>P</kbd> 写真　<kbd>V</kbd> 一人称　<kbd>Shift</kbd> 力をぬく</div></div>` },
   { t: "🗺️ 町の場所", h: () => `<div class="gd"><span>🏪</span><div><b>広場のまわり</b>：服屋・ご飯屋・おもちゃ屋・乗り物屋　<b>道ぞい</b>：武器屋・空の乗り物屋・ハローワーク</div></div><div class="gd"><span>🎰</span><div><b>ガチャ屋</b>（東）・<b>ボードゲームカフェ</b>（西：オセロ・五目ならべ・4目ならべ・トランプ。ちがう機械の友だちとネット対戦も！）・<b>📋掲示板</b>（広場：ミッション・宝の地図・スタンプラリー・おにごっこ・フレンド）</div></div><div class="gd"><span>🎡</span><div><b>南</b>：遊園地（観覧車・<b>🎢ジェットコースター</b>・レース）・<b>🎣つり場</b>（南の桟橋の先）・<b>♨️旅館と温泉</b>・<b>🍹リゾート</b>（南東）<br><b>北</b>：ビル街・<b>🏨ホテル</b>　<b>北西</b>：展望タワー・<b>⛺キャンプ場</b><br><b>西</b>：サッカー場・ゲームセンター・コインランドリー　<b>東</b>：けいさつ署・ろうや</div></div><div class="gd"><span>🏝️</span><div>海の<b>小島</b>には番人と金庫。<b>大砲</b>で飛んでいける。お金をためたら<b>自分の島</b>も！</div></div>` },
   { t: "💰 お金", h: () => `<div class="gd"><span>⬆️</span><div><b>かせぐ</b>：コインを拾う・仕事（ハローワーク）・📰新聞配達・👏広場でおどってストリートライブ・🔍自販機の下・つり・ボードゲーム・🗺️宝の地図・ミッション・わるもの退治・モンスター退治・おばけの写真</div></div><div class="gd"><span>⬇️</span><div><b>使う</b>：🎰ガチャ（ぼうし・エフェクト・金ピカ）・お店・武器・乗り物・つりのエサ・オセロのかけ・ぬいへのプレゼント・自分の島</div></div><div class="gd"><span>📋</span><div><b>きょうのミッション</b>：毎日3つ。ぜんぶクリアで🎫ガチャ券！（広場の掲示板）</div></div>` },
@@ -7348,7 +7359,7 @@ function townIntro() {
     <div class="gd"><span>🪙</span><div>コインを集めて、<b>お店・ガチャ・つり・オセロ</b>で使おう</div></div>
     <div class="gd"><span>📋</span><div>まよったら広場の<b>掲示板</b>で「きょうのミッション」</div></div>
     <div class="gd"><span>🎮</span><div>${touchMode ? "左で動く・右で見回す・右下のボタンで操作" : "<kbd>WASD</kbd> 動く　クリック パンチ　右クリック つかむ　<kbd>E</kbd> 調べる"}</div></div>
-  </div><div class="small">くわしいことは「📖 あそびかた」（${touchMode ? "下の 📖" : "H キー"}）でいつでも見られるよ</div>`, [
+  </div><div class="small">くわしいことは「📖 あそびかた」（${touchMode ? (uiOld() ? "上の 📖" : "下の 📖") : "H キー"}）でいつでも見られるよ</div>`, [
     { label: "遊ぶ！", fn: () => { controls = true; } },
     { label: "📖 あそびかた", fn: () => openGuide(0) },
   ]);
@@ -7373,6 +7384,7 @@ function openBoard() {
     { name: "🏹 怪獣ハンターをよぶ", desc: "コインでハンターをやとうと、モンスターとたたかってくれる（J キーでも呼べる）", btn: "えらぶ", fn: () => { openHunters(); return false; } },
     { name: "🗺️ 宝の地図", desc: townSave.treasure ? "持っている！ 右上のヒントをたよりにさがそう" : "町のどこかにうまっている宝箱の場所がわかる（コイン・ガチャ券・レアなぼうしなど）", btn: townSave.treasure ? "持っている" : "50🪙で買う", disabled: !!townSave.treasure, fn: () => { buyTreasureMap(); } },
     { name: "👫 フレンド・プロフィール・称号", desc: "", btn: "ひらく", fn: () => { openFriends(); return false; } },
+    { name: "🔀 ボタン配置を切りかえ", desc: "いまの配置 ⇄ 前の配置（タイトル画面でも切りかえられる）", btn: "切りかえ", fn: () => { toggleUiLayout(); return false; } },
     { name: "🎓 チュートリアルをもう一度", desc: "あそびかたを1つずつやってみる", btn: "やる", fn: () => { closeShop(); startTutorial(); return false; } },
     { name: "📖 あそびかた", desc: "そうさ・町の場所・お金・イベント…", btn: "ひらく", fn: () => { closeShop(); openGuide(0); return false; } },
   ], openBoard);
@@ -9658,14 +9670,14 @@ setTimeout(() => {
 // =====================================================================
 const TUT = [
   { t: () => touchMode ? "🕹️ 左がわをさわって、歩いてみよう" : "🕹️ <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> キーで歩いてみよう", ok: (s) => s.moved > 6 },
-  { t: () => touchMode ? "⬆️ 「ジャンプ」ボタンでジャンプ！" : "⬆️ <kbd>スペース</kbd>キーでジャンプ！", ok: () => me.vel.y > 2 },
+  { t: () => touchMode ? "⬆️ ⬆️ボタンでジャンプ！" : "⬆️ <kbd>スペース</kbd>キーでジャンプ！", ok: () => me.vel.y > 2 },
   { t: () => touchMode ? "👀 右がわを指でなぞって、まわりを見回そう" : "👀 マウスを動かして見回そう（画面をクリックすると、マウスで見回せるよ）", ok: (s) => s.looked > 1.6 },
-  { t: () => touchMode ? "✊ 「パンチ」ボタンでパンチ！" : "✊ クリックでパンチ！", ok: () => me.punch > 0 },
-  { t: () => touchMode ? "🧸 「力をぬく」ボタンで、ただのぬいぐるみのふり（見つかりにくい）" : "🧸 <kbd>Shift</kbd>キーで力をぬいて、ただのぬいぐるみのふり（見つかりにくい）", ok: () => me.limp },
+  { t: () => touchMode ? "✊ 👊ボタンでパンチ！" : "✊ クリックでパンチ！", ok: () => me.punch > 0 },
+  { t: () => touchMode ? "🧸 🧸ボタンで、ただのぬいぐるみのふり（見つかりにくい）" : "🧸 <kbd>Shift</kbd>キーで力をぬいて、ただのぬいぐるみのふり（見つかりにくい）", ok: () => me.limp },
   { t: () => "🪙 近くに出た ✨コイン✨ を拾おう！（コインでいろいろ買えるよ）", setup: tutCoins, ok: (s) => wallet > s.w0 },
-  { t: () => touchMode ? "🤾 近くのぬいぐるみを「つかむ」ボタンでつかんで、もう一回おして投げよう！" : "🤾 近くのぬいぐるみを <b>右クリック</b>でつかんで、はなしてぶん投げよう！", setup: tutBot, ok: (s) => s.threw, skipIf: () => !net.isHost },
-  { t: () => touchMode ? "🥤 ▼の自販機の前の光る輪で「調べる」ボタン。お店も同じように使えるよ" : "🥤 ▼の自販機の前の光る輪で <kbd>E</kbd>（調べる）。お店も同じように使えるよ", target: () => [VENDING[0][0] - 0.6, 3.2, VENDING[0][1] + 0.4], ok: () => !$("shopP").hidden },
-  { t: () => touchMode ? "🗺️ 下の 🗺️ ボタンで地図を見よう" : "🗺️ <kbd>Tab</kbd>キーで地図を見よう（もう一回おすと海まで、もう一回でとじる）", ok: () => !!bigMap },
+  { t: () => touchMode ? "🤾 近くのぬいぐるみを✋ボタンでつかんで、もう一回おして投げよう！" : "🤾 近くのぬいぐるみを <b>右クリック</b>でつかんで、はなしてぶん投げよう！", setup: tutBot, ok: (s) => s.threw, skipIf: () => !net.isHost },
+  { t: () => touchMode ? "🥤 ▼の自販機の前の光る輪で🔍ボタン。お店も同じように使えるよ" : "🥤 ▼の自販機の前の光る輪で <kbd>E</kbd>（調べる）。お店も同じように使えるよ", target: () => [VENDING[0][0] - 0.6, 3.2, VENDING[0][1] + 0.4], ok: () => !$("shopP").hidden },
+  { t: () => touchMode ? "🗺️ " + (uiOld() ? "上" : "下") + "の 🗺️ ボタンで地図を見よう" : "🗺️ <kbd>Tab</kbd>キーで地図を見よう（もう一回おすと海まで、もう一回でとじる）", ok: () => !!bigMap },
   { t: () => touchMode ? "📋 ▼の掲示板で「調べる」。ミッション・アルバイト・あそびかたが見られるよ" : "📋 ▼の掲示板で <kbd>E</kbd>。ミッション・アルバイト・あそびかたが見られるよ", target: () => [-9.5, 3.9, -5], ok: () => !$("shopP").hidden && $("shopTitle").textContent.includes("掲示板") },
 ];
 const tut = { on: false, i: 0, s: null, wait: 0, arrow: null, lastYaw: 0, lastPos: null };
@@ -9706,7 +9718,7 @@ function tutEnd(done) {
   if (!done) return;
   const first = !townSave.tutDone; townSave.tutDone = true; saveTown(true);
   if (first) gotCoins(100, "🎓 チュートリアルクリア！");
-  setTimeout(() => showMsg("🎓 チュートリアルクリア！", `これで準備OK！<br>まよったら <b>📖 あそびかた</b>（${touchMode ? "下の 📖" : "H キー"}）や、広場の <b>📋掲示板</b> を見てね。<br>コインを集めて、お店・ガチャ・つり・ボードゲーム…自由に遊ぼう！`, [{ label: "遊ぶ！", fn: () => { controls = true; } }]), 900);
+  setTimeout(() => showMsg("🎓 チュートリアルクリア！", `これで準備OK！<br>まよったら <b>📖 あそびかた</b>（${touchMode ? (uiOld() ? "上の 📖" : "下の 📖") : "H キー"}）や、広場の <b>📋掲示板</b> を見てね。<br>コインを集めて、お店・ガチャ・つり・ボードゲーム…自由に遊ぼう！`, [{ label: "遊ぶ！", fn: () => { controls = true; } }]), 900);
 }
 function tutCoins() { if (!net.isHost) { tut.s.w0 = -1; return; } for (let k = 0; k < 3; k++) { const a = me.ry + rand(-0.6, 0.6), r = 2.5 + k; spawnCoin(me.pos.x + Math.sin(a) * r, 0, me.pos.z + Math.cos(a) * r, 1); } }
 function tutBot() { const b = town.bots[2]; if (!b) return; b.pos.set(me.pos.x + Math.sin(me.ry) * 2, 0, me.pos.z + Math.cos(me.ry) * 2); b.vel.set(0, 0, 0); b.model.g.position.copy(b.pos); b.model.place(); }
@@ -9723,6 +9735,92 @@ function ateShow() {
   play("item");
   clearTimeout(ateTimer); ateTimer = setTimeout(() => (e.hidden = true), 1600);
 }
+
+// =====================================================================
+//  26. スケボーの技（空中でクリック／👊ボタン → ランダムで技！）
+// =====================================================================
+const SK_TRICKS = [
+  { n: "キックフリップ", pts: 100, bz: 1 },
+  { n: "ヒールフリップ", pts: 110, bz: -1 },
+  { n: "ショービット", pts: 90, by: 0.5 },
+  { n: "360フリップ", pts: 220, bz: 1, by: 1 },
+  { n: "インポッシブル", pts: 200, bx: 1 },
+  { n: "360スピン", pts: 180, spin: 1 },
+  { n: "540スピン", pts: 300, spin: 1.5 },
+  { n: "インディグラブ", pts: 120, grab: 1 },
+  { n: "ダブルフリップ", pts: 240, bz: 2 },
+  { n: "ふにゃふにゃフリップ", pts: 280, bz: 2, spin: 1 },
+  { n: "ピザ回し", pts: 160, by: 2 },
+  { n: "ぬいぐるみバックフリップ", pts: 380, bx: -1, spin: 1 },
+];
+const SK_PARK = { x: 57, z: -57, r: 10 };
+const sk = { air: false, trick: null, last: -1, combo: [], session: false, pts: 0, tricks: 0, wasPark: false };
+function skInPark() { return Math.abs(me.pos.x - SK_PARK.x) < SK_PARK.r && Math.abs(me.pos.z - SK_PARK.z) < SK_PARK.r; }
+function skTrick() {
+  if (!me.skate || me.onGround || sk.trick || me.limp) return false;
+  let i; do { i = Math.floor(Math.random() * SK_TRICKS.length); } while (i === sk.last && SK_TRICKS.length > 1);
+  sk.last = i; const T = SK_TRICKS[i];
+  sk.trick = { T, t: 0, dur: 0.42 + (T.spin || 0) * 0.16 + Math.abs(T.bz || 0) * 0.06, ry0: me.ry };
+  popText(me.pos.x, me.pos.y + 2.4, me.pos.z, T.n, "#7cf0ff"); play("jump");
+  return true;
+}
+function skEndSession() {
+  if (!sk.session) return;
+  sk.session = false;
+  if (sk.pts > 0) {
+    const coins = Math.max(1, Math.floor(sk.pts / 40)), best = townSave.skateBest || 0, isBest = sk.pts > best;
+    if (isBest) { townSave.skateBest = sk.pts; saveTown(true); }
+    gotCoins(coins, `🛹 スケートスコア ${sk.pts}点（技 ${sk.tricks}こ）${isBest ? "<br>🏆 自己ベスト！" : `<br>ベスト：${best}点`}`);
+  }
+  sk.pts = 0; sk.tricks = 0; sk.combo = [];
+}
+function skUpdate(dt) {
+  const hud = $("skHud");
+  if (!me.skate || mode !== "town") {
+    if (sk.trick) sk.trick = null;
+    sk.air = false; skEndSession();
+    if (!hud.hidden) hud.hidden = true;
+    return;
+  }
+  const park = skInPark();
+  if (park && !sk.session) { sk.session = true; sk.pts = 0; sk.tricks = 0; toast(`🛹 ジャンプ中に ${touchMode ? "🤸" : "クリック"}で技！<br><span class="small">つなげるとコンボで点が倍！</span>`, 2600); }
+  if (!park && sk.session && me.onGround && !sk.trick) skEndSession();
+  // 空中
+  if (!me.onGround) sk.air = true;
+  const board = me.model.skate;
+  if (sk.trick) {
+    const K = sk.trick, T = K.T; K.t += dt;
+    const k = Math.min(1, K.t / K.dur), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    if (board) { board.rotation.order = "YXZ"; board.rotation.set((T.bx || 0) * Math.PI * 2 * e, me.ry + (T.by || 0) * Math.PI * 2 * e, (T.bz || 0) * Math.PI * 2 * e); if (T.grab) board.position.y += Math.sin(k * Math.PI) * 0.25; }
+    if (T.spin) me.ry = K.ry0 + T.spin * Math.PI * 2 * e;
+    if (k >= 1) { sk.combo.push(T); sk.trick = null; }
+  }
+  // 着地
+  if (sk.air && me.onGround) {
+    sk.air = false;
+    if (sk.trick) {
+      // 技のとちゅうで着地 → ずてーん！
+      sk.trick = null; sk.combo = [];
+      me.stun = 1.2; me.vel.x *= 0.2; me.vel.z *= 0.2; play("squish"); shake = Math.max(shake, 0.15);
+      popText(me.pos.x, me.pos.y + 2, me.pos.z, "ずてーん！ 失敗…", "#ff8a8a");
+    } else if (sk.combo.length) {
+      const n = sk.combo.length, sum = sk.combo.reduce((a, t) => a + t.pts, 0), got = sum * n;
+      popText(me.pos.x, me.pos.y + 2.6, me.pos.z, n > 1 ? `${n}コンボ！ +${got}` : `ナイス！ +${got}`, "#ffd84a"); play(n > 1 ? "clear" : "item");
+      if (sk.session) { sk.pts += got; sk.tricks += n; }
+      sk.combo = [];
+    }
+  }
+  // 点数の表示
+  hud.hidden = !sk.session;
+  if (sk.session) setH(hud, `🛹 スコア <b>${sk.pts}</b>　<span class="small">ベスト ${townSave.skateBest || 0}</span>${sk.trick ? `<br>✨ ${sk.trick.T.n}` : sk.combo.length ? `<br>✨ ${sk.combo.map((t) => t.n).join(" → ")}` : ""}`);
+}
+
+// ---- ボタン配置の切りかえ（いまの配置 ⇄ 前の配置） ----
+function uiOld() { try { return localStorage.getItem("funyaland_ui") === "old"; } catch (e) { return false; } }
+function applyUiLayout() { document.body.classList.toggle("oldUI", uiOld()); const b = $("bUi"); if (b) b.textContent = `🔀 ボタン配置：${uiOld() ? "前の" : "いまの"}`; }
+function toggleUiLayout() { try { localStorage.setItem("funyaland_ui", uiOld() ? "new" : "old"); } catch (e) {} applyUiLayout(); toast(`ボタン配置を「${uiOld() ? "前の配置" : "いまの配置"}」にした`, 1600); }
+$("bUi").onclick = toggleUiLayout;
+applyUiLayout();
 
 // 町モードで届いたメッセージ（onNet から呼ばれる）
 function onNetTown(d, conn) {
@@ -9971,8 +10069,10 @@ function updateTouchUI() {
   if (ui.dataset.mode !== mode) ui.dataset.mode = mode;
   // 乗り物に乗っている・空を飛んでいるときは、ボタンの名前をかえる
   const jb = $("tbJump"), lb = $("tbLimp");
-  const jt = me.fly ? "上がる" : me.heldBy ? "連打で逃げる" : me.ufo ? "アームを落とす" : "ジャンプ";
-  const lt = me.fly ? "下がる" : "力をぬく";
+  const jt = me.fly ? "🔼" : me.heldBy ? "💥" : me.ufo ? "🕹️" : "⬆️";
+  const lt = me.fly ? "🔽" : "🧸";
+  const ab = $("tbAtk"), at = me.skate && !me.onGround ? "🤸" : "👊";
+  if (ab && ab.dataset.t !== at) { ab.dataset.t = at; ab.textContent = at; }
   if (jb.dataset.t !== jt) { jb.dataset.t = jt; jb.textContent = jt; }
   if (lb.dataset.t !== lt) { lb.dataset.t = lt; lb.textContent = lt; }
 }
