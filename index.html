@@ -542,6 +542,37 @@
     <button class="tool" data-part="horn" data-v="deer">シカ</button>
     <button class="tool" data-part="horn" data-v="dragon">ドラゴン</button>
   </div>
+  <div class="row" data-def="none">
+    <span class="small">まゆげ</span>
+    <button class="tool" data-part="brow" data-v="none">なし</button>
+    <button class="tool" data-part="brow" data-v="normal">ふつう</button>
+    <button class="tool" data-part="brow" data-v="angry">おこり</button>
+    <button class="tool" data-part="brow" data-v="sad">こまり</button>
+    <button class="tool" data-part="brow" data-v="thick">ふとい</button>
+  </div>
+  <div class="row" data-def="none">
+    <span class="small">ほっぺ</span>
+    <button class="tool" data-part="cheek" data-v="none">なし</button>
+    <button class="tool" data-part="cheek" data-v="pink">ピンク</button>
+    <button class="tool" data-part="cheek" data-v="red">まっか</button>
+    <button class="tool" data-part="cheek" data-v="star">キラキラ</button>
+  </div>
+  <div class="row" data-def="none">
+    <span class="small">ひげ</span>
+    <button class="tool" data-part="whisker" data-v="none">なし</button>
+    <button class="tool" data-part="whisker" data-v="cat">ネコひげ</button>
+    <button class="tool" data-part="whisker" data-v="mustache">ちょびひげ</button>
+    <button class="tool" data-part="whisker" data-v="beard">あごひげ</button>
+  </div>
+  <div class="row" data-def="none">
+    <span class="small">はね</span>
+    <button class="tool" data-part="wing" data-v="none">なし</button>
+    <button class="tool" data-part="wing" data-v="angel">天使</button>
+    <button class="tool" data-part="wing" data-v="bat">コウモリ</button>
+    <button class="tool" data-part="wing" data-v="butterfly">チョウ</button>
+    <button class="tool" data-part="wing" data-v="fairy">ようせい</button>
+    <button class="tool" data-part="wing" data-v="dragon">ドラゴン</button>
+  </div>
   <div class="row">
     <button class="tool" id="bRotL">◀ 回す</button><button class="tool" id="bRotR">回す ▶</button><button class="tool" id="bSpin">🔄 自動でまわす：ON</button><span class="small">キャラをドラッグしても回せるよ</span>
   </div>
@@ -1089,10 +1120,10 @@ function makePlush(texture, limbColor, label) {
   hands.lFoot.scale.set(1, 0.7, 1.4); hands.rFoot.scale.set(1, 0.7, 1.4);
   // しっぽ・かみがた・角（キャラメイクでえらべる）
   const tail = new THREE.Group(); parts.add(tail);
-  const hairG = new THREE.Group(), hornG = new THREE.Group(); headG.add(hairG); headG.add(hornG);
+  const hairG = new THREE.Group(), hornG = new THREE.Group(), faceX = new THREE.Group(), wingG = new THREE.Group(); headG.add(hairG); headG.add(hornG); headG.add(faceX); body.add(wingG);
   let partsKey = null;
   function buildParts(o) {
-    const key = [o.tail, o.hair, o.hairColor, o.head, o.horn].join("|"); if (key === partsKey) return; partsKey = key;
+    const key = [o.tail, o.hair, o.hairColor, o.head, o.horn, o.brow, o.cheek, o.whisker, o.wing].join("|"); if (key === partsKey) return; partsKey = key;
     const add = (grp, geo, m, x, y, z) => { const ms = new THREE.Mesh(geo, m); ms.position.set(x, y, z); grp.add(ms); return ms; };
     const clear = (grp) => { while (grp.children.length) grp.remove(grp.children[0]); };
     // 頭の形（顔・かみ・角・ぼうしも形に合わせる）
@@ -1129,6 +1160,40 @@ function makePlush(texture, limbColor, label) {
     else if (nk === "oni") add(hornG, new THREE.ConeGeometry(0.06, 0.16, 8), new THREE.MeshToonMaterial({ color: 0xffe08a }), 0, 0.33, 0.05);
     else if (nk === "deer") { const m2 = new THREE.MeshToonMaterial({ color: 0x8a5a3a }); for (const sx of [-1, 1]) { const a = add(hornG, new THREE.CylinderGeometry(0.02, 0.025, 0.22, 6), m2, sx * 0.14, 0.36, 0); a.rotation.z = -sx * 0.3; const b = add(hornG, new THREE.CylinderGeometry(0.015, 0.02, 0.12, 6), m2, sx * 0.2, 0.42, 0.04); b.rotation.z = -sx * 1.0; } }
     else if (nk === "dragon") { const m2 = new THREE.MeshToonMaterial({ color: 0xf4f0e0 }); for (const sx of [-1, 1]) { const e = add(hornG, new THREE.ConeGeometry(0.045, 0.24, 8), m2, sx * 0.14, 0.27, -0.1); e.rotation.set(-0.9, 0, -sx * 0.3); } }
+    // まゆげ・ほっぺ・ひげ（顔のパーツ）
+    clear(faceX); faceX.scale.set(r[0], r[1], r[2]);
+    const bk = o.brow || "none";
+    if (bk !== "none") for (const sx of [-1, 1]) {
+      const b = add(faceX, new THREE.BoxGeometry(bk === "thick" ? 0.14 : 0.11, bk === "thick" ? 0.045 : 0.025, 0.03), black, sx * 0.13, 0.19, 0.29);
+      b.rotation.z = bk === "angry" ? sx * 0.4 : bk === "sad" ? -sx * 0.35 : 0; b.rotation.x = -0.3;
+    }
+    const ck = o.cheek || "none";
+    if (ck !== "none") for (const sx of [-1, 1]) {
+      if (ck === "star") { add(faceX, new THREE.OctahedronGeometry(0.035), gold, sx * 0.21, -0.03, 0.27); continue; }
+      const c = add(faceX, new THREE.SphereGeometry(0.05, 10, 8), new THREE.MeshToonMaterial({ color: ck === "red" ? 0xff3a5a : 0xff9ac0 }), sx * 0.2, -0.04, 0.26);
+      c.scale.set(1.2, 0.7, 0.35); c.rotation.y = sx * 0.6;
+    }
+    const wk = o.whisker || "none";
+    if (wk === "cat") { for (const sx of [-1, 1]) for (const k of [-1, 0, 1]) { const w = add(faceX, new THREE.CylinderGeometry(0.006, 0.006, 0.2, 4), black, sx * 0.2, -0.06 + k * 0.03, 0.29); w.rotation.z = Math.PI / 2 + sx * k * 0.2; w.rotation.y = -sx * 0.3; } }
+    else if (wk === "mustache") { for (const sx of [-1, 1]) { const m2 = add(faceX, new THREE.SphereGeometry(0.05, 10, 8), black, sx * 0.05, -0.04, 0.31); m2.scale.set(1.3, 0.55, 0.5); m2.rotation.z = sx * 0.3; } }
+    else if (wk === "beard") { const bd = add(faceX, new THREE.SphereGeometry(0.13, 12, 10), new THREE.MeshToonMaterial({ color: new THREE.Color(o.hairColor || "#5a3a2a") }), 0, -0.2, 0.18); bd.scale.set(1.1, 0.9, 0.6); }
+    // せなかのはね（体のうしろ = -z）
+    clear(wingG); wingG.userData.piv = null;
+    const gk = o.wing || "none";
+    if (gk !== "none") {
+      const piv = [];
+      const WM = { angel: [0xffffff, 0xf4f0ff], bat: [0x3a2a4a, 0x5a3a6a], butterfly: [0xff8ac0, 0x8ac8ff], dragon: [null, 0xffd84a], fairy: [0xbff4ff, 0xffd8ff] }[gk] || [0xffffff, 0xffffff];
+      const m1 = WM[0] == null ? limb : new THREE.MeshToonMaterial({ color: WM[0], transparent: gk === "fairy", opacity: gk === "fairy" ? 0.75 : 1 }), m2 = new THREE.MeshToonMaterial({ color: WM[1], transparent: gk === "fairy", opacity: gk === "fairy" ? 0.75 : 1 });
+      for (const sx of [-1, 1]) {
+        const p = new THREE.Group(); p.position.set(sx * 0.08, 0.08, -0.24); wingG.add(p); piv.push(p);
+        if (gk === "angel") { const a = add(p, new THREE.SphereGeometry(0.13, 12, 8), m1, sx * 0.17, 0.06, -0.02); a.scale.set(1.6, 1.1, 0.22); a.rotation.z = sx * 0.4; const b = add(p, new THREE.SphereGeometry(0.09, 10, 8), m2, sx * 0.2, -0.08, -0.02); b.scale.set(1.5, 0.9, 0.2); }
+        else if (gk === "bat") { for (let k = 0; k < 3; k++) { const a = add(p, new THREE.ConeGeometry(0.07, 0.3, 4), k % 2 ? m2 : m1, sx * (0.08 + k * 0.08), 0.05 - k * 0.03, -0.02); a.rotation.z = sx * (1.0 + k * 0.35); a.scale.z = 0.25; } }
+        else if (gk === "butterfly" || gk === "fairy") { const a = add(p, new THREE.SphereGeometry(0.12, 12, 8), m1, sx * 0.15, 0.1, -0.02); a.scale.set(1.2, 1.3, 0.15); const b = add(p, new THREE.SphereGeometry(0.08, 10, 8), m2, sx * 0.13, -0.08, -0.02); b.scale.set(1.1, 1.2, 0.15); }
+        else if (gk === "dragon") { const a = add(p, new THREE.SphereGeometry(0.13, 12, 8), m1, sx * 0.17, 0.05, -0.02); a.scale.set(1.7, 1.0, 0.18); a.rotation.z = sx * 0.3; for (let k = 0; k < 3; k++) add(p, new THREE.ConeGeometry(0.02, 0.07, 4), m2, sx * (0.1 + k * 0.08), 0.15 - k * 0.02, -0.02); }
+      }
+      wingG.userData.piv = piv;
+    }
+    toonify(faceX); toonify(wingG);
     toonify(tail); toonify(hairG); toonify(hornG);
   }
   buildParts({});
@@ -1143,6 +1208,7 @@ function makePlush(texture, limbColor, label) {
   const glassMat = new THREE.MeshLambertMaterial({ color: 0xaee4ff, transparent: true, opacity: 0.55 });
   // 車（2人乗り。うしろの席は友だち用）
   const car = new THREE.Group(); car.visible = false; parts.add(car);
+  const stkG = new THREE.Group(); car.add(stkG);
   {
     const cb = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 1.9), new THREE.MeshToonMaterial({ color: 0xff5c7a })); cb.position.set(0, 0.22, -0.3); car.add(cb); car.userData.body = cb;
     bx(car, 0.86, 0.12, 0.4, 0xffd84a, 0, 0.42, 0.45);                    // ボンネット
@@ -1326,6 +1392,7 @@ function makePlush(texture, limbColor, label) {
       body.position.copy(pel).add(che).multiplyScalar(0.5);
       orient(body, vB.copy(che).sub(pel).normalize(), facing);
       body.scale.set(sc, 1.1 * sc, 0.9 * sc);
+      if (wingG.userData.piv) { const f = Math.sin((s.t || 0) * (s.air ? 14 : 5)) * (s.air ? 0.5 : 0.2); wingG.userData.piv[0].rotation.y = 0.35 + f; wingG.userData.piv[1].rotation.y = -0.35 - f; }
       // 頭：胸から頭への向き
       headG.position.copy(hd);
       orient(headG, vB.copy(hd).sub(che).normalize(), facing);
@@ -1348,6 +1415,10 @@ function makePlush(texture, limbColor, label) {
       // かげ・車・銃・名前
       shadow.position.set(pel.x, y + 0.02, pel.z); shadow.scale.setScalar(sc);
       car.visible = isCarV(veh); car.position.set(x, y, z); car.rotation.y = ry;
+      if (car.visible) { const sk2 = s.stk || ""; if (st.stk !== sk2) { st.stk = sk2; while (stkG.children.length) stkG.remove(stkG.children[0]);
+        if (sk2) { const T3 = stickerTex(sk2);
+          for (const sx of [-1, 1]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.28), new THREE.MeshBasicMaterial({ map: T3.side, transparent: true, side: THREE.DoubleSide, depthWrite: false })); m.position.set(sx * 0.457, 0.22, -0.3); m.rotation.y = sx * Math.PI / 2; if (sx < 0) m.scale.x = -1; stkG.add(m); }
+          const hm = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.38), new THREE.MeshBasicMaterial({ map: T3.hood, transparent: true, depthWrite: false })); hm.rotation.x = -Math.PI / 2; hm.position.set(0, 0.485, 0.45); stkG.add(hm); } } }
       if (car.visible && st.carKind !== veh) { st.carKind = veh; if (veh === "sports") car.scale.set(1.05, 0.8, 1.18); else if (veh === "monster") car.scale.set(1.35, 1.5, 1.3); else car.scale.set(1, 1, 1); }
       if (car.visible) { const cc = s.carColor != null ? s.carColor : 0xff5c7a; if (st.carCol !== cc) { st.carCol = cc; car.userData.body.material.color.set(cc); } }
       for (const k in mounts) { const on = veh === k; mounts[k].visible = on; if (on) { mounts[k].position.set(x, y, z); mounts[k].rotation.set(k === "carpet" ? Math.sin((s.t || 0) * 3) * 0.04 : 0, ry, 0); } }
@@ -1564,12 +1635,16 @@ function updateMe(dt) {
     if (iz > 0 || nit) p.carSpeed = Math.min(maxF, p.carSpeed + 9 * (1 + 0.15 * (CU.engine || 0)) * (nit ? 3 : 1) * dt);
     else if (iz < 0) p.carSpeed = Math.max(maxB, p.carSpeed - (p.carSpeed > 0 ? 16 : 7) * dt);
     else p.carSpeed *= Math.pow(0.35, dt);
-    if (inPond) p.carSpeed *= Math.pow(0.1, dt);
-    if (snowy) p.carSpeed *= Math.pow(0.8 + 0.06 * (CU.tire || 0), dt);
-    const steer = clamp(Math.abs(p.carSpeed) / 4, 0, 1) * 2.4 * (1 + 0.2 * (CU.tire || 0)) * Math.sign(p.carSpeed);
+    const TT = CU.tt || "normal";
+    if (inPond && TT !== "offroad") p.carSpeed *= Math.pow(0.1, dt);
+    if (snowy && TT !== "snow") p.carSpeed *= Math.pow(0.8 + 0.06 * (CU.tire || 0), dt);
+    const steer = clamp(Math.abs(p.carSpeed) / 4, 0, 1) * 2.4 * (1 + 0.2 * (CU.tire || 0)) * (TT === "drift" ? 1.3 : 1) * Math.sign(p.carSpeed);
     if (p.onGround) p.ry -= ix * steer * dt;
     const fx = Math.sin(p.ry), fz = Math.cos(p.ry);
-    if (p.onGround) { p.vel.x = fx * p.carSpeed; p.vel.z = fz * p.carSpeed; }
+    if (p.onGround) {
+      if (TT === "drift") { const gr = Math.min(1, dt * 2.6); p.vel.x += (fx * p.carSpeed - p.vel.x) * gr; p.vel.z += (fz * p.carSpeed - p.vel.z) * gr; driftTick(p, dt, fx, fz); }
+      else { p.vel.x = fx * p.carSpeed; p.vel.z = fz * p.carSpeed; }
+    }
     // カメラはだんだん車のうしろへ回る
     if (Math.abs(p.carSpeed) > 1) camYaw = lerpAngle(camYaw, p.ry + Math.PI, Math.min(1, dt * 2.5));
     len = Math.abs(p.carSpeed) > 0.5 ? 1 : 0;
@@ -1658,7 +1733,7 @@ function updateMe(dt) {
     // 車・スケボーでスロープを上ると、そのいきおいでジャンプする
     const slc = slopeUnder(p.pos);
     p.slVy = slc ? Math.max(0, slc.slG * (p.vel.x * slc.slDx + p.vel.z * slc.slDz)) : 0;
-    if ((p.car || p.skate) && !slc && rise > 0.1 && rise < 0.32) p.vel.y = Math.min(9, Math.hypot(p.vel.x, p.vel.z) * 0.55);
+    if ((p.car || p.skate) && !slc && rise > 0.1 && rise < 0.32) { const off = p.car && carUp().tt === "offroad" ? 1.35 : 1; p.vel.y = Math.min(9 * off, Math.hypot(p.vel.x, p.vel.z) * 0.55 * off); }
     // トランポリン
     if (town_ && !p.fly && town.bounce.some((b) => p.pos.x > b.minX && p.pos.x < b.maxX && p.pos.z > b.minZ && p.pos.z < b.maxZ && Math.abs(g - b.y) < 0.05)) {
       p.vel.y = keys.Space ? 15 : 11; p.onGround = false; play("jump");
@@ -1667,7 +1742,7 @@ function updateMe(dt) {
   else {
     const drop = p.pos.y - g;
     if (p.onGround && p.vel.y <= 0 && !p.fly && drop < 0.45 && slopeUnder({ x: p.pos.x, y: g, z: p.pos.z })) p.pos.y = g;
-    else if (p.onGround && p.vel.y <= 0 && p.slVy > 0.6 && (p.car || p.skate)) { p.vel.y = Math.min(12, p.slVy * 1.6 + 2); p.slVy = 0; }
+    else if (p.onGround && p.vel.y <= 0 && p.slVy > 0.6 && (p.car || p.skate)) { const off = p.car && carUp().tt === "offroad" ? 1.3 : 1; p.vel.y = Math.min(12 * off, (p.slVy * 1.6 + 2) * off); p.slVy = 0; }
     p.onGround = p.pos.y - g < 0.02;
   }
   if (p.pos.y < -10) { toast("落っこちた！"); respawnHere(); }
@@ -1676,7 +1751,7 @@ function updateMe(dt) {
   p.model.g.rotation.y = p.ry;
   p.model.g.visible = !(p.invis > 0 && Math.floor(p.t * 10) % 2 === 0);
   p.model.animate(dt, { speed: p.skate || p.fly ? 0 : Math.hypot(p.vel.x, p.vel.z), air: !p.onGround && !p.car && !p.fly && p.float <= 0, limp: p.limp || p.ko > 0, punch: p.punch, stun: p.stun, t: p.t,
-    big: p.buffs.big > 0, small: p.buffs.small > 0, veh: p.veh, carColor: p.carColor, vc: p.vehColor, slide: p.slideT > 0, climb: p.climbT > 0, weapon, flat: p.flat > 0 ? 1 : p.ko > 0 ? 0.65 : p.squashT > 0 ? p.squashT * 1.6 : 0, grab: !!p.grab || p.grabMiss > 0, spin: p.spin > 0, balloon: p.float > 0, emote: p.emote, aim: p.aimT > 0 });
+    big: p.buffs.big > 0, small: p.buffs.small > 0, veh: p.veh, carColor: p.carColor, vc: p.vehColor, stk: p.car && !p.stolen ? stickerKey() : "", slide: p.slideT > 0, climb: p.climbT > 0, weapon, flat: p.flat > 0 ? 1 : p.ko > 0 ? 0.65 : p.squashT > 0 ? p.squashT * 1.6 : 0, grab: !!p.grab || p.grabMiss > 0, spin: p.spin > 0, balloon: p.float > 0, emote: p.emote, aim: p.aimT > 0 });
   // 体がくたっと倒れている間は、芯（ゲームの位置）が体についていく
   if (p.model.free()) {
     const pel = p.model.pelvis();
@@ -1690,7 +1765,7 @@ let respawnHere = () => {};
 
 function myState() {
   const p = me;
-  return { x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), ry: +p.ry.toFixed(2), sp: +Math.hypot(p.vel.x, p.vel.z).toFixed(1), air: !p.onGround, limp: p.limp || p.ko > 0 || !!p.wash || !!p.bowl || !!p.heldBy, mv: p.moving && !p.limp, pu: p.punch > 0, st: p.stun > 0, big: p.buffs.big > 0, sm: p.buffs.small > 0, car: p.car, sk: p.skate, vh: p.veh || null, gb: p.grab ? (p.grab.kind === "player" ? p.grab.id : 1) : 0, hl: p.heldBy ? 1 : 0, fz: p.flat > 0 ? 1 : 0, sn: p.spin > 0 ? 1 : 0, pol: mode === "town" ? policeState() : null, cc: p.carColor, vc: p.vehColor != null ? p.vehColor : null, sl: p.slideT > 0 ? 1 : 0, cl: p.climbT > 0 ? 1 : 0, wa: wantedStars(), hd: mode === "town" ? p.held : null, fl: p.float > 0, em: p.emote, rd: p.ride || null, inv: p.invis > 0, hat: myLook.hat, hc: myLook.hatColor, lc: myLook.limb, ey: myLook.eye, mo: myLook.mouth, pt: [myLook.tail || "", myLook.hair || "", myLook.hairColor || "", myLook.head || "", myLook.horn || ""], tr: townSave.trailOn || null, gd: townSave.goldOn && townSave.goldBody ? 1 : 0, tt: townSave.title || 0, so: mode === "town" ? soldierState() : null, ou: myOutfit() };
+  return { x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), ry: +p.ry.toFixed(2), sp: +Math.hypot(p.vel.x, p.vel.z).toFixed(1), air: !p.onGround, limp: p.limp || p.ko > 0 || !!p.wash || !!p.bowl || !!p.heldBy, mv: p.moving && !p.limp, pu: p.punch > 0, st: p.stun > 0, big: p.buffs.big > 0, sm: p.buffs.small > 0, car: p.car, sk: p.skate, vh: p.veh || null, gb: p.grab ? (p.grab.kind === "player" ? p.grab.id : 1) : 0, hl: p.heldBy ? 1 : 0, fz: p.flat > 0 ? 1 : 0, sn: p.spin > 0 ? 1 : 0, pol: mode === "town" ? policeState() : null, cc: p.carColor, stk: p.car && !p.stolen ? stickerKey() : "", vc: p.vehColor != null ? p.vehColor : null, sl: p.slideT > 0 ? 1 : 0, cl: p.climbT > 0 ? 1 : 0, wa: wantedStars(), hd: mode === "town" ? p.held : null, fl: p.float > 0, em: p.emote, rd: p.ride || null, inv: p.invis > 0, hat: myLook.hat, hc: myLook.hatColor, lc: myLook.limb, ey: myLook.eye, mo: myLook.mouth, pt: [myLook.tail || "", myLook.hair || "", myLook.hairColor || "", myLook.head || "", myLook.horn || "", myLook.brow || "", myLook.cheek || "", myLook.whisker || "", myLook.wing || ""], tr: townSave.trailOn || null, gd: townSave.goldOn && townSave.goldBody ? 1 : 0, tt: townSave.title || 0, so: mode === "town" ? soldierState() : null, ou: myOutfit() };
 }
 
 function updateCamera(dt) {
@@ -2043,12 +2118,12 @@ function updateRemotes(dt) {
     r.model.g.position.copy(r.pos); r.model.g.rotation.y = r.ry;
     { const tagT = remoteTag(r, s); if (tagT !== r.lastTag && r.model.nameTag) { r.lastTag = tagT; relabel(r.model.nameTag, tagT, s.wa ? "#ff8a8a" : isFriend(r.name) ? "#ffe08a" : "#fff"); } }
     r.model.setLimb(s.lc || "#6bd66b"); r.model.setHat(s.hat, s.hc); r.model.setFace(s.ey, s.mo);
-    if (s.pt) r.model.setParts({ tail: s.pt[0] || undefined, hair: s.pt[1] || undefined, hairColor: s.pt[2] || undefined, head: s.pt[3] || undefined, horn: s.pt[4] || undefined });
+    if (s.pt) r.model.setParts({ tail: s.pt[0] || undefined, hair: s.pt[1] || undefined, hairColor: s.pt[2] || undefined, head: s.pt[3] || undefined, horn: s.pt[4] || undefined, brow: s.pt[5] || undefined, cheek: s.pt[6] || undefined, whisker: s.pt[7] || undefined, wing: s.pt[8] || undefined });
     // うしろに乗っている人は、運転している人の乗り物の高さにすわる
     let rideH = 0;
     if (s.rd) { const dv = s.rd === net.myId ? me.veh : net.players[s.rd] && net.players[s.rd].state && net.players[s.rd].state.vh; rideH = dv && VEHICLES[dv] ? VEHICLES[dv].h || 0 : 0; }
     const flying = s.vh && VEHICLES[s.vh] && VEHICLES[s.vh].fly;
-    r.model.animate(dt, { speed: s.sk || flying ? 0 : s.sp, air: s.air && !s.car && !s.fl && !flying, limp: s.limp, punch: s.pu ? 1 : 0, stun: s.st ? 1 : 0, t: r.t, big: s.big, small: s.sm, veh: s.vh || (s.car ? "car" : s.sk ? "skate" : null), vc: s.vc, slide: !!s.sl, climb: !!s.cl,
+    r.model.animate(dt, { speed: s.sk || flying ? 0 : s.sp, air: s.air && !s.car && !s.fl && !flying, limp: s.limp, punch: s.pu ? 1 : 0, stun: s.st ? 1 : 0, t: r.t, big: s.big, small: s.sm, veh: s.vh || (s.car ? "car" : s.sk ? "skate" : null), vc: s.vc, stk: s.stk, slide: !!s.sl, climb: !!s.cl,
       weapon: s.hd && WEAPONS[s.hd] && s.hd !== "hand" ? s.hd : null, carColor: s.cc, grab: !!s.gb, spin: !!s.sn, flat: s.fz ? 1 : 0, hold: s.hl ? new V3(r.pos.x, r.pos.y + 0.45, r.pos.z) : null, balloon: s.fl, emote: s.em, ride: !!s.rd, mountH: s.rd ? rideH : undefined, aim: s.pu && GUNS.includes(s.hd) });
     if (mode === "town") updateRemotePolice(r, s.pol, dt);
   }
@@ -4476,6 +4551,7 @@ function buildCity() {
   slope(60, -75, 0, -1, 6, 3.2, 10, 0xe07a7a); slope(60, -45, 0, 1, 3.5, 0.9, 10, 0x9ad0a0);   // はしの坂（とても高い・小さい）
   addBox(60, 0, -69, 7, 0.4, 0.6, 0xffd84a); addBox(60, 0, -51, 7, 0.4, 0.6, 0xffd84a);       // 低い台（とびこえる）
   { const sl = makeLabel("🛹 スケートパーク", "#fff", 2.4, { bg: "#6a7ab8" }); sl.position.set(60, 6, -60); world.add(sl); }
+  buildRails(); buildCarRace();
   town.mapRects.push({ x: 60, z: -60, w: 34, d: 34, color: 0x9a9aa8, label: "スケート", flat: true });
   // 北西：展望タワー（階段でぐるぐるのぼる）
   addBox(-57, 0, -57, 4, 30, 4, 0xd85a5a);
@@ -7466,6 +7542,7 @@ function badUpdate(dt) {
 // =====================================================================
 function funTownUpdate(dt) {
   trailsUpdate(dt);
+  carRaceUpdate(dt);
   parkourUpdate(dt);
   skUpdate(dt);
   tutUpdate(dt);
@@ -9987,6 +10064,7 @@ function skUpdate(dt) {
   // 空中
   if (!me.onGround) sk.air = true;
   const board = me.veh === "bmx" ? me.model.bmx : me.model.skate;
+  grindUpdate(dt, board);
   if (sk.trick) {
     const K = sk.trick, T = K.T; K.t += dt;
     const k = Math.min(1, K.t / K.dur), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
@@ -10165,9 +10243,11 @@ function openGarage() {
     return { name: `${d.name}　Lv.${lv}${max ? "（MAX）" : ""}`, desc: d.desc, btn: max ? "MAX" : `${d.price[lv]}🪙で改造`, disabled: max,
       fn: () => { if (!pay(d.price[lv])) return; U[k] = lv + 1; saveTown(true); play("clear"); toast(`${d.name} が Lv.${lv + 1} になった！`, 1600); } };
   });
+  garageExtraRows(rows);
   rows.push({ name: `🔥 ニトロ ×3　（いま ${U.nitro || 0} 回分）`, desc: `車に乗っているとき ${touchMode ? "🔥ボタン" : "Shift キー"}で2.5秒 ものすごく速くなる`, btn: "60🪙で買う",
     fn: () => { if (!pay(60)) return; U.nitro = (U.nitro || 0) + 3; saveTown(true); play("item"); } });
   openPanel("🔧 車の改造ガレージ", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい　（車・スポーツカー・モンスタートラック みんなに効くよ）`, rows, openGarage);
+  wireGarage();
 }
 
 // ---- 走っている車は、スケートパークをよけて外がわを通る ----
@@ -10192,7 +10272,7 @@ $("bPauseTitle").onclick = () => { setPause(false); $("bTitle").click(); };
 $("bPauseGuide").onclick = () => { setPause(false); openGuide(); };
 
 // ---- キャラメイク：しっぽ・かみがた・かみの色・頭の形・角 ----
-function lookParts(L = myLook) { return { tail: L.tail, hair: L.hair, hairColor: L.hairColor, head: L.head, horn: L.horn }; }
+function lookParts(L = myLook) { return { tail: L.tail, hair: L.hair, hairColor: L.hairColor, head: L.head, horn: L.horn, brow: L.brow, cheek: L.cheek, whisker: L.whisker, wing: L.wing }; }
 (function setupPartsUI() {
   const mark = () => document.querySelectorAll("[data-part]").forEach((b) => b.classList.toggle("on", (myLook[b.dataset.part] || b.parentElement.dataset.def) === b.dataset.v));
   document.querySelectorAll("[data-part]").forEach((b) => b.onclick = () => { myLook[b.dataset.part] = b.dataset.v; mark(); refreshMyModel(); play("item"); });
@@ -10205,6 +10285,188 @@ function lookParts(L = myLook) { return { tail: L.tail, hair: L.hair, hairColor:
   setTimeout(mark, 0);
   window.markParts = mark;
 })();
+
+// =====================================================================
+//  30. カーレース・ステッカー・タイヤのしゅるい・ドリフト・グラインド
+// =====================================================================
+// ---- 🏎️ カーレース（町の環状道路を2周。ライバル2台ときそう） ----
+const CR_PTS = [[0, -42.5], [42.5, -42.5], [42.5, 0], [42.5, 42.5], [0, 42.5], [-42.5, 42.5], [-42.5, 0], [-42.5, -42.5]];
+const CR_SEG = 42.5, CR_LEN = CR_SEG * 8, CR_LAPS = 2;
+const carRace = { on: false, cd: 0, cp: 1, lap: 0, t: 0, rivals: [], cdShown: 0, near: false };
+function buildCarRace() {
+  const [x, z] = CR_PTS[0];
+  for (const s of [-3.8, 3.8]) addBox(x, 0, z + s, 0.4, 3.8, 0.4, 0x222222, { collide: false });
+  const cv = document.createElement("canvas"); cv.width = 256; cv.height = 32; const c = cv.getContext("2d");
+  for (let i = 0; i < 16; i++) for (let j = 0; j < 2; j++) { c.fillStyle = (i + j) % 2 ? "#111" : "#fff"; c.fillRect(i * 16, j * 16, 16, 16); }
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 8), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) })); bar.position.set(x, 3.8, z); world.add(bar);
+  const l = makeLabel("🏎️ カーレース（車で通るとスタート）", "#fff", 1.6, { bg: "#c0303a" }); l.position.set(x, 5.2, z); world.add(l);
+  town.crRing = new THREE.Mesh(new THREE.TorusGeometry(3.4, 0.2, 6, 28), new THREE.MeshBasicMaterial({ color: 0xffa040 })); town.crRing.visible = false; world.add(town.crRing);
+  carRace.on = false; carRace.rivals = [];
+}
+function crPosAt(d, lane) {
+  d = ((d % CR_LEN) + CR_LEN) % CR_LEN;
+  const i = Math.floor(d / CR_SEG) % 8, u = (d - i * CR_SEG) / CR_SEG, a = CR_PTS[i], b = CR_PTS[(i + 1) % 8];
+  const dx = (b[0] - a[0]) / CR_SEG, dz = (b[1] - a[1]) / CR_SEG;
+  return [a[0] + (b[0] - a[0]) * u + dz * lane, a[1] + (b[1] - a[1]) * u - dx * lane, Math.atan2(dx, dz)];
+}
+function crProgress() { const R = carRace, n = R.cp === 0 ? 8 : R.cp; return (R.lap * 8 + n - 1) * CR_SEG + CR_SEG - Math.min(CR_SEG, Math.hypot(me.pos.x - CR_PTS[R.cp][0], me.pos.z - CR_PTS[R.cp][1])); }
+function crPlace() { const p = crProgress(); return 1 + carRace.rivals.filter((v) => v.d > p).length; }
+function crStart() {
+  const R = carRace;
+  Object.assign(R, { on: true, cd: 3.5, cp: 1, lap: 0, t: 0, cdShown: 9 });
+  me.pos.set(-6, Math.max(0, me.pos.y), -42.5); me.ry = Math.PI / 2; camYaw = me.ry + Math.PI; me.carSpeed = 0; me.vel.set(0, 0, 0);
+  R.rivals = [{ d: -6, lane: -2.2, sp: 13.6, m: makeCarMesh(0x4ac0f0, true) }, { d: -6, lane: 2.2, sp: 16.4, m: makeCarMesh(0x6bd66b, true) }];
+  toast(`🏎️ カーレース！ 町を${CR_LAPS}周。オレンジの輪をくぐってね`, 2200);
+}
+function crEnd(msg) {
+  const R = carRace;
+  for (const v of R.rivals) world.remove(v.m);
+  R.rivals = []; R.on = false; R.near = true;
+  if (town.crRing) town.crRing.visible = false;
+  if (msg) toast(msg, 2200);
+}
+function crFinish() {
+  const R = carRace, t = R.t, place = crPlace(), best = townSave.carRaceBest;
+  const rew = place === 1 ? 120 : place === 2 ? 60 : 25, isBest = !best || t < best;
+  if (isBest) { townSave.carRaceBest = +t.toFixed(2); saveTown(true); }
+  crEnd(null); play("clear");
+  gotCoins(rew + (isBest ? 30 : 0), `🏁 ゴール！ ${place}位　${t.toFixed(2)}秒${isBest ? "<br>🏆 新記録！" : `<br>記録：${best}秒`}`);
+}
+function carRaceUpdate(dt) {
+  const R = carRace;
+  const nearStart = Math.hypot(me.pos.x - CR_PTS[0][0], me.pos.z - CR_PTS[0][1]) < 4.5;
+  if (!R.on) { if (nearStart && !R.near && isCarV(me.veh) && !me.race && !me.jail) crStart(); R.near = nearStart; return; }
+  if (mode !== "town" || !isCarV(me.veh) || me.jail || me.ko > 0) { crEnd("🏎️ レースは中止になった"); return; }
+  if (R.cd > 0) {
+    R.cd -= dt; me.carSpeed = 0; me.vel.x = 0; me.vel.z = 0;
+    const n = Math.ceil(R.cd - 0.5);
+    if (n !== R.cdShown) { R.cdShown = n; if (n > 0) { toast(`🏎️ ${n}`, 700); play("coin"); } else { toast("🏁 GO!!", 900); play("clear"); } }
+  } else R.t += dt;
+  R.rivals.forEach((v, i) => {
+    if (R.cd <= 0 && v.d < CR_LAPS * CR_LEN) v.d += v.sp * (0.93 + 0.07 * Math.sin(R.t * 0.8 + i * 2)) * dt;
+    const [x, z, ry] = crPosAt(Math.min(v.d, CR_LAPS * CR_LEN - 0.01), v.lane); v.m.position.set(x, 0, z); v.m.rotation.y = ry;
+  });
+  const [cx, cz] = CR_PTS[R.cp];
+  if (Math.hypot(me.pos.x - cx, me.pos.z - cz) < 7.5) {
+    if (R.cp === 0) { R.lap++; if (R.lap >= CR_LAPS) { crFinish(); return; } toast(`🏁 ラップ ${R.lap + 1}/${CR_LAPS}！`, 1200); play("item"); }
+    else play("coin");
+    R.cp = (R.cp + 1) % 8;
+  }
+  const ring = town.crRing;
+  if (ring) { const [nx, nz] = CR_PTS[R.cp], pv = CR_PTS[(R.cp + 7) % 8]; ring.visible = true; ring.position.set(nx, 2.2, nz); ring.rotation.set(0, Math.atan2(nx - pv[0], nz - pv[1]), gameTime * 2); }
+  if (R.t > 240) crEnd("🏎️ 時間切れ…");
+}
+function crHud() { const R = carRace; return R.cd > 0 ? "🏎️ もうすぐスタート…" : `🏎️ カーレース　ラップ ${Math.min(R.lap + 1, CR_LAPS)}/${CR_LAPS}　${R.t.toFixed(1)}秒　いま <b>${crPlace()}位</b>${townSave.carRaceBest ? "　記録 " + townSave.carRaceBest + "秒" : ""}`; }
+
+// ---- 🎨 ステッカー ----
+const STICKERS = { none: ["なし", 0], flame: ["🔥 ほのお", 40], star: ["⭐ 星", 40], num: ["🔢 数字", 40], stripe: ["🏁 ライン", 40], heart: ["💗 ハート", 40], bolt: ["⚡ いなずま", 40] };
+function stickerKey() { const k = townSave.carSticker || "none"; return k === "none" ? "" : k + ":" + (townSave.carNum || 7); }
+const stickerTexCache = {};
+function stickerTex(key) {
+  if (stickerTexCache[key]) return stickerTexCache[key];
+  const [kind, num] = key.split(":");
+  const mk = (w, h, draw) => { const cv = document.createElement("canvas"); cv.width = w; cv.height = h; draw(cv.getContext("2d"), w, h); return new THREE.CanvasTexture(cv); };
+  const flame = (c, w, h, vert) => { for (let i = 0; i < 6; i++) { const g = c.createLinearGradient(0, 0, vert ? 0 : w, vert ? h : 0); g.addColorStop(0, "#ffe040"); g.addColorStop(0.5, "#ff8a20"); g.addColorStop(1, "rgba(255,40,20,0)"); c.fillStyle = g; c.beginPath(); const L = (0.55 + (i % 3) * 0.15); if (vert) { const x0 = (i + 0.5) * w / 6; c.moveTo(x0 - w / 12, 0); c.quadraticCurveTo(x0 + w / 10, h * L * 0.5, x0, h * L); c.quadraticCurveTo(x0 - w / 14, h * L * 0.5, x0 + w / 12, 0); } else { const y0 = (i + 0.5) * h / 6; c.moveTo(0, y0 - h / 12); c.quadraticCurveTo(w * L * 0.5, y0 - h / 8, w * L, y0); c.quadraticCurveTo(w * L * 0.5, y0 + h / 8, 0, y0 + h / 12); } c.fill(); } };
+  const heart = (c, x, y, r) => { c.beginPath(); c.moveTo(x, y + r * 0.8); c.bezierCurveTo(x - r * 1.4, y - r * 0.2, x - r * 0.5, y - r * 1.1, x, y - r * 0.35); c.bezierCurveTo(x + r * 0.5, y - r * 1.1, x + r * 1.4, y - r * 0.2, x, y + r * 0.8); c.fill(); };
+  const bolt = (c, x, y, s) => { c.beginPath(); c.moveTo(x - s * 0.2, y - s); c.lineTo(x + s * 0.4, y - s); c.lineTo(x + s * 0.05, y - s * 0.1); c.lineTo(x + s * 0.45, y - s * 0.1); c.lineTo(x - s * 0.35, y + s); c.lineTo(x - s * 0.05, y + s * 0.15); c.lineTo(x - s * 0.45, y + s * 0.15); c.closePath(); c.fill(); c.stroke(); };
+  const numCircle = (c, x, y, r) => { c.fillStyle = "#fff"; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); c.lineWidth = r * 0.12; c.strokeStyle = "#111"; c.stroke(); c.fillStyle = "#111"; c.font = `bold ${Math.round(r * 1.25)}px sans-serif`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(num, x, y + r * 0.06); };
+  const side = mk(256, 48, (c, w, h) => {
+    if (kind === "flame") flame(c, w, h, false);
+    else if (kind === "star") { c.fillStyle = "#ffe040"; for (let i = 0; i < 5; i++) drawStar(c, 30 + i * 48, 24 + (i % 2 ? 6 : -6), 13); }
+    else if (kind === "num") numCircle(c, 128, 24, 21);
+    else if (kind === "stripe") { c.fillStyle = "#fff"; c.fillRect(0, 8, w, 9); c.fillRect(0, 26, w, 9); }
+    else if (kind === "heart") { c.fillStyle = "#ff6aa8"; for (let i = 0; i < 5; i++) heart(c, 28 + i * 50, 26, 14); }
+    else if (kind === "bolt") { c.fillStyle = "#ffe040"; c.strokeStyle = "#a07000"; c.lineWidth = 2; for (let i = 0; i < 4; i++) bolt(c, 36 + i * 62, 24, 20); }
+  });
+  const hood = mk(128, 96, (c, w, h) => {
+    if (kind === "flame") flame(c, w, h, true);
+    else if (kind === "star") { c.fillStyle = "#ffe040"; drawStar(c, 64, 48, 36); }
+    else if (kind === "num") numCircle(c, 64, 48, 38);
+    else if (kind === "stripe") { c.fillStyle = "#fff"; c.fillRect(38, 0, 18, h); c.fillRect(72, 0, 18, h); }
+    else if (kind === "heart") { c.fillStyle = "#ff6aa8"; heart(c, 64, 52, 34); }
+    else if (kind === "bolt") { c.fillStyle = "#ffe040"; c.strokeStyle = "#a07000"; c.lineWidth = 3; bolt(c, 64, 48, 40); }
+  });
+  return (stickerTexCache[key] = { side, hood });
+}
+
+// ---- 🛞 タイヤのしゅるい ----
+const TIRES = {
+  normal: ["ふつうのタイヤ", 0, "いつものタイヤ"],
+  offroad: ["🏔️ オフロードタイヤ", 250, "池や水たまりでもおそくならない・ジャンプ台で高くとぶ"],
+  snow: ["❄️ 雪用タイヤ", 200, "雪の日でもすべらず、おそくならない"],
+  drift: ["💨 ドリフトタイヤ", 300, "よくすべってドリフトできる！ ドリフトするとコインがもらえる"],
+};
+function garageExtraRows(rows) {
+  const U = carUp(); U.tires = U.tires || ["normal"]; U.tt = U.tt || "normal";
+  for (const [k, [n, p, d]] of Object.entries(TIRES)) {
+    const own = U.tires.includes(k), on = U.tt === k;
+    rows.push({ name: `${n}${on ? "　✅ つけている" : ""}`, desc: d, btn: on ? "つけている" : own ? "つける" : `${p}🪙で買う`, disabled: on,
+      fn: () => { if (!own) { if (!pay(p)) return; U.tires.push(k); } U.tt = k; saveTown(true); play("item"); toast(`${n}をつけた！`, 1400); } });
+  }
+  const st = townSave.stickers = townSave.stickers || ["none"], cur = townSave.carSticker || "none";
+  rows.push({ html: `<div style="width:100%;text-align:left"><b>🎨 ステッカー</b>　<span class="small">（はじめてえらぶときは 40🪙・2回目からタダ）</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${Object.entries(STICKERS).map(([k, [n, p]]) => `<button class="stkb ${k === cur ? "" : "sub"}" data-k="${k}" style="font-size:14px;padding:6px 10px">${n}${!st.includes(k) && p ? ` ${p}🪙` : ""}</button>`).join("")}</div><div style="margin-top:8px">🔢 数字：<button class="stkn sub" data-d="-1" style="padding:4px 12px">−</button> <b style="font-size:20px">${townSave.carNum || 7}</b> <button class="stkn sub" data-d="1" style="padding:4px 12px">＋</button></div></div>` });
+}
+function wireGarage() {
+  document.querySelectorAll("#shopP .stkb").forEach((b) => b.onclick = () => {
+    const k = b.dataset.k, st = townSave.stickers = townSave.stickers || ["none"];
+    if (!st.includes(k)) { if (!pay(STICKERS[k][1])) return; st.push(k); }
+    townSave.carSticker = k; saveTown(true); play("item"); openGarage();
+  });
+  document.querySelectorAll("#shopP .stkn").forEach((b) => b.onclick = () => { townSave.carNum = ((townSave.carNum || 7) + Number(b.dataset.d) + 98) % 99 + 1; saveTown(true); openGarage(); });
+}
+// ドリフト：すべっている間に点がたまり、終わるとコインになる
+const drift = { pts: 0, idle: 0, fx: 0 };
+function driftTick(p, dt, fx, fz) {
+  const sp = Math.hypot(p.vel.x, p.vel.z);
+  const slip = sp > 6 ? Math.abs((p.vel.x * fz - p.vel.z * fx) / sp) : 0;
+  if (slip > 0.28) {
+    drift.pts += sp * slip * dt * 12; drift.idle = 0; drift.fx -= dt;
+    if (drift.fx <= 0) { drift.fx = 0.18; popText(p.pos.x - fx * 1.2, p.pos.y + 0.3, p.pos.z - fz * 1.2, "💨", "#ddd"); }
+  } else if (drift.pts > 0) {
+    drift.idle += dt;
+    if (drift.idle > 0.45) {
+      const pts = Math.round(drift.pts), coins = Math.min(15, Math.floor(pts / 60));
+      if (pts > (townSave.driftBest || 0)) { townSave.driftBest = pts; saveTown(true); }
+      if (coins > 0) gotCoins(coins, `💨 ドリフト ${pts}点！`); else popText(p.pos.x, p.pos.y + 1.6, p.pos.z, `ドリフト ${pts}点`, "#ffd84a");
+      drift.pts = 0;
+    }
+  }
+}
+
+// ---- 🛹 グラインド（スケートパークのレールの上をすべる） ----
+const RAILS = [
+  { x: 60, z: -69, ax: "x", half: 3.5, hw: 0.3, top: 0.4 },
+  { x: 60, z: -51, ax: "x", half: 3.5, hw: 0.3, top: 0.4 },
+  { x: 45, z: -60, ax: "z", half: 5, hw: 0.2, top: 0.55 },
+  { x: 75, z: -60, ax: "z", half: 5, hw: 0.2, top: 0.55 },
+];
+function buildRails() {
+  for (const R of RAILS.slice(2)) {
+    addBox(R.x, 0, R.z, R.hw * 2, R.top, R.half * 2, 0xc8c8d8);
+    for (const s of [-R.half + 0.4, 0, R.half - 0.4]) addBox(R.x, 0, R.z + s, 0.12, R.top - 0.02, 0.12, 0x666670, { collide: false });
+  }
+}
+function railUnder() {
+  for (const r of RAILS) {
+    const a = r.ax === "x" ? me.pos.x - r.x : me.pos.z - r.z, c = r.ax === "x" ? me.pos.z - r.z : me.pos.x - r.x;
+    if (Math.abs(a) < r.half + 0.1 && Math.abs(c) < r.hw + 0.28 && Math.abs(me.pos.y - r.top) < 0.12) return r;
+  }
+  return null;
+}
+function grindUpdate(dt, board) {
+  const rail = me.onGround && !sk.trick ? railUnder() : null;
+  if (rail) {
+    if (!sk.grind) { sk.grind = { pts: 0, fx: 0 }; popText(me.pos.x, me.pos.y + 2.2, me.pos.z, me.veh === "bmx" ? "ペグ グラインド！" : "グラインド！", "#ffd84a"); play("item"); }
+    const G = sk.grind; G.pts += 90 * dt; G.fx -= dt;
+    const v = rail.ax === "x" ? me.vel.x : me.vel.z, dir = Math.sign(v) || (Math.sin(me.ry) * (rail.ax === "x" ? 1 : 0) + Math.cos(me.ry) * (rail.ax === "z" ? 1 : 0) >= 0 ? 1 : -1), sp = Math.max(5.5, Math.abs(v));
+    if (rail.ax === "x") { me.pos.z = rail.z; me.vel.z = 0; me.vel.x = dir * sp; me.ry = dir > 0 ? Math.PI / 2 : -Math.PI / 2; }
+    else { me.pos.x = rail.x; me.vel.x = 0; me.vel.z = dir * sp; me.ry = dir > 0 ? 0 : Math.PI; }
+    if (board) board.rotation.set(0, me.ry + Math.PI / 2, 0);
+    if (G.fx <= 0) { G.fx = 0.12; popText(me.pos.x + rand(-0.2, 0.2), me.pos.y + 0.15, me.pos.z + rand(-0.2, 0.2), "✦", "#ffe08a"); }
+  } else if (sk.grind) {
+    sk.combo.push({ n: "グラインド", pts: Math.round(sk.grind.pts) }); sk.grind = null;
+  }
+}
 
 // 町モードで届いたメッセージ（onNet から呼ばれる）
 function onNetTown(d, conn) {
@@ -10314,6 +10576,7 @@ function updateHud() {
     else if (me.grab) wt = "✊ つかんでいる！ 右クリック（G）をはなすと投げる（長く持つほど遠くへ）";
     else if (me.jail) wt = `⛓️ ろうやの中　刑期 あと ${mmss(me.jail.t)}　／　脱獄：かべのひびで E 連打 → 庭のすみの木箱からかべをこえる`;
     else if (ws) wt = `🚨 ${"★".repeat(ws)}${"☆".repeat(3 - ws)} 手配中　あと ${mmss(me.wanted)}（逃げきるか、けいさつ署で自首）`;
+    else if (carRace.on) wt = crHud();
     else if (me.race) wt = `🏁 レース ${me.race.t.toFixed(1)}秒　次：${me.race.next === 4 ? "ゴール" : "ゲート" + me.race.next}${townSave.raceBest ? "　記録 " + townSave.raceBest + "秒" : ""}`;
     else if (ev.kind === "dance") wt = `💃 ダンスパーティー中！ 広場で X（${Math.min(10, Math.floor(me.danceT || 0))}/10秒）`;
     else if (ev.kind === "family") wt = "👨‍👩‍👧 家族が町に来ている！ 動くところを見られないように（Shift で ただのぬいぐるみのふり）";
