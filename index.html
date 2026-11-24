@@ -48,16 +48,16 @@
   .swatch.on { border-color: #fff; }
   .tool { padding: 6px 12px; font-size: 14px; background: #ddd; }
   .tool.on { background: #ffd84a; }
-  #hud { position: fixed; z-index: 5; left: 12px; top: 10px; font-size: 15px; line-height: 1.7; text-shadow: 0 0 4px #000, 0 0 4px #000; pointer-events: none; }
+  #hud { position: fixed; z-index: 5; left: 12px; top: 10px; font-size: 16px; font-weight: bold; line-height: 1.7; text-shadow: 0 0 3px #000, 0 0 3px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; pointer-events: none; }
   #hud b { color: #ffd84a; font-size: 18px; }
-  #hudR { position: fixed; z-index: 5; right: 12px; top: 10px; text-align: right; font-size: 14px; line-height: 1.6; text-shadow: 0 0 4px #000, 0 0 4px #000; pointer-events: none; }
+  #hudR { position: fixed; z-index: 5; right: 12px; top: 10px; text-align: right; font-size: 15px; font-weight: bold; line-height: 1.6; text-shadow: 0 0 3px #000, 0 0 3px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; pointer-events: none; }
   #watch { position: fixed; z-index: 6; left: 50%; top: 52px; transform: translateX(-50%); text-align: center; font-size: 20px; font-weight: bold; color: #ff8a8a; text-shadow: 0 0 6px #000, 0 0 6px #000; pointer-events: none; }
   #watch .bar { width: 240px; height: 12px; margin: 4px auto 0; background: #0008; border-radius: 6px; overflow: hidden; }
   #watch .bar div { height: 100%; width: 0; background: linear-gradient(90deg, #ffd84a, #ff4a4a); }
   #bTitle { position: fixed; z-index: 7; right: 12px; bottom: 34px; font-size: 14px; padding: 7px 16px; background: #ffffffdd; }
   #saveInd { position: fixed; z-index: 7; right: 12px; bottom: 76px; font-size: 14px; font-weight: bold; color: #bff; text-shadow: 0 0 4px #000, 0 0 4px #000; pointer-events: none; }
-  #help { position: fixed; z-index: 5; left: 50%; bottom: 8px; transform: translateX(-50%); font-size: 12px; color: #fffc; text-shadow: 0 0 4px #000; pointer-events: none; white-space: nowrap; }
-  #toast { position: fixed; z-index: 6; left: 50%; top: 22%; transform: translateX(-50%); font-size: 26px; font-weight: bold; text-shadow: 0 0 6px #000, 0 0 6px #000; pointer-events: none; text-align: center; }
+  #help { position: fixed; z-index: 5; left: 50%; bottom: 8px; transform: translateX(-50%); font-size: 13px; font-weight: bold; color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000, 1px 1px 0 #000; pointer-events: none; white-space: nowrap; }
+  #toast { position: fixed; z-index: 6; left: 50%; top: 22%; transform: translateX(-50%); font-size: 26px; font-weight: bold; text-shadow: 0 0 4px #000, 0 0 4px #000, 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000; pointer-events: none; text-align: center; background: rgba(0,0,0,.35); padding: 6px 16px; border-radius: 14px; }
   #prompt { position: fixed; z-index: 5; left: 50%; top: 62%; transform: translateX(-50%); background: rgba(0,0,0,.65); border: 2px solid #ffd84a; padding: 6px 16px; border-radius: 10px; font-size: 17px; font-weight: bold; pointer-events: none; }
   #warn { position: fixed; z-index: 5; left: 50%; top: 12%; transform: translateX(-50%); font-size: 22px; font-weight: bold; color: #ff8a8a; text-shadow: 0 0 6px #000; pointer-events: none; }
   #hpbar, #foodbar { position: fixed; z-index: 5; left: 50%; transform: translateX(-50%); width: 260px; background: #0008; border-radius: 7px; overflow: hidden; pointer-events: none; }
@@ -288,6 +288,11 @@
   #tutStep { font-size: 12px; color: #ffd84a; } #tutText { font-size: 15px; line-height: 1.5; margin: 4px 0; text-align: left; } #tutText kbd { background: #fff; color: #222; border-radius: 5px; padding: 0 5px; font-size: 13px; }
   #tutSkip { font-size: 12px; padding: 4px 12px; }
   body.touch #tutBox { top: calc(100px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(440px, 58vw); padding: 4px 10px; display: flex; align-items: center; gap: 8px; background: rgba(30, 20, 60, .75); } body.touch #tutBox[hidden] { display: none; } body.touch #tutStep { display: none; } body.touch #tutText { font-size: 12px; flex: 1; margin: 0; line-height: 1.35; } body.touch #tutSkip { font-size: 10px; padding: 3px 8px; flex: none; }
+  /* ご飯を食べた！ */
+  #ateP { position: fixed; z-index: 7; left: 50%; top: 36%; transform: translate(-50%, 0); font-size: 34px; font-weight: bold; color: #fff; background: linear-gradient(#ff9a5a, #ff6a8a); border: 4px solid #fff; border-radius: 22px; padding: 8px 26px; box-shadow: 0 6px 18px rgba(0,0,0,.4); text-shadow: 0 2px 0 #b03a5a; pointer-events: none; white-space: nowrap; animation: atePop .35s ease-out; }
+  #ateP[hidden] { display: none; }
+  @keyframes atePop { 0% { transform: translate(-50%, 0) scale(.3); } 70% { transform: translate(-50%, 0) scale(1.15); } 100% { transform: translate(-50%, 0) scale(1); } }
+  body.touch #ateP { font-size: 22px; top: 40%; padding: 5px 18px; }
 </style>
 <!-- 3D 表示の部品（Three.js）と、部屋コードで遊ぶための部品（PeerJS）。インターネットから読み込む -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -357,6 +362,7 @@
 </div>
 <div id="movieP" hidden><div class="mvBar top"></div><div class="mvBar bot"></div><button id="mvSkip">スキップ ▶▶</button><div id="mvCap"></div><div id="mvTitle">ふにゃふにゃランド<small>ぬいぐるみたちの、ふにゃふにゃな毎日がはじまる！</small></div></div>
 <div id="tutBox" hidden><div id="tutStep"></div><div id="tutText"></div><button id="tutSkip" class="sub">スキップ</button></div>
+<div id="ateP" hidden></div>
 <div id="chatLog"></div>
 <div id="chatBox" hidden><input id="chatIn" type="text" maxlength="60" placeholder="メッセージ（Enter で送る）" autocomplete="off"><button id="chatSend">送る</button><button id="chatClose" class="pink">とじる</button><div id="chatQuick"></div></div>
 <div id="wanted" hidden></div>
@@ -557,19 +563,28 @@ function mesh(geo, color, parent = world) { const m = new THREE.Mesh(geo, mat(co
 function at(m, x, y, z) { m.position.set(x, y, z); return m; }
 
 // 文字の看板（いつもカメラの方を向く）
-function makeLabel(text, color = "#fff", size = 1) {
-  // 文字が長いときは、看板を横に長くする（文字が切れないように）
+function makeLabel(text, color = "#fff", size = 1, opt = {}) {
+  // 文字が長いときは、看板を横に長くする（文字が切れないように）。くっきり見えるように2倍の大きさでかく
   const cv = document.createElement("canvas");
   let c = cv.getContext("2d");
-  c.font = "bold 34px sans-serif";
-  const w = Math.max(256, Math.ceil(c.measureText(text).width) + 28);
-  cv.width = w; cv.height = 64;
+  const FONT = "bold 68px 'Hiragino Maru Gothic ProN', 'BIZ UDPGothic', 'Meiryo', sans-serif";
+  c.font = FONT;
+  const tw = Math.ceil(c.measureText(text).width);
+  const w = Math.max(512, tw + (opt.bg ? 80 : 56));
+  cv.width = w; cv.height = 128;
   c = cv.getContext("2d");
-  c.font = "bold 34px sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
-  c.lineWidth = 7; c.strokeStyle = "#000a"; c.strokeText(text, w / 2, 32);
-  c.fillStyle = color; c.fillText(text, w / 2, 32);
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false }));
-  sp.scale.set(2 * size * w / 256, 0.5 * size, 1);
+  if (opt.bg) {
+    // お店の看板：色つきの板＋白いふち
+    const bw = tw + 60, x0 = (w - bw) / 2;
+    c.fillStyle = opt.bg; c.strokeStyle = "#fff"; c.lineWidth = 8;
+    c.beginPath(); if (c.roundRect) c.roundRect(x0, 8, bw, 112, 26); else c.rect(x0, 8, bw, 112); c.fill(); c.stroke();
+  }
+  c.font = FONT; c.textAlign = "center"; c.textBaseline = "middle"; c.lineJoin = "round";
+  c.lineWidth = opt.bg ? 12 : 16; c.strokeStyle = "#000"; c.strokeText(text, w / 2, 66);
+  c.fillStyle = color; c.fillText(text, w / 2, 66);
+  const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
+  sp.scale.set(2 * size * w / 512, 0.5 * size, 1);
   sp.renderOrder = 10;
   sp.userData.size = size;
   return sp;
@@ -2559,7 +2574,7 @@ const FOOD_FX = {
 };
 function eatFood(id) {
   const f = FOOD_FX[id]; if (!f) return;
-  me.hunger = Math.min(100, me.hunger + (f.h || 0));
+  ateShow(); me.hunger = Math.min(100, me.hunger + (f.h || 0));
   if (f.hp) me.hp = Math.min(100, me.hp + f.hp);
   if (f.speed) me.buffs.speed = f.speed;
   if (f.jump) me.buffs.jump = f.jump;
@@ -2781,7 +2796,7 @@ function building(x, z, fx, fz, name, color, opt = {}) {
   else { addBox(x - W / 2 + t / 2, 0, z, t, H, D, wall); addBox(x + W / 2 - t / 2, 0, z, t, H, D, wall); }
   addBox(x, H, z, wx + 0.6, 0.5, wz + 0.6, color); // 屋根
   // 入口の上の看板
-  const l = makeLabel(name, "#fff", 1.6); l.position.set(x + fx * (D / 2 + 0.3), H + 1.4, z + fz * (D / 2 + 0.3)); world.add(l);
+  const l = makeLabel(name, "#fff", 2.1, { bg: "#" + new THREE.Color(color).multiplyScalar(0.8).getHexString() }); l.position.set(x + fx * (D / 2 + 0.3), H + 1.7, z + fz * (D / 2 + 0.3)); world.add(l);
   town.mapRects.push({ x, z, w: wx, d: wz, color, label: opt.short || name, icon: opt.look && SHOP_LOOK[opt.look] ? SHOP_LOOK[opt.look].icon : null });
   if (opt.look) decorateBuilding(x, z, fx, fz, W, D, H, color, opt.look);
   // 中のカウンターと店員さん
@@ -3311,7 +3326,7 @@ function makeWeatherFx() {
 function weatherUpdate(dt) {
   if (net.isHost) {
     wx.left -= dt;
-    if (wx.left <= 0) { wx.cur = wx.next; wx.next = pickWeather(wx.cur); wx.left = rand(360, 480); wx.told = false; }
+    if (wx.left <= 0) { wx.cur = wx.next; wx.next = pickWeather(wx.cur); wx.left = wx.cur === "thunder" || wx.cur === "magma" ? rand(80, 120) : rand(360, 480); wx.told = false; }
     // お金の雨：コインがどんどん降ってくる
     if (wx.cur === "money") { moneyT -= dt; if (moneyT <= 0 && town.coins.size < 140) { moneyT = 0.35; spawnRandomCoin(Math.random() < 0.2 ? 5 : 1); } }
   } else wx.left -= dt;
@@ -3330,8 +3345,8 @@ function weatherUpdate(dt) {
   const sky = new THREE.Color(W.sky).lerp(NIGHT_SKY, 1 - dayF).lerp(DUSK_SKY, Math.min(1, duskF) * 0.4);
   scene.background.lerp(sky, Math.min(1, dt * 0.8));
   if (scene.fog) scene.fog.color.copy(scene.background);
-  hemi.intensity += (W.light * 0.9 * (0.45 + 0.55 * dayF) - hemi.intensity) * Math.min(1, dt);
-  sun.intensity += (W.light * 0.8 * (0.25 + 0.75 * dayF) - sun.intensity) * Math.min(1, dt);
+  hemi.intensity += (W.light * 0.9 * (0.72 + 0.28 * dayF) - hemi.intensity) * Math.min(1, dt);
+  sun.intensity += (W.light * 0.8 * (0.42 + 0.58 * dayF) - sun.intensity) * Math.min(1, dt);
   skyUpdate(dt);
   // 雨・雪などのつぶ
   const F = town.weatherFx;
@@ -3630,6 +3645,10 @@ function hostMonster(dt) {
   if (!M) { monTimer -= dt; if (monTimer <= 0) spawnMonster(); return; }
   if (M.dead > 0) { M.dead -= dt; if (M.dead <= 0) town.mon = null; return; }
   M.life -= dt; M.t += dt; M.atkCD -= dt;
+  if (M.t >= 420 && M.hp > 0) {
+    explodeFx(new V3(M.pos.x, M.pos.y + 2, M.pos.z), 6 * monT(M).r, 0xb0a0ff); play("item");
+    town.mon = null; const text = `💨 ${monT(M).name}は、ぽんっと消えた！（7分たった）`; toast(text, 2500); netSend({ t: "chat", text }); return;
+  }
   const targets = [];
   if (me.ko <= 0 && !isSafe(me.pos)) targets.push({ id: net.myId, pos: me.pos });
   for (const id in net.players) { const s = net.players[id].state; if (s && !s.limp && !isSafe(net.players[id].pos)) targets.push({ id, pos: net.players[id].pos }); }
@@ -4165,8 +4184,8 @@ function hungerUpdate(dt) {
 }
 function eatIngredient() {
   if (me.hunger >= 99) { toast("おなかいっぱい！", 900); return; }
-  if (townSave.veg > 0) { townSave.veg--; me.hunger = Math.min(100, me.hunger + 12); toast("🥕 野菜を食べた（おなか +12）", 1200); }
-  else if (townSave.meat > 0) { townSave.meat--; me.hunger = Math.min(100, me.hunger + 18); toast("🍖 お肉を食べた（おなか +18）", 1200); }
+  if (townSave.veg > 0) { townSave.veg--; ateShow(); me.hunger = Math.min(100, me.hunger + 12); toast("🥕 野菜を食べた（おなか +12）", 1200); }
+  else if (townSave.meat > 0) { townSave.meat--; ateShow(); me.hunger = Math.min(100, me.hunger + 18); toast("🍖 お肉を食べた（おなか +18）", 1200); }
   else { toast("食べ物を持っていない（ご飯屋さんで買うか、食料士で集めよう）", 1800); return; }
   play("item"); saveTown(true);
 }
@@ -6013,8 +6032,8 @@ function calcDay() {
 }
 function isFestival() { return (dayOf(worldT()) - 1) % 7 === 6; }
 function nightSee() { return 0.55 + 0.45 * dayF; } // 夜は見られにくい
-const NIGHT_SKY = new THREE.Color(0x0a1030), DUSK_SKY = new THREE.Color(0xff9a5a), NIGHT_TOP = new THREE.Color(0x03061a), SKY_TOP_TMP = new THREE.Color();
-const HEMI_DAY = new THREE.Color(0xeef6ff), HEMI_NIGHT = new THREE.Color(0x6a7ab8), SUN_DAY = new THREE.Color(0xfff2dd), SUN_NIGHT = new THREE.Color(0x9db4ff), SUN_DUSK = new THREE.Color(0xffa060);
+const NIGHT_SKY = new THREE.Color(0x1c2a5a), DUSK_SKY = new THREE.Color(0xff9a5a), NIGHT_TOP = new THREE.Color(0x03061a), SKY_TOP_TMP = new THREE.Color();
+const HEMI_DAY = new THREE.Color(0xeef6ff), HEMI_NIGHT = new THREE.Color(0x9aa8e0), SUN_DAY = new THREE.Color(0xfff2dd), SUN_NIGHT = new THREE.Color(0x9db4ff), SUN_DUSK = new THREE.Color(0xffa060);
 
 // ---- 街灯（夜になると光って、足もとが明るくなる） ----
 let glowTex = null;
@@ -8349,7 +8368,7 @@ function openHotel() {
     { html: "<span class='small'>夜にとまると、朝までねむれるよ（昼間はおひるね）。とまるとわたがまんたんになる</span>" },
     { name: "🛏️ ふつうの部屋", desc: "ふかふかベッドでぐっすり", btn: "30🪙でとまる", fn: () => { if (!pay(30)) return false; closeShop(); restAt("ホテル"); return false; } },
     { name: "👑 スイートルーム", desc: "大きなベッド＋ルームサービス！ おなかいっぱい・2分ふわふわ（ダメージ半分）・1分足が速い", btn: "150🪙でとまる", fn: () => { if (!pay(150)) return false; closeShop(); restAt("スイートルーム", () => { me.hunger = 100; me.buffs.fluffy = 120; me.buffs.speed = 60; }); return false; } },
-    { name: "🍳 朝ごはんバイキング", desc: "食べほうだい！ おなか・わたが全回復", btn: "25🪙で食べる", fn: () => { if (!pay(25)) return false; me.hunger = 100; me.hp = 100; toast("🍳 もぐもぐ… バイキング最高！ おなかいっぱい！", 2200); } },
+    { name: "🍳 朝ごはんバイキング", desc: "食べほうだい！ おなか・わたが全回復", btn: "25🪙で食べる", fn: () => { if (!pay(25)) return false; ateShow(); me.hunger = 100; me.hp = 100; toast("🍳 もぐもぐ… バイキング最高！ おなかいっぱい！", 2200); } },
   ], openHotel);
 }
 // ---- 旅館 ----
@@ -8357,8 +8376,8 @@ function openRyokan() {
   openPanel("♨️ 旅館 ふにゃ乃湯", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい`, [
     { html: "<span class='small'>となりの <b>露天ぶろ（温泉）</b> はタダで入れるよ。ゆっくりつかると、ほっこりして元気になる</span>" },
     { name: "🛏️ おふとんでねる", desc: "たたみの部屋でぐっすり。起きたら1分ふわふわ", btn: "60🪙でとまる", fn: () => { if (!pay(60)) return false; closeShop(); restAt("旅館", () => { me.buffs.fluffy = 60; }); return false; } },
-    { name: "🍱 和食のおぜん", desc: "おなか全回復・わた +50", btn: "40🪙で食べる", fn: () => { if (!pay(40)) return false; me.hunger = 100; me.hp = Math.min(100, me.hp + 50); toast("🍱 いただきます！ おいしい〜", 2000); } },
-    { name: "🥚 温泉たまご", desc: "おなか +20・20秒 高くジャンプできる", btn: "8🪙で食べる", fn: () => { if (!pay(8)) return false; me.hunger = Math.min(100, me.hunger + 20); me.buffs.jump = 20; toast("🥚 ぷるぷるの温泉たまご！ ぴょーん！", 2000); } },
+    { name: "🍱 和食のおぜん", desc: "おなか全回復・わた +50", btn: "40🪙で食べる", fn: () => { if (!pay(40)) return false; ateShow(); me.hunger = 100; me.hp = Math.min(100, me.hp + 50); toast("🍱 いただきます！ おいしい〜", 2000); } },
+    { name: "🥚 温泉たまご", desc: "おなか +20・20秒 高くジャンプできる", btn: "8🪙で食べる", fn: () => { if (!pay(8)) return false; ateShow(); me.hunger = Math.min(100, me.hunger + 20); me.buffs.jump = 20; toast("🥚 ぷるぷるの温泉たまご！ ぴょーん！", 2000); } },
     { name: "🍶 フルーツ牛乳", desc: "温泉のあとはこれ！ わた +30", btn: "5🪙で飲む", fn: () => { if (!pay(5)) return false; me.hp = Math.min(100, me.hp + 30); toast("🥛 ごくごく… ぷはー！", 1800); } },
   ], openRyokan);
 }
@@ -8366,7 +8385,7 @@ function openRyokan() {
 function openJuice() {
   openPanel("🍹 ビーチのジュース屋", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい`, [
     { name: "🍹 トロピカルジュース", desc: "わた +30・1分 足が速い", btn: "15🪙", fn: () => { if (!pay(15)) return false; me.hp = Math.min(100, me.hp + 30); me.buffs.speed = 60; toast("🍹 トロピカル〜！ 足が速くなった！", 2000); } },
-    { name: "🍧 かき氷", desc: "おなか +25・きーん！", btn: "8🪙", fn: () => { if (!pay(8)) return false; me.hunger = Math.min(100, me.hunger + 25); me.stun = 0.6; toast("🍧 きーーん！ （頭がいたい…）", 1800); } },
+    { name: "🍧 かき氷", desc: "おなか +25・きーん！", btn: "8🪙", fn: () => { if (!pay(8)) return false; ateShow(); me.hunger = Math.min(100, me.hunger + 25); me.stun = 0.6; toast("🍧 きーーん！ （頭がいたい…）", 1800); } },
     { name: "🥥 ココナッツ", desc: "でっかくなる（20秒）", btn: "20🪙", fn: () => { if (!pay(20)) return false; me.buffs.big = 20; me.buffs.small = 0; toast("🥥 ココナッツパワー！ でっかくなった！", 2000); } },
   ], openJuice);
 }
@@ -8377,10 +8396,10 @@ function openCampfire() {
     { name: "🍡 マシュマロを焼く", desc: "タダ！ おなか +15（1日3回まで）", btn: "焼く", fn: () => {
       const d = dayOf(clk.my); if (townSave.mallowDay !== d) { townSave.mallowDay = d; townSave.mallowN = 0; }
       if (townSave.mallowN >= 3) { toast("きょうはもう3こ食べたよ。また明日！", 1800); return; }
-      townSave.mallowN++; saveTown(true); me.hunger = Math.min(100, me.hunger + 15);
+      townSave.mallowN++; saveTown(true); ateShow(); me.hunger = Math.min(100, me.hunger + 15);
       toast(pick(["🍡 こんがり焼けた！ とろ〜り", "🍡 あっ、ちょっとこげた… でもおいしい", "🍡 まっくろこげ！ …にがい"]), 2000);
     } },
-    { name: "🍖 お肉を焼く", desc: `持っているお肉を焼く（いま ${townSave.meat || 0}こ）：おなか +50・わた +20`, btn: "焼く", disabled: !(townSave.meat > 0), fn: () => { townSave.meat--; saveTown(true); me.hunger = Math.min(100, me.hunger + 50); me.hp = Math.min(100, me.hp + 20); toast("🍖 ジュージュー… バーベキューだ！", 2000); } },
+    { name: "🍖 お肉を焼く", desc: `持っているお肉を焼く（いま ${townSave.meat || 0}こ）：おなか +50・わた +20`, btn: "焼く", disabled: !(townSave.meat > 0), fn: () => { townSave.meat--; saveTown(true); ateShow(); me.hunger = Math.min(100, me.hunger + 50); me.hp = Math.min(100, me.hp + 20); toast("🍖 ジュージュー… バーベキューだ！", 2000); } },
     { name: "☕ ココア", desc: "わた +20", btn: "5🪙", fn: () => { if (!pay(5)) return false; me.hp = Math.min(100, me.hp + 20); toast("☕ ほっこり…", 1500); } },
   ], openCampfire);
 }
@@ -9665,6 +9684,18 @@ function tutEnd(done) {
 function tutCoins() { if (!net.isHost) { tut.s.w0 = -1; return; } for (let k = 0; k < 3; k++) { const a = me.ry + rand(-0.6, 0.6), r = 2.5 + k; spawnCoin(me.pos.x + Math.sin(a) * r, 0, me.pos.z + Math.cos(a) * r, 1); } }
 function tutBot() { const b = town.bots[2]; if (!b) return; b.pos.set(me.pos.x + Math.sin(me.ry) * 2, 0, me.pos.z + Math.cos(me.ry) * 2); b.vel.set(0, 0, 0); b.model.g.position.copy(b.pos); b.model.place(); }
 $("tutSkip").onclick = () => { tutEnd(false); townSave.tutDone = true; saveTown(true); toast("チュートリアルをスキップした（掲示板からもう一度できるよ）", 2200); };
+
+// =====================================================================
+//  24. ご飯を食べた！の表示
+// =====================================================================
+let ateTimer = 0;
+function ateShow() {
+  const e = $("ateP"); if (!e) return;
+  e.textContent = "🍽️ ご飯を食べた！";
+  e.hidden = true; void e.offsetWidth; e.hidden = false; // アニメーションをもう一回
+  play("item");
+  clearTimeout(ateTimer); ateTimer = setTimeout(() => (e.hidden = true), 1600);
+}
 
 // 町モードで届いたメッセージ（onNet から呼ばれる）
 function onNetTown(d, conn) {
