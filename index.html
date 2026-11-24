@@ -269,6 +269,25 @@
   #amTitle { font-size: 16px; font-weight: bold; color: #ffd84a; text-align: center; }
   #amCanvas { border-radius: 12px; border: 3px solid #fff; touch-action: none; cursor: crosshair; }
   #armyMap .btns button { font-size: 15px; padding: 8px 18px; }
+  /* ムービー */
+  #movieP { position: fixed; inset: 0; z-index: 25; pointer-events: none; }
+  #movieP[hidden] { display: none; }
+  .mvBar { position: absolute; left: 0; right: 0; height: 9vh; background: #000; }
+  .mvBar.top { top: 0; } .mvBar.bot { bottom: 0; }
+  #mvSkip { position: absolute; top: calc(2vh + env(safe-area-inset-top)); right: calc(16px + env(safe-area-inset-right)); pointer-events: auto; font-size: 14px; padding: 6px 16px; background: rgba(255,255,255,.85); }
+  #mvCap { position: absolute; left: 50%; bottom: 11vh; transform: translateX(-50%); width: min(820px, 90vw); text-align: center; font-size: clamp(16px, 2.6vw, 26px); font-weight: bold; color: #fff; text-shadow: 0 2px 6px #000, 0 0 3px #000; line-height: 1.5; opacity: 0; }
+  #mvCap.on { animation: mvCap .8s forwards; }
+  @keyframes mvCap { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  #mvTitle { position: absolute; left: 50%; top: 36%; transform: translate(-50%, -50%) scale(.6); text-align: center; font-size: clamp(36px, 8vw, 84px); font-weight: bold; color: #ffd84a; text-shadow: 0 6px 0 #c0407a, 0 0 30px #ff8ac0; opacity: 0; transition: opacity 1.2s, transform 1.2s; white-space: nowrap; }
+  #mvTitle small { display: block; font-size: clamp(14px, 2.2vw, 22px); color: #fff; text-shadow: 0 2px 4px #000; margin-top: 10px; }
+  #mvTitle.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  /* チュートリアル */
+  #tutBox { position: fixed; z-index: 8; left: 50%; top: calc(54px + env(safe-area-inset-top)); transform: translateX(-50%); width: min(560px, 86vw); background: rgba(30, 20, 60, .9); border: 3px solid #ffd84a; border-radius: 16px; padding: 10px 14px; box-sizing: border-box; text-align: center; }
+  #tutBox[hidden] { display: none; }
+  #tutBox.done { border-color: #7cff9a; }
+  #tutStep { font-size: 12px; color: #ffd84a; } #tutText { font-size: 17px; line-height: 1.5; margin: 4px 0; } #tutText kbd { background: #fff; color: #222; border-radius: 5px; padding: 0 5px; font-size: 13px; }
+  #tutSkip { font-size: 12px; padding: 4px 12px; }
+  body.touch #tutBox { top: calc(104px + env(safe-area-inset-top)); } body.touch #tutText { font-size: 14px; }
 </style>
 <!-- 3D 表示の部品（Three.js）と、部屋コードで遊ぶための部品（PeerJS）。インターネットから読み込む -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -336,6 +355,8 @@
   <canvas id="amCanvas" width="600" height="600"></canvas>
   <div class="btns"><span id="amInfo" class="small"></span><button id="amUndo" class="sub">かきなおす</button><button id="amOk">決定！</button><button id="amCancel" class="pink">やめる</button></div>
 </div>
+<div id="movieP" hidden><div class="mvBar top"></div><div class="mvBar bot"></div><button id="mvSkip">スキップ ▶▶</button><div id="mvCap"></div><div id="mvTitle">ふにゃふにゃランド<small>ぬいぐるみたちの、ふにゃふにゃな毎日がはじまる！</small></div></div>
+<div id="tutBox" hidden><div id="tutStep"></div><div id="tutText"></div><button id="tutSkip" class="sub">スキップ</button></div>
 <div id="chatLog"></div>
 <div id="chatBox" hidden><input id="chatIn" type="text" maxlength="60" placeholder="メッセージ（Enter で送る）" autocomplete="off"><button id="chatSend">送る</button><button id="chatClose" class="pink">とじる</button><div id="chatQuick"></div></div>
 <div id="wanted" hidden></div>
@@ -362,6 +383,7 @@
     <button id="bSync" class="sub">🔄 データ連携</button>
     <button id="bFriends" class="pink">👫 フレンド</button>
     <button id="bGfx" class="sub">⚙️ 画質：ふつう</button>
+    <button id="bMovie" class="pink">🎬 ムービー</button>
   </div>
   <p class="small" id="libMsg"></p>
   <p id="fsHint" hidden></p>
@@ -1166,6 +1188,7 @@ function makePlush(texture, limbColor, label) {
       parts.visible = g.visible;
     },
   };
+  model.setOutfit = makeOutfitter(body, limbs, hands, limb);
   toonify(parts, shadow);
   return model;
 }
@@ -1267,7 +1290,7 @@ function makeMe() {
   };
   scene.add(model.g);
 }
-function refreshMyModel() { if (me) { me.model.setLimb(myLook.limb); me.model.setHat(myLook.hat, myLook.hatColor); me.model.setFace(myLook.eye, myLook.mouth); } }
+function refreshMyModel() { if (me) { me.model.setLimb(myLook.limb); me.model.setHat(myLook.hat, myLook.hatColor); me.model.setFace(myLook.eye, myLook.mouth); if (me.model.setOutfit) me.model.setOutfit(myOutfit()); } }
 function spawnMe(x, y, z, yaw = 0) {
   me.pos.set(x, y, z); me.vel.set(0, 0, 0); me.limp = false; me.stun = 0; me.ko = 0;
   camYaw = yaw; me.ry = yaw + Math.PI;
@@ -1462,7 +1485,7 @@ let respawnHere = () => {};
 
 function myState() {
   const p = me;
-  return { x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), ry: +p.ry.toFixed(2), sp: +Math.hypot(p.vel.x, p.vel.z).toFixed(1), air: !p.onGround, limp: p.limp || p.ko > 0 || !!p.wash || !!p.bowl || !!p.heldBy, mv: p.moving && !p.limp, pu: p.punch > 0, st: p.stun > 0, big: p.buffs.big > 0, sm: p.buffs.small > 0, car: p.car, sk: p.skate, vh: p.veh || null, gb: p.grab ? (p.grab.kind === "player" ? p.grab.id : 1) : 0, hl: p.heldBy ? 1 : 0, fz: p.flat > 0 ? 1 : 0, sn: p.spin > 0 ? 1 : 0, pol: mode === "town" ? policeState() : null, cc: p.carColor, wa: wantedStars(), hd: mode === "town" ? p.held : null, fl: p.float > 0, em: p.emote, rd: p.ride || null, inv: p.invis > 0, hat: myLook.hat, hc: myLook.hatColor, lc: myLook.limb, ey: myLook.eye, mo: myLook.mouth, tr: townSave.trailOn || null, gd: townSave.goldOn && townSave.goldBody ? 1 : 0, tt: townSave.title || 0, so: mode === "town" ? soldierState() : null };
+  return { x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), ry: +p.ry.toFixed(2), sp: +Math.hypot(p.vel.x, p.vel.z).toFixed(1), air: !p.onGround, limp: p.limp || p.ko > 0 || !!p.wash || !!p.bowl || !!p.heldBy, mv: p.moving && !p.limp, pu: p.punch > 0, st: p.stun > 0, big: p.buffs.big > 0, sm: p.buffs.small > 0, car: p.car, sk: p.skate, vh: p.veh || null, gb: p.grab ? (p.grab.kind === "player" ? p.grab.id : 1) : 0, hl: p.heldBy ? 1 : 0, fz: p.flat > 0 ? 1 : 0, sn: p.spin > 0 ? 1 : 0, pol: mode === "town" ? policeState() : null, cc: p.carColor, wa: wantedStars(), hd: mode === "town" ? p.held : null, fl: p.float > 0, em: p.emote, rd: p.ride || null, inv: p.invis > 0, hat: myLook.hat, hc: myLook.hatColor, lc: myLook.limb, ey: myLook.eye, mo: myLook.mouth, tr: townSave.trailOn || null, gd: townSave.goldOn && townSave.goldBody ? 1 : 0, tt: townSave.title || 0, so: mode === "town" ? soldierState() : null, ou: myOutfit() };
 }
 
 function updateCamera(dt) {
@@ -2454,6 +2477,7 @@ const town = {
     this.spots = []; this.mapRects = []; this.vaults = []; this.trash = []; this.foods = []; this.customers = []; this.islands = new Map(); this.fx = [];
     this.mon = null; this.remoteMon = null; this.myHits = {}; this.weatherFx = null; this.monMesh = null; this.target = null; this.targetMark = null; this.monLerp = null; this.chefT = null;
     this.clerks = []; this.extras = []; this.police = []; this.prevKO = {}; this.traffic = null; this.ball = null; this.jail = null; this.raceRing = null; this.remoteTraffic = null; this.remoteParked = null; this.remoteBall = null;
+    this.safe = []; this.doors = [];
     this.ufos = []; this.pins = []; this.washers = []; this.props = []; this.signs = []; this.family = []; this.famMeshes = []; this.remoteFam = null; this.bag = null; this.pinsResetT = 0; puffs = [];
   },
   syncCoins(list) {
@@ -2658,21 +2682,24 @@ function openShop(s) {
     let state = "";
     if (it.kind === "own" && townSave.owned[it.id]) state = "持っている";
     if (it.kind === "hat" && townSave.hats.includes(it.id)) state = myLook.hat === it.id ? "かぶっている" : "持っている（タダでかぶれる）";
+    if (it.kind === "cloth" && (townSave.clothes || []).includes(it.id)) state = myOutfit().includes(it.id) ? "着ている" : "持っている（タダで着る）";
     if (it.kind === "count") state = `持っている数：${townSave[it.id]}`;
-    const free = (it.kind === "hat" && townSave.hats.includes(it.id)) || it.price === 0;
+    const free = (it.kind === "hat" && townSave.hats.includes(it.id)) || (it.kind === "cloth" && (townSave.clothes || []).includes(it.id)) || it.price === 0;
     const owned = it.kind === "own" && townSave.owned[it.id];
-    return { name: `${ITEM_ICON[it.id] || ""} ${shopItemName(it)}`, desc: it.desc + (state ? "　/　" + state : ""), btn: owned ? "買った" : free ? (it.kind === "hat" ? "かぶる" : "えらぶ") : `${it.price}🪙で買う`, disabled: owned, fn: () => buyItem(s, it) };
+    return { name: `${ITEM_ICON[it.id] || ""} ${shopItemName(it)}`, desc: it.desc + (state ? "　/　" + state : ""), btn: owned ? "買った" : free ? (it.kind === "hat" ? "かぶる" : it.kind === "cloth" ? "着る" : "えらぶ") : `${it.price}🪙で買う`, disabled: owned, fn: () => buyItem(s, it) };
   });
   openPanel(s.name, `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい`, rows, () => openShop(s));
 }
 function buyItem(s, it) {
-  const owned = it.kind === "hat" && townSave.hats.includes(it.id);
+  const owned = (it.kind === "hat" && townSave.hats.includes(it.id)) || (it.kind === "cloth" && (townSave.clothes || []).includes(it.id));
   if (!owned && it.price > 0 && !pay(it.price)) return;
   if (owned || it.price === 0) play("item");
   switch (it.kind) {
     case "hat": if (!owned) townSave.hats.push(it.id); myLook.hat = it.id; refreshMyModel(); saveMyLook(); break;
     case "hatcolor": myLook.hatColor = pick(COLORS); refreshMyModel(); saveMyLook(); break;
     case "nohat": myLook.hat = null; refreshMyModel(); saveMyLook(); break;
+    case "cloth": wearCloth(it.id); break;
+    case "nocloth": myLook.outfit = [null, null, null]; saveMyLook(); refreshMyModel(); break;
     case "own":
       townSave.owned[it.id] = true;
       if (WEAPONS[it.id]) { me.held = it.id; toast(`${WEAPONS[it.id].name}を手に入れた！ ${MELEE.includes(it.id) ? "2" : "3"}キーで持てるよ`, 1800); }
@@ -2764,6 +2791,8 @@ function building(x, z, fx, fz, name, color, opt = {}) {
     addBox(x - fx * (D / 2 - 0.7), 0, z - fz * (D / 2 - 0.7), fx ? 0.8 : 2.4, 0.6, fx ? 2.4 : 0.8, 0xc8b898); // 店員さんの台
     if (opt.clerk !== false) addClerk(x - fx * (D / 2 - 0.7), z - fz * (D / 2 - 0.7), Math.atan2(fx, fz), opt.clerkName || "店員さん");
   }
+  (town.safe = town.safe || []).push({ x, z, hw: wx / 2 - 0.25, hd: wz / 2 - 0.25 });
+  (town.doors = town.doors || []).push({ x: x + fx * (D / 2 + 1.5), z: z + fz * (D / 2 + 1.5), name: (opt.short || name).replace(/^[^ぁ-んァ-ン一-龥A-Za-z]+/, "") });
   return { sx: x - fx * (D / 2 - 2.6), sz: z - fz * (D / 2 - 2.6), dx: x + fx * (D / 2 + 1.5), dz: z + fz * (D / 2 + 1.5) };
 }
 // 店員さん（近くに来ると手をふる）
@@ -3602,8 +3631,8 @@ function hostMonster(dt) {
   if (M.dead > 0) { M.dead -= dt; if (M.dead <= 0) town.mon = null; return; }
   M.life -= dt; M.t += dt; M.atkCD -= dt;
   const targets = [];
-  if (me.ko <= 0) targets.push({ id: net.myId, pos: me.pos });
-  for (const id in net.players) { const s = net.players[id].state; if (s && !s.limp) targets.push({ id, pos: net.players[id].pos }); }
+  if (me.ko <= 0 && !isSafe(me.pos)) targets.push({ id: net.myId, pos: me.pos });
+  for (const id in net.players) { const s = net.players[id].state; if (s && !s.limp && !isSafe(net.players[id].pos)) targets.push({ id, pos: net.players[id].pos }); }
   let tgt = null, td = 110;
   for (const t of targets) { const d = Math.hypot(t.pos.x - M.pos.x, t.pos.z - M.pos.z); if (d < td) { td = d; tgt = t; } }
   if (M.wind > 0) { M.wind -= dt; if (M.wind <= 0) stomp(M); return; }
@@ -3743,7 +3772,15 @@ function buildIsland(owner, data) {
   // 建物
   for (const b of data.buildings) {
     const { k, x, z } = b;
-    if (k === "house") { const c = pick([0xff9aa8, 0xffd27a, 0x9ad8ff, 0xb8e89a]); box(x, 0, z, 3, 2.6, 3, c); box(x, 2.6, z, 3.4, 0.4, 3.4, 0x8a5a4a); }
+    if (k === "house") {
+      const c = pick([0xff9aa8, 0xffd27a, 0x9ad8ff, 0xb8e89a]);
+      box(x, 0, z - 1.45, 3, 2.6, 0.2, c); box(x - 1.45, 0, z, 0.2, 2.6, 3, c); box(x + 1.45, 0, z, 0.2, 2.6, 3, c);
+      box(x - 1.05, 0, z + 1.45, 0.9, 2.6, 0.2, c); box(x + 1.05, 0, z + 1.45, 0.9, 2.6, 0.2, c); box(x, 2.1, z + 1.45, 1.2, 0.5, 0.2, c);
+      box(x, 2.6, z, 3.4, 0.4, 3.4, 0x8a5a4a);
+      box(x - 0.6, 0, z - 0.55, 1.4, 0.45, 1.2, 0xffffff); box(x - 1.0, 0.45, z - 0.55, 0.35, 0.15, 0.8, 0xffd8e0, false);
+      (isl.safe = isl.safe || []).push({ x: X + x, z: Z + z, hw: 1.3, hd: 1.3 });
+      const hs = addSpot(X + x - 0.5, Z + z + 0.5, () => isl.mine ? "[E] ベッドでねる（タダ）" : "[E] ひと休み（おじゃまします）", () => restAt("島の家", isl.mine ? () => { me.buffs.fluffy = 40; } : null), 0.9); isl.spots.push(hs);
+    }
     if (k === "shop") {
       box(x, 0, z, 2.4, 1.1, 1.2, 0xff8ac0);
       for (const [px, pz] of [[-1.1, -0.5], [1.1, -0.5]]) box(x + px, 0, z + pz, 0.15, 2.6, 0.15, 0x9a6a3a);
@@ -4948,7 +4985,7 @@ function grabRelease(drop) {
   const pw = drop ? 1.5 : 6 + 9 * Math.min(1, G.t / 1.2);
   const fx = Math.sin(me.ry), fz = Math.cos(me.ry);
   const v = { x: fx * pw, y: drop ? 1 : 4 + pw * 0.35, z: fz * pw };
-  if (!drop) { play("jump"); me.punch = 0.3; missionAdd("throw", 1); }
+  if (!drop) { play("jump"); me.punch = 0.3; missionAdd("throw", 1); if (tut.on && tut.s) tut.s.threw = true; }
   if (G.kind === "bot") { town.myHits[G.i] = gameTime; if (net.isHost) throwBot(G.i, v); else netSend({ t: "throwbot", i: G.i, ...v }); }
   if (G.kind === "police") { const p = G.p; p.vel.set(v.x, v.y, v.z); p.flyT = drop ? 0.3 : 1.6; p.stun = drop ? 0.5 : 1.8; if (!drop) crime(15, "けいさつをぶん投げた", true); }
   if (G.kind === "ball") { if (net.isHost) { town.ball.heldT = 0; town.ball.vel.set(v.x, v.y, v.z); town.ball.last = net.myId; } else netSend({ t: "throwball", ...v }); }
@@ -5808,7 +5845,7 @@ function townUpdate(dt) {
     b.think -= dt;
     b.sayT -= dt;
     if (b.sayT <= 0 && b.ko <= 0) { b.sayT = rand(6, 14); if (!b.guard || b.angry > 0) botSay(b, pick(BOT_LINES[b.type])); }
-    const targets = [{ id: net.myId, pos: me.pos, ko: me.ko > 0 }, ...Object.entries(net.players).filter(([, r]) => r.state).map(([id, r]) => ({ id, pos: new V3(r.state.x, r.state.y, r.state.z), ko: r.state.limp }))];
+    const targets = [{ id: net.myId, pos: me.pos, ko: me.ko > 0 || isSafe(me.pos) }, ...Object.entries(net.players).filter(([, r]) => r.state).map(([id, r]) => { const p = new V3(r.state.x, r.state.y, r.state.z); return { id, pos: p, ko: r.state.limp || isSafe(p) }; })];
     let near = null, nd = 10;
     for (const t of targets) { const d = t.pos.distanceTo(b.pos); if (d < nd && !t.ko) { nd = d; near = t; } }
     const mood = b.golden ? "shy" : ev.kind === "dance" && !b.guard ? "party" : b.angry > 0 && !b.guard ? "brawler" : b.type;
@@ -6119,11 +6156,11 @@ function makeGhost() {
   return { g, m, t: 0, life: 70, ph: rand(0, 7), gone: 0 };
 }
 function ghostsUpdate(dt, N, h) {
-  const active = (h >= 21 || h < 4) && !me.jail;
-  if (active && N.ghosts.length < 3) {
+  const active = (h >= 21 || h < 4) && !me.jail && !isSafe(me.pos);
+  if (active && N.ghosts.length < 1) {
     N.ghostT -= dt;
     if (N.ghostT <= 0) {
-      N.ghostT = rand(10, 18);
+      N.ghostT = rand(35, 60);
       const a = rand(0, Math.PI * 2), r = rand(16, 24);
       const gh = makeGhost(); gh.g.position.set(me.pos.x + Math.cos(a) * r, me.pos.y + 0.2, me.pos.z + Math.sin(a) * r);
       N.ghosts.push(gh);
@@ -6347,7 +6384,7 @@ function nightHud() {
   }
   if (townSave.trust) r += `<br>🤝 信用 ${townSave.trust}（${trustTitle()}）`;
   const MS = missionsToday(), md = MS.list.filter((m) => m.done).length;
-  r += `<br>📋 ミッション ${md}/${MS.list.length}${md === MS.list.length ? " ✅" : "（広場の掲示板）"}` + treasureHud() + tagHud();
+  r += `<br>📋 ミッション ${md}/${MS.list.length}${md === MS.list.length ? " ✅" : "（広場の掲示板）"}` + treasureHud() + tagHud() + paperHud();
   return r + "<br>";
 }
 
@@ -6487,6 +6524,7 @@ function trailsUpdate(dt) {
   // ほかの人
   for (const id in net.players) {
     const r = net.players[id], s = r.state; if (!s || !r.model) continue;
+    if (r.model.setOutfit) r.model.setOutfit(Array.isArray(s.ou) ? s.ou.slice(0, 3).map((k) => (CLOTHES[k] ? k : null)) : []);
     const gd = !!s.gd; if (gd !== !!r.gdShown) { r.gdShown = gd; r.model.skin.color.setHex(gd ? 0xffd84a : 0xffffff); }
     if (s.tr && TRAILS[s.tr] && s.mv) { r.trailT = (r.trailT || 0) - dt; if (r.trailT <= 0) { r.trailT = 0.12; trailEmit(s.tr, r.pos.x, r.pos.y, r.pos.z); } }
   }
@@ -7120,8 +7158,8 @@ function badUpdate(dt) {
     else {
       badEv.t -= dt; if (badEv.t <= 0) { endBadEvent(false); }
       const targets = [];
-      if (me.ko <= 0 && !me.jail) targets.push({ id: net.myId, pos: me.pos });
-      for (const id in net.players) { const s = net.players[id].state; if (s && !s.limp) targets.push({ id, pos: net.players[id].pos }); }
+      if (me.ko <= 0 && !me.jail && !isSafe(me.pos)) targets.push({ id: net.myId, pos: me.pos });
+      for (const id in net.players) { const s = net.players[id].state; if (s && !s.limp && !isSafe(net.players[id].pos)) targets.push({ id, pos: net.players[id].pos }); }
       town.bots.forEach((bt, k) => { if (k < 8 && bt.ko <= 0) targets.push({ bot: k, pos: bt.pos }); });
       for (const b of town.bad || []) {
         b.t += dt;
@@ -7175,6 +7213,10 @@ function badUpdate(dt) {
 // =====================================================================
 function funTownUpdate(dt) {
   trailsUpdate(dt);
+  tutUpdate(dt);
+  safeHint();
+  liveUpdate(dt);
+  paperUpdate(dt);
   hunterUpdate(dt);
   monHint();
   fpsWatch(dt);
@@ -7240,7 +7282,7 @@ const GUIDE = [
     ? `<div class="gd"><span>🕹️</span><div><b>うごく</b>：左がわをさわって動かす<br><b>見回す</b>：右がわをなぞる（2本指でズーム）</div></div><div class="gd"><span>✊</span><div><b>パンチ／使う</b>・<b>つかむ→投げる</b>・<b>調べる</b>・<b>乗り物</b>は右下のボタン</div></div><div class="gd"><span>🔝</span><div>上のボタン：👁一人称 🗺️地図 📸写真 🍙食べる 👋💃エモート 🤝わたす 📞けいさつ 📖あそびかた</div></div>`
     : `<div class="gd"><span>🕹️</span><div><kbd>WASD</kbd> うごく　<kbd>スペース</kbd> ジャンプ　マウス：見回す　ホイール：ズーム</div></div><div class="gd"><span>✊</span><div><b>クリック</b>：パンチ・使う（長おしでぐるぐるパンチ）<br><b>右クリック</b>：つかむ → はなすとぶん投げる！</div></div><div class="gd"><span>⌨️</span><div><kbd>E</kbd> 調べる・入る　<kbd>F</kbd> 乗り物　<kbd>Q</kbd> 食べる　<kbd>1</kbd>〜<kbd>5</kbd> 持ちかえ　<kbd>Tab</kbd> 地図<br><kbd>R</kbd> わたす・フレンド　<kbd>C</kbd> けいさつを呼ぶ　<kbd>H</kbd> このガイド　<kbd>P</kbd> 写真　<kbd>V</kbd> 一人称　<kbd>Shift</kbd> 力をぬく</div></div>` },
   { t: "🗺️ 町の場所", h: () => `<div class="gd"><span>🏪</span><div><b>広場のまわり</b>：服屋・ご飯屋・おもちゃ屋・乗り物屋　<b>道ぞい</b>：武器屋・空の乗り物屋・ハローワーク</div></div><div class="gd"><span>🎰</span><div><b>ガチャ屋</b>（東）・<b>ボードゲームカフェ</b>（西：オセロ・五目ならべ・4目ならべ・トランプ。ちがう機械の友だちとネット対戦も！）・<b>📋掲示板</b>（広場：ミッション・宝の地図・スタンプラリー・おにごっこ・フレンド）</div></div><div class="gd"><span>🎡</span><div><b>南</b>：遊園地（観覧車・<b>🎢ジェットコースター</b>・レース）・<b>🎣つり場</b>（南の桟橋の先）・<b>♨️旅館と温泉</b>・<b>🍹リゾート</b>（南東）<br><b>北</b>：ビル街・<b>🏨ホテル</b>　<b>北西</b>：展望タワー・<b>⛺キャンプ場</b><br><b>西</b>：サッカー場・ゲームセンター・コインランドリー　<b>東</b>：けいさつ署・ろうや</div></div><div class="gd"><span>🏝️</span><div>海の<b>小島</b>には番人と金庫。<b>大砲</b>で飛んでいける。お金をためたら<b>自分の島</b>も！</div></div>` },
-  { t: "💰 お金", h: () => `<div class="gd"><span>⬆️</span><div><b>かせぐ</b>：コインを拾う・仕事（ハローワーク）・つり・ボードゲーム・🗺️宝の地図・ミッション・わるもの退治・モンスター退治・おばけの写真</div></div><div class="gd"><span>⬇️</span><div><b>使う</b>：🎰ガチャ（ぼうし・エフェクト・金ピカ）・お店・武器・乗り物・つりのエサ・オセロのかけ・ぬいへのプレゼント・自分の島</div></div><div class="gd"><span>📋</span><div><b>きょうのミッション</b>：毎日3つ。ぜんぶクリアで🎫ガチャ券！（広場の掲示板）</div></div>` },
+  { t: "💰 お金", h: () => `<div class="gd"><span>⬆️</span><div><b>かせぐ</b>：コインを拾う・仕事（ハローワーク）・📰新聞配達・👏広場でおどってストリートライブ・🔍自販機の下・つり・ボードゲーム・🗺️宝の地図・ミッション・わるもの退治・モンスター退治・おばけの写真</div></div><div class="gd"><span>⬇️</span><div><b>使う</b>：🎰ガチャ（ぼうし・エフェクト・金ピカ）・お店・武器・乗り物・つりのエサ・オセロのかけ・ぬいへのプレゼント・自分の島</div></div><div class="gd"><span>📋</span><div><b>きょうのミッション</b>：毎日3つ。ぜんぶクリアで🎫ガチャ券！（広場の掲示板）</div></div>` },
   { t: "⚡ イベント", h: () => `<div class="gd"><span>😈</span><div><b>わるものぬい団</b>：何人もせめてくる。みんなでやっつけよう</div></div><div class="gd"><span>🏹</span><div><b>怪獣ハンター</b>：モンスターが来たら J（スマホは🏹）でハンターを呼べる。よけたり遠くからうったりして、ちゃんと戦ってくれる</div></div><div class="gd"><span>🦖</span><div><b>モンスター</b>／<b>👑キングモンスター</b>（まれ）／<b>💀最強の魔王モンスター</b>（すごくまれ）</div></div><div class="gd"><span>✨</span><div>金色のぬい・ダンスパーティー・家族が来る・天気（雨・雷・マグマ・お金の雨）</div></div><div class="gd"><span>🚨</span><div>悪いことを見られると<b>けいさつ</b>が追ってくる。つかまると<b>ろうや</b>→脱獄！<br>なぐられたり撃たれたら、10秒以内に <b>C で通報</b>できる（なにもされていないのに呼ぶと<b>罰金</b>！）</div></div>` },
   { t: "🌙 朝と夜", h: () => `<div class="gd"><span>🌅</span><div>1日＝12分。毎朝おこづかい。<b>日曜日はお祭り</b>（コイン2倍）</div></div><div class="gd"><span>🎆</span><div>夜は<b>花火大会</b>・<b>👻おばけぬい</b>（P で写真にとるとコイン）・<b>🌠流れ星</b>（Z でおねがい）・夜だけの魚</div></div><div class="gd"><span>📜</span><div><b>やくそく書</b>：相手のそばで R。3日以内にわたさないと…ろうや！</div></div>` },
   { t: "👫 フレンド", h: () => `<div class="gd"><span>💛</span><div>部屋で友だちのそばで <b>R →「フレンドになろう」</b>。いっしょに遊ぶとレベルが上がってコインがもらえる。掲示板からそばにワープもできる</div></div><div class="gd"><span>🧸</span><div>町のぬいに <b>R →「プレゼント」</b>。❤5で<b>親友</b>になって、ついてきていっしょに戦ってくれる</div></div><div class="gd"><span>🪖</span><div><b>島の軍隊</b>：自分の島で Q →「島の軍隊」。兵士（剣士・弓兵・盾兵）をやとって、島を守る・ボディガード・部隊を作って地図に作戦をかく！</div></div><div class="gd"><span>🏅</span><div><b>称号</b>：いろいろなことをすると手に入る。名札に出るよ</div></div>` },
@@ -7280,9 +7322,12 @@ function openBoard() {
     { html: `<div style="width:100%"><b>📋 きょうのミッション</b><br>${missionsHtml()}</div>` },
     { html: stampCard() },
     { name: "🏃 おにごっこ（部屋のみんなで）", desc: tag.on ? "いまおにごっこ中！" : net.online ? "部屋にいるみんなでおにごっこ！ にげきると30コイン" : "部屋に2人以上いるときにできるよ", btn: tag.on ? "やっている" : "はじめる", disabled: tag.on || !net.online, fn: () => { startTag(); closeShop(); return false; } },
+    { name: "📰 新聞配達（アルバイト）", desc: paper.on ? "いま配達中！" : "町の5か所に新聞をとどける。4分以内で80コイン＋はやいとボーナス", btn: paper.on ? "配達中" : "やる", disabled: paper.on, fn: () => { startPaper(); return false; } },
+    ...(townSave.home != null ? [{ name: "🏠 家に帰る", desc: "自分の家にワープ", btn: "帰る", fn: () => { goHome(); return false; } }] : []),
     { name: "🏹 怪獣ハンターをよぶ", desc: "コインでハンターをやとうと、モンスターとたたかってくれる（J キーでも呼べる）", btn: "えらぶ", fn: () => { openHunters(); return false; } },
     { name: "🗺️ 宝の地図", desc: townSave.treasure ? "持っている！ 右上のヒントをたよりにさがそう" : "町のどこかにうまっている宝箱の場所がわかる（コイン・ガチャ券・レアなぼうしなど）", btn: townSave.treasure ? "持っている" : "50🪙で買う", disabled: !!townSave.treasure, fn: () => { buyTreasureMap(); } },
     { name: "👫 フレンド・プロフィール・称号", desc: "", btn: "ひらく", fn: () => { openFriends(); return false; } },
+    { name: "🎓 チュートリアルをもう一度", desc: "あそびかたを1つずつやってみる", btn: "やる", fn: () => { closeShop(); startTutorial(); return false; } },
     { name: "📖 あそびかた", desc: "そうさ・町の場所・お金・イベント…", btn: "ひらく", fn: () => { closeShop(); openGuide(0); return false; } },
   ], openBoard);
 }
@@ -7294,10 +7339,12 @@ function buildFunTown() {
   buildFishing();
   buildBoard();
   Object.assign(badEv, { on: false, remote: null, meshes: [], timer: rand(260, 420) });
-  town.bad = []; callP.cars = []; fish.state = null; town.trSpot = null; town.trSpark = null; armyReset(); hunterReset();
+  town.bad = []; callP.cars = []; fish.state = null; town.trSpot = null; town.trSpark = null; armyReset(); hunterReset(); funStuffReset();
   buildStamps();
   buildStay();
   buildCoaster();
+  buildHouses();
+  buildVending();
 }
 // R でえらぶ：友だち → フレンド・やくそく書　／　町のぬい → プレゼント・やくそく書・親友
 function personMenu(P) {
@@ -7624,7 +7671,7 @@ function digTreasure() {
 // ---- 部屋のかぎ（バージョンがちがうと、うまく遊べないので教える） ----
 function oldVerMsg() { net.full = true; net.online = false; showMsg("バージョンがちがうよ", "部屋を作った人と、ゲームのバージョンがちがうみたい。<br>2人とも同じアドレス（GitHub のページなど）で開いて、ページを<b>読みこみ直して</b>からためしてね。", [{ label: "タイトルへ", fn: () => location.reload() }]); }
 // ---- メニューが出ている間は、マウスをゲームの画面からはなす（ボタンがおせなくなるのをふせぐ） ----
-function anyUiOpen() { return !mode || !$("titleP").hidden || !$("modeP").hidden || !$("joinP").hidden || !$("msgP").hidden || !$("shopP").hidden || !$("rvP").hidden || !$("cardP").hidden || !$("armyMap").hidden || chat.open || paintMode; }
+function anyUiOpen() { return !mode || !$("titleP").hidden || !$("modeP").hidden || !$("joinP").hidden || !$("msgP").hidden || !$("shopP").hidden || !$("rvP").hidden || !$("cardP").hidden || !$("armyMap").hidden || chat.open || paintMode || movie.on; }
 setInterval(() => { if (document.pointerLockElement && anyUiOpen() && document.exitPointerLock) document.exitPointerLock(); }, 200);
 
 // =====================================================================
@@ -9133,6 +9180,492 @@ function monHint() {
   const b = $("tbHunt"); if (b) { const v = alive ? "" : "none"; if (b.style.display !== v) b.style.display = v; }
 }
 
+// =====================================================================
+//  22. 服とくつ・中に入れる家・建物の中は安全・コンビニ・自販機・お金のかせぎ方
+// =====================================================================
+// ---- 服・ズボン・くつ（体の上に重ねる） ----
+const CLOTHES = {
+  tshirt: { slot: 0, name: "Tシャツ", e: "👕", c: 0xffffff, price: 15 },
+  stripe: { slot: 0, name: "しましまシャツ", e: "👕", stripe: ["#ff5c7a", "#ffffff"], price: 25 },
+  hoodie: { slot: 0, name: "パーカー", e: "🧥", c: 0x6a8ad8, pocket: true, price: 35 },
+  aloha: { slot: 0, name: "アロハシャツ", e: "🌺", flower: true, price: 40 },
+  suit: { slot: 0, name: "スーツ", e: "🤵", c: 0x2a2a3a, tie: 0xd83a3a, price: 80 },
+  dress: { slot: 0, name: "ドレス", e: "👗", c: 0xff8ac0, flare: true, price: 90 },
+  jeans: { slot: 1, name: "ジーンズ", e: "👖", c: 0x3a5aa8, long: true, price: 30 },
+  shorts: { slot: 1, name: "短パン", e: "🩳", c: 0xffa040, price: 15 },
+  jersey: { slot: 1, name: "ジャージ", e: "👖", c: 0x3a3a4a, long: true, price: 25 },
+  sneaker: { slot: 2, name: "スニーカー", e: "👟", c: 0xff3a3a, price: 20 },
+  boots: { slot: 2, name: "長ぐつ", e: "🥾", c: 0xffd84a, tall: true, price: 25 },
+  goldshoe: { slot: 2, name: "金のくつ", e: "✨", c: 0xffc020, price: 300 },
+};
+const SLOT_NAME = ["服", "ズボン", "くつ"];
+const clothTex = {};
+function clothMaterial(C) {
+  if (C.stripe || C.flower) {
+    const key = C.stripe ? C.stripe.join() : "flower";
+    if (!clothTex[key]) {
+      const cv = document.createElement("canvas"); cv.width = 128; cv.height = 64; const c = cv.getContext("2d");
+      if (C.stripe) { for (let i = 0; i < 8; i++) { c.fillStyle = C.stripe[i % 2]; c.fillRect(0, i * 8, 128, 8); } }
+      else { c.fillStyle = "#2aa0d8"; c.fillRect(0, 0, 128, 64); for (let i = 0; i < 14; i++) { c.fillStyle = pick(["#ff5c7a", "#ffd84a", "#ffffff"]); const x = Math.random() * 128, y = Math.random() * 64; for (let k = 0; k < 5; k++) { c.beginPath(); c.arc(x + Math.cos(k * 1.26) * 4, y + Math.sin(k * 1.26) * 4, 3, 0, 7); c.fill(); } } }
+      clothTex[key] = new THREE.CanvasTexture(cv);
+    }
+    return new THREE.MeshToonMaterial({ map: clothTex[key], gradientMap: TOON_GRADIENT });
+  }
+  return new THREE.MeshToonMaterial({ color: C.c, gradientMap: TOON_GRADIENT });
+}
+// makePlush の中から呼ぶ：服を着せる（body：胴の球、legs：太もも・すね、feet：足）
+function makeOutfitter(body, limbs, hands, limbMat) {
+  const st = { key: "", added: [] };
+  return (o) => {
+    o = Array.isArray(o) ? o : [];
+    const key = o.join(","); if (key === st.key) return; st.key = key;
+    for (const m of st.added) m.parent && m.parent.remove(m); st.added = [];
+    for (let i = 4; i < 8; i++) limbs[i][2].material = limbMat;
+    hands.lFoot.material = hands.rFoot.material = limbMat;
+    const [sh, pa, so] = o.map((k) => (CLOTHES[k] ? CLOTHES[k] : null));
+    if (sh) {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.29, 18, 12, 0, Math.PI * 2, 0.75, 1.45), clothMaterial(sh)); body.add(m); st.added.push(m);
+      if (sh.tie) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.02), toonMat(sh.tie)); t.position.set(0, 0.06, 0.285); body.add(t); st.added.push(t); }
+      if (sh.pocket) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.07, 0.02), toonMat(0x4a6ab8)); p.position.set(0, -0.08, 0.285); body.add(p); st.added.push(p); }
+      if (sh.flare) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.32, 18, 1, true), clothMaterial(sh)); f.material.side = THREE.DoubleSide; f.position.y = -0.2; body.add(f); st.added.push(f); }
+    }
+    if (pa) {
+      const pm2 = clothMaterial(pa);
+      const band = new THREE.Mesh(new THREE.SphereGeometry(0.288, 18, 8, 0, Math.PI * 2, 2.05, 1.09), pm2); body.add(band); st.added.push(band);
+      limbs[4][2].material = limbs[6][2].material = pm2;
+      if (pa.long) limbs[5][2].material = limbs[7][2].material = pm2;
+    }
+    if (so) { const sm = clothMaterial(so); hands.lFoot.material = hands.rFoot.material = sm; if (so.tall) limbs[5][2].material = limbs[7][2].material = sm; }
+  };
+}
+function myOutfit() { const o = myLook.outfit; return Array.isArray(o) ? o.map((k) => (CLOTHES[k] ? k : null)) : [null, null, null]; }
+// 服屋に服をならべる
+SHOPS[0].items.push(...Object.entries(CLOTHES).map(([id, C]) => ({ id, name: `${C.e} ${C.name}（${SLOT_NAME[C.slot]}）`, price: C.price, kind: "cloth", desc: C.slot === 2 ? "足にはくよ" : C.slot === 1 ? "足にはくよ（ズボン）" : "体に着るよ" })));
+SHOPS[0].items.push({ id: "nocloth", name: "✖️ 服・ズボン・くつをぬぐ", price: 0, kind: "nocloth", desc: "" });
+function wearCloth(id) {
+  const C = CLOTHES[id]; if (!C) return;
+  townSave.clothes = townSave.clothes || [];
+  if (!townSave.clothes.includes(id)) townSave.clothes.push(id);
+  const o = myOutfit(); o[C.slot] = id; myLook.outfit = o; saveMyLook(); saveTown(true);
+  if (me && me.model.setOutfit) me.model.setOutfit(o);
+}
+// ---- 中に入れる家 ----
+SHOP_LOOK.conv = { icon: "🏪", stripe: ["#4ac080", "#ffffff"], prop: "onigiri", sub: "おにぎり・ジュース・おかし", shelf: ["onigiri", "cake", "balloon"] };
+SHOPS.push(
+  { id: "conv", name: "🏪 コンビニ ふにゃマート", color: 0x4ac080, slot: [35, -9, -1, 0], items: [] },
+  { id: "conv", name: "🏪 ふにゃマート 2号店", color: 0x4ac080, slot: [-35, 9, 1, 0], items: [] },
+);
+Object.assign(FOOD_FX, {
+  sando: { h: 35, hp: 15, msg: "サンドイッチ、もぐもぐ！" },
+  pudding: { h: 20, hp: 20, msg: "ぷるぷるプリン！ あま〜い" },
+  sports: { h: 5, hp: 40, msg: "スポーツドリンクでわたが回復！" },
+  cola: { h: 5, speed: 30, msg: "シュワシュワ！ 足が速くなった！" },
+  energy: { h: 5, speed: 20, jump: 20, msg: "エナジードリンク！ 速くて高くとべる！" },
+  oshiruko: { h: 30, hp: 10, msg: "あったかいおしるこ… ほっこり" },
+});
+const CONV_ITEMS = [
+  { id: "onigiri", name: "🍙 おにぎり", price: 5, kind: "food", desc: "おなか +30・わた +30" },
+  { id: "sando", name: "🥪 サンドイッチ", price: 8, kind: "food", desc: "おなか +35・わた +15" },
+  { id: "pudding", name: "🍮 プリン", price: 8, kind: "food", desc: "おなか +20・わた +20" },
+  { id: "sports", name: "🥤 スポーツドリンク", price: 8, kind: "food", desc: "わた +40" },
+  { id: "cola", name: "🥤 コーラ", price: 6, kind: "food", desc: "30秒 足が速い" },
+  { id: "peel", name: "🍌 バナナの皮 ×3", price: 3, kind: "count", desc: "ふんだ人がすべる" },
+  { id: "balloon", name: "🎈 風船", price: 6, kind: "count", desc: "8秒 ふわふわ浮かぶ" },
+];
+SHOPS.filter((s) => s.id === "conv").forEach((s) => s.items.push(...CONV_ITEMS));
+const HOUSES = [
+  { x: -33, z: -33, fx: 0, fz: 1, name: "ぬいたちの家", color: 0xd87a5a },
+  { x: -48, z: -57, fx: 1, fz: 0, name: "赤い屋根の家", color: 0xd84a4a },
+  { x: 57, z: 42, fx: -1, fz: 0, name: "空き家（売り物）", color: 0x6aa0d8, sale: true },
+];
+function furnish(x, z, fx, fz, W, D, owner) {
+  // おくのかべがわにベッド、まん中にテーブル、すみにテレビ
+  const bx = x - fx * (D / 2 - 1.1), bz = z - fz * (D / 2 - 1.1);
+  const along = (a) => [fx ? 0 : a, fx ? a : 0];
+  const [ax, az] = along(-W / 2 + 1.3);
+  addBox(bx + ax, 0, bz + az, fx ? 1.8 : 1.3, 0.5, fx ? 1.3 : 1.8, 0xffffff);
+  const pil = mesh(new THREE.BoxGeometry(fx ? 0.4 : 0.9, 0.18, fx ? 0.9 : 0.4), 0xffd8e0); pil.position.set(bx + ax - fx * 0.55, 0.6, bz + az - fz * 0.55);
+  const blanket = mesh(new THREE.BoxGeometry(fx ? 1.0 : 1.32, 0.08, fx ? 1.32 : 1.0), 0x6ab0ff); blanket.position.set(bx + ax + fx * 0.3, 0.54, bz + az + fz * 0.3);
+  addSpot(bx + ax + fx * 1.2, bz + az + fz * 1.2, () => owner ? "[E] ベッドでねる（タダ）" : "[E] ベッドでひと休み（おじゃまします）", () => restAt(owner ? "自分の家" : "ぬいの家", owner ? () => { me.buffs.fluffy = 60; } : null), 1.4);
+  addBox(x, 0, z, 1.2, 0.6, 1.2, 0xb88a5a);
+  const [tx, tz] = along(W / 2 - 1);
+  addBox(bx + tx, 0, bz + tz, fx ? 0.4 : 1.0, 0.9, fx ? 1.0 : 0.4, 0x3a3a4a);
+  const scr = new THREE.Mesh(new THREE.BoxGeometry(fx ? 0.05 : 0.8, 0.5, fx ? 0.8 : 0.05), new THREE.MeshBasicMaterial({ color: 0x5ad0ff })); scr.position.set(bx + tx + fx * 0.22, 1.25, bz + tz + fz * 0.22); world.add(scr);
+}
+function buildHouses() {
+  HOUSES.forEach((H, i) => {
+    const mine = townSave.home === i;
+    const name = mine ? `🏠 ${myName}の家` : H.sale ? "🏠 空き家（売り物）" : `🏠 ${H.name}`;
+    const b = building(H.x, H.z, H.fx, H.fz, name, H.color, { short: mine ? "わが家" : "家", noCounter: true, size: [7, 6], wall: 0xfff0dc, floor: 0xc8a070 });
+    furnish(H.x, H.z, H.fx, H.fz, 7, 6, mine);
+    if (H.sale && !mine) addSpot(b.sx, b.sz, () => "[E] この家を買う（1500コイン）", () => buyHome(i), 1.6);
+    const mb = mesh(new THREE.BoxGeometry(0.35, 0.3, 0.3), 0xd84a4a); mb.position.set(b.dx + (H.fz ? 1.6 : 0), 1.0, b.dz + (H.fx ? 1.6 : 0));
+    addBox(b.dx + (H.fz ? 1.6 : 0), 0, b.dz + (H.fx ? 1.6 : 0), 0.08, 0.85, 0.08, 0x7a5230, { collide: false });
+  });
+}
+function buyHome(i) {
+  if (townSave.home != null) { toast("もう自分の家を持っているよ", 1500); return; }
+  showMsg("🏠 家を買う", "この家を <b>1500コイン</b> で買う？<br>自分の家になると、ベッドでタダでねられて、起きたらふわふわになるよ。掲示板から「家に帰る」もできる", [
+    { label: "買う！", fn: () => { controls = true; if (!pay(1500)) return; townSave.home = i; saveTown(true); play("clear"); toast("🏠 自分の家を手に入れた！ （町に入りなおすと表札がかわるよ）", 3000); } },
+    { label: "やめる", fn: () => { controls = true; } },
+  ]);
+}
+function goHome() { const H = HOUSES[townSave.home]; if (!H) return; if (me.veh) setVehicle(null); spawnMe(H.x, 0.3, H.z, camYaw); closeShop(); toast("🏠 ただいま！", 1500); }
+// ---- 建物の中は安全（わるもの・モンスター・けんか好き・おばけは入ってこない） ----
+function isSafe(p) {
+  if (!p || p.y > 4.5) return false;
+  for (const r of town.safe || []) if (Math.abs(p.x - r.x) < r.hw && Math.abs(p.z - r.z) < r.hd) return true;
+  for (const isl of town.islands.values()) for (const r of isl.safe || []) if (Math.abs(p.x - r.x) < r.hw && Math.abs(p.z - r.z) < r.hd) return true;
+  return false;
+}
+let safeShown = false;
+function safeHint() { const s = mode === "town" && isSafe(me.pos); if (s !== safeShown) { safeShown = s; if (s) toast("🏠 建物の中は安全！ わるものやモンスターは入ってこないよ", 1600); } }
+// ---- 自販機（武器・ジュース）と、自販機の下のコイン ----
+const VENDING = [[9.8, 4.6], [3.4, 79.5], [50, -2]];
+function buildVending() {
+  const W = SHOPS.find((s) => s.id === "weapons");
+  const wItems = W ? W.items.filter((it) => ["hammer", "gun", "katana"].includes(it.id)) : [];
+  const juice = [
+    { id: "sports", name: "🥤 スポーツドリンク", price: 8, kind: "food", desc: "わた +40" },
+    { id: "cola", name: "🥤 コーラ", price: 6, kind: "food", desc: "30秒 足が速い" },
+    { id: "energy", name: "⚡ エナジードリンク", price: 12, kind: "food", desc: "20秒 速くて高くとべる" },
+    { id: "oshiruko", name: "🥫 おしるこ", price: 7, kind: "food", desc: "おなか +30・わた +10" },
+  ];
+  VENDING.forEach(([x, z], i) => {
+    const mk = (ox, color, label, s) => {
+      addBox(x + ox, 0, z, 1.0, 2.0, 0.8, color);
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 0.05), new THREE.MeshBasicMaterial({ color: 0xe8f6ff })); panel.position.set(x + ox, 1.3, z + 0.42); world.add(panel);
+      const l = makeLabel(label, "#fff", 0.8); l.position.set(x + ox, 2.5, z); world.add(l);
+      addSpot(x + ox, z + 1.3, () => `[E] ${label}`, () => openVending(s, i * 2 + (ox > 0 ? 1 : 0)), 1.1);
+    };
+    mk(-0.6, 0xd84a4a, "🔫 武器の自販機", { name: "🔫 武器の自販機（すぐ買える！）", items: wItems });
+    mk(0.6, 0x3a8ad8, "🥤 ジュースの自販機", { name: "🥤 ジュースの自販機", items: juice });
+    town.mapRects.push({ x, z, w: 2.2, d: 0.8, color: 0xd84a4a, label: "自販機", icon: "🥤" });
+  });
+}
+const vmPeek = {};
+function openVending(s, k) {
+  openShop(s);
+  panelReopen = () => openVending(s, k);
+  const last = vmPeek[k] || -999;
+  const row = document.createElement("div"); row.className = "shopRow";
+  row.innerHTML = `<div><b>🔍 自販機の下をのぞく</b><br><span class="small">だれかが落としたコインがあるかも…？</span></div><button>のぞく</button>`;
+  row.querySelector("button").onclick = () => {
+    initAudio();
+    if (gameTime - last < 90) { toast("さっきのぞいたばかり。また今度…", 1300); return; }
+    vmPeek[k] = gameTime; row.querySelector("button").disabled = true;
+    const r = Math.random(), v = r < 0.35 ? 0 : r < 0.9 ? Math.floor(rand(1, 9)) : Math.floor(rand(15, 40));
+    if (v) gotCoins(v, "🔍 自販機の下にコインが落ちてた！"); else toast("🔍 …ほこりしかなかった", 1300);
+  };
+  $("shopList").appendChild(row);
+}
+// ---- お金のかせぎ方：ストリートライブ（広場でおどると、おひねりがもらえる） ----
+const live = { t: 0, day: -1, got: 0 };
+function liveUpdate(dt) {
+  if (mode !== "town" || me.emote !== "dance" || Math.hypot(me.pos.x, me.pos.z) > 11) { live.t = 0; return; }
+  let n = 0; town.bots.forEach((b, i) => { if (i < 8 && !botKO(i) && b.pos.distanceTo(me.pos) < 12) n++; });
+  for (const id in net.players) { const r = net.players[id]; if (r.pos && r.pos.distanceTo(me.pos) < 12) n++; }
+  const d = dayOf(clk.my); if (live.day !== d) { live.day = d; live.got = 0; }
+  if (n < 1 || live.got >= 150) { live.t = 0; return; }
+  live.t += dt;
+  if (live.t >= 5) { live.t = 0; const v = Math.min(150 - live.got, Math.floor(rand(3, 6)) * Math.min(3, n)); live.got += v; gotCoins(v, `👏 ストリートライブ！ 見ている人 ${n}人から おひねり`); }
+}
+// ---- お金のかせぎ方：新聞配達のアルバイト ----
+const paper = { on: false, list: [], left: 0, marks: [] };
+function startPaper() {
+  if (paper.on) { toast("いま配達中だよ！", 1200); return; }
+  const doors = (town.doors || []).filter((d) => Math.hypot(d.x, d.z) < 78);
+  if (doors.length < 5) return;
+  paper.list = shuffleArr(doors.slice()).slice(0, 5).map((d) => ({ ...d, done: false }));
+  paper.on = true; paper.left = 240;
+  for (const m of paper.marks) world.remove(m); paper.marks = paper.list.map((d) => { const l = makeLabel("📰", "#fff", 1.6); l.position.set(d.x, 3, d.z); world.add(l); return l; });
+  closeShop(); play("item");
+  toast("📰 新聞配達スタート！ 📰 のマークがある5か所に、4分以内にとどけよう（近くに行くだけでOK）", 3800);
+}
+function paperUpdate(dt) {
+  if (!paper.on) return;
+  paper.left -= dt;
+  paper.list.forEach((d, i) => {
+    if (d.done) return;
+    paper.marks[i].position.y = 3 + Math.sin(gameTime * 3 + i) * 0.3;
+    if (Math.hypot(me.pos.x - d.x, me.pos.z - d.z) < 2.6) { d.done = true; world.remove(paper.marks[i]); play("coin"); toast(`📰 「${d.name}」にとどけた！（${paper.list.filter((x) => x.done).length}/5）`, 1300); }
+  });
+  const done = paper.list.filter((x) => x.done).length;
+  if (done >= 5) { paper.on = false; const bonus = Math.floor(paper.left / 60) * 10; gotCoins(80 + bonus, `📰 新聞配達おわり！ おつかれさま${bonus ? `（はやいのでボーナス +${bonus}）` : ""}`); missionAdd("earn", 0); }
+  else if (paper.left <= 0) { paper.on = false; for (const m of paper.marks) world.remove(m); const v = done * 10; if (v) gotCoins(v, `📰 時間切れ… とどけた${done}か所ぶん`); else toast("📰 時間切れ…", 1500); }
+}
+function paperHud() {
+  if (!paper.on) return "";
+  const n = paper.list.find((d) => !d.done), done = paper.list.filter((d) => d.done).length, m = Math.max(0, Math.ceil(paper.left));
+  const dist = n ? ` 次：${n.name}まで ${Math.round(Math.hypot(n.x - me.pos.x, n.z - me.pos.z) / 5) * 5}m（${compass(n.x - me.pos.x, n.z - me.pos.z)}）` : "";
+  return `<br>📰 配達 ${done}/5（のこり ${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}）${dist}`;
+}
+function funStuffReset() { paper.on = false; paper.marks = []; live.t = 0; safeShown = false; }
+
+// =====================================================================
+//  23. オープニングムービー「ようちえんに きふされた ぬいぐるみ」
+//   3Dの小さなセットを作って、カメラと字幕で見せる（タイトルの「🎬 ムービー」でいつでも見られる）
+// =====================================================================
+const MOVIE_LEN = 64;
+const MOVIE_CAPS = [
+  [0.5, "あるお店のすみっこに、ふにゃふにゃのぬいぐるみがいました。"],
+  [6, "だれにもえらばれず、ほこりをかぶって…"],
+  [11.5, "ある日、ぬいぐるみは ようちえんに「きふ」されることになりました。"],
+  [17, "トラックにゆられて、ガタゴト ガタゴト…"],
+  [23, "「わあ！ ぬいぐるみだ！」　ようちえんの子どもたちは大よろこび！"],
+  [30, "だっこされたり、なげられたり。毎日いっしょにあそびました。"],
+  [38, "よごれたら、あらってもらって ぴっかぴか！"],
+  [44, "でも、みんながねむった夜…"],
+  [48.5, "ぬいぐるみは、ふにゃっと立ち上がりました！"],
+  [53, "ふにゃふにゃランドへ、ぼうけんにしゅっぱつ！"],
+];
+const movie = { on: false, t: 0, g: null, o: {}, after: null, capI: -1, song: null };
+function mvBox(w, h, d, c, x, y, z, parent) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), toonMat(c)); m.position.set(x, y + h / 2, z); (parent || movie.g).add(m); return m; }
+function mvLabel(text, color, size, x, y, z) { const l = makeLabel(text, color, size); l.position.set(x, y, z); movie.g.add(l); return l; }
+// 子ども（ぬいぐるみとちがう、ふつうの子）
+function makeKid(smock, hair) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, 0.65, 12), toonMat(smock)); body.position.y = 0.55; g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 14, 10), toonMat(0xffe0c8)); head.position.y = 1.12; g.add(head);
+  const hairM = new THREE.Mesh(new THREE.SphereGeometry(0.285, 14, 8, 0, Math.PI * 2, 0, 1.3), toonMat(hair)); hairM.position.y = 1.15; hairM.rotation.x = -0.25; g.add(hairM);
+  const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.32, 0.12, 14), toonMat(0xffd84a)); hat.position.y = 1.36; g.add(hat);
+  for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), toonMat(0x222222)); e.position.set(s * 0.09, 1.14, 0.25); g.add(e); const ch = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), toonMat(0xff9aa8)); ch.position.set(s * 0.15, 1.06, 0.22); g.add(ch); }
+  const mo = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.012, 6, 10, Math.PI), toonMat(0xaa3a3a)); mo.position.set(0, 1.03, 0.26); mo.rotation.z = Math.PI; g.add(mo);
+  const arms = [];
+  for (const s of [-1, 1]) { const a = new THREE.Group(); a.position.set(s * 0.26, 0.8, 0); const m = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.4, 8), toonMat(smock)); m.position.y = -0.18; a.add(m); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), toonMat(0xffe0c8)); hd.position.y = -0.4; a.add(hd); g.add(a); arms.push(a); }
+  for (const s of [-1, 1]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.25, 8), toonMat(0x3a3a5a)); l.position.set(s * 0.1, 0.12, 0); g.add(l); }
+  movie.g.add(g);
+  return { g, arms, t: rand(0, 5) };
+}
+function buildMovie() {
+  movie.g = new THREE.Group(); scene.add(movie.g);
+  const O = movie.o = {};
+  // 主人公のぬいぐるみ（自分のキャラの見た目）
+  O.hero = makePlush(myTexture, myLook.limb || "#6bd66b", null);
+  O.hero.setHat(myLook.hat, myLook.hatColor); O.hero.setFace("sleepy", "o");
+  if (O.hero.setOutfit) O.hero.setOutfit(myOutfit());
+  movie.g.add(O.hero.g);
+  // A：おもちゃ屋のすみ（x=0）
+  mvBox(9, 0.2, 6, 0xb88a5a, 0, -0.2, 0); mvBox(9, 5, 0.3, 0xf0e0c8, 0, 0, -3);
+  for (const y of [0.9, 1.9, 2.9]) mvBox(5, 0.12, 1, 0x8a5a3a, -1, y, -2.4);
+  mvBox(0.12, 3.1, 1, 0x8a5a3a, -3.5, 0, -2.4); mvBox(0.12, 3.1, 1, 0x8a5a3a, 1.5, 0, -2.4);
+  for (let k = 0; k < 6; k++) { const b = mvBox(0.35, 0.35, 0.35, pick([0xff5c7a, 0x4cc9f0, 0xffd84a, 0x6bd66b]), -3 + k * 0.5, k % 2 ? 1.02 : 2.02, -2.5); b.rotation.y = rand(0, 1); }
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), toonMat(0xff8a3a)); ball.position.set(0.8, 2.32, -2.4); movie.g.add(ball);
+  mvLabel("ふにゃふにゃおもちゃ店", "#fff", 1.2, -1, 4.2, -2.8);
+  // ほこり
+  const dn = 120, dp = new Float32Array(dn * 3);
+  for (let i = 0; i < dn; i++) { dp[i * 3] = rand(-2.5, 1.5); dp[i * 3 + 1] = rand(0.5, 3.5); dp[i * 3 + 2] = rand(-2.6, -0.5); }
+  const dg = new THREE.BufferGeometry(); dg.setAttribute("position", new THREE.BufferAttribute(dp, 3));
+  O.dust = new THREE.Points(dg, new THREE.PointsMaterial({ color: 0xddd0b0, size: 0.05, transparent: true, opacity: 0.8 })); movie.g.add(O.dust);
+  // きふの箱
+  O.box = new THREE.Group(); O.box.position.set(0.3, 0, 0.6); movie.g.add(O.box);
+  mvBox(1.4, 0.9, 1.0, 0xc8a070, 0, 0, 0, O.box);
+  O.flapL = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.04, 1.0), toonMat(0xd8b080)); O.flapL.geometry.translate(0.35, 0, 0); O.flapL.position.set(-0.7, 0.9, 0); O.box.add(O.flapL);
+  O.flapR = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.04, 1.0), toonMat(0xd8b080)); O.flapR.geometry.translate(-0.35, 0, 0); O.flapR.position.set(0.7, 0.9, 0); O.box.add(O.flapR);
+  const bl = makeLabel("🎁 きふ", "#c0304a", 0.8); bl.position.set(0, 0.5, 0.52); O.box.add(bl);
+  // B：道とトラック（x=60）
+  mvBox(76, 0.1, 30, 0x7cc85a, 60, -0.1, 0); mvBox(76, 0.12, 4, 0x777777, 60, -0.08, 0);
+  for (let k = 0; k < 12; k++) { const x = 26 + k * 6, z = -rand(4, 11); mvBox(0.4, 1.4, 0.4, 0x7a5230, x, 0, z); const f = new THREE.Mesh(new THREE.ConeGeometry(1.2, 2.4, 10), toonMat(0x4fa548)); f.position.set(x, 2.6, z); movie.g.add(f); }
+  O.truck = new THREE.Group(); O.truck.position.set(30, 0, 0); movie.g.add(O.truck);
+  mvBox(2.4, 1.3, 1.7, 0xffffff, -0.6, 0.45, 0, O.truck); mvBox(1.1, 1.1, 1.6, 0x4cc9f0, 1.25, 0.45, 0, O.truck);
+  const win = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.45, 1.3), new THREE.MeshLambertMaterial({ color: 0xbfe6ff })); win.position.set(1.81, 1.25, 0); O.truck.add(win);
+  for (const [x, z] of [[-1.3, 0.85], [-1.3, -0.85], [1.2, 0.85], [1.2, -0.85]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.2, 14), toonMat(0x222222)); w.rotation.x = Math.PI / 2; w.position.set(x, 0.32, z); O.truck.add(w); }
+  const tl = makeLabel("🌷 ふにゃふにゃようちえん ゆき", "#fff", 0.6); tl.position.set(-0.6, 1.2, 0.87); O.truck.add(tl);
+  // C：ようちえん（x=120）
+  mvBox(40, 0.1, 30, 0x8ad86a, 120, -0.1, 0);
+  mvBox(10, 3, 4, 0xfff0dc, 120, 0, -6);
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(7, 2.2, 4), toonMat(0xff8ac0)); roof.rotation.y = Math.PI / 4; roof.scale.set(1, 1, 0.45); roof.position.set(120, 4.1, -6); movie.g.add(roof);
+  for (const x of [116.5, 120, 123.5]) mvBox(1.4, 1.1, 0.06, 0xbfe6ff, x, 1.2, -3.98);
+  O.win = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.1), new THREE.MeshBasicMaterial({ color: 0xffe9a0, transparent: true, opacity: 0 })); O.win.position.set(120, 1.75, -3.92); movie.g.add(O.win);
+  mvLabel("🌷 ふにゃふにゃようちえん", "#ff5ca8", 1.6, 120, 6.2, -5.5);
+  mvBox(2, 0.3, 2, 0xe8d8a0, 113, 0, 1); // すなば
+  const slide = mvBox(0.8, 0.12, 3, 0xff5c7a, 127, 0.8, 1); slide.rotation.x = 0.45; mvBox(0.8, 1.6, 0.6, 0x4cc9f0, 127, 0, -0.4);
+  for (const x of [114, 126]) mvBox(0.12, 2.4, 0.12, 0xffffff, x, 0, 4); // ものほしざお
+  O.rope = mvBox(12, 0.04, 0.04, 0xffffff, 120, 2.35, 4);
+  O.kids = [0xff8a8a, 0x8ac8ff, 0xffd27a, 0xa0e080, 0xc8a0ff].map((c, i) => makeKid(c, pick([0x3a2a1a, 0x6a3a1a, 0x1a1a2a])));
+  O.kids.forEach((K, i) => K.g.position.set(114 + i * 3, 0, 8));
+  // 夜の空（月と星）・遠くの町の光
+  O.moon = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 12), new THREE.MeshBasicMaterial({ color: 0xfff6d0 })); O.moon.position.set(135, 22, -40); movie.g.add(O.moon);
+  const sn = 300, sp = new Float32Array(sn * 3); for (let i = 0; i < sn; i++) { sp[i * 3] = 120 + rand(-120, 120); sp[i * 3 + 1] = rand(10, 70); sp[i * 3 + 2] = rand(-90, -40); }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute("position", new THREE.BufferAttribute(sp, 3));
+  O.stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 2, sizeAttenuation: false, transparent: true, opacity: 0 })); movie.g.add(O.stars);
+  O.townLights = [];
+  for (let k = 0; k < 14; k++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: pick([0xffd27a, 0xff9ad0, 0x9ad0ff]), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); s.position.set(120 + rand(-14, 14), rand(0.5, 6), 34 + rand(0, 8)); s.scale.setScalar(rand(2, 4)); movie.g.add(s); O.townLights.push(s); }
+}
+// ---- 毎フレーム：時間にあわせて動かす ----
+const lerpV = (a, b, k) => new V3(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k);
+const ease = (k) => k * k * (3 - 2 * k);
+function movieUpdate(dt) {
+  movie.t += dt; const t = movie.t, O = movie.o;
+  // 字幕
+  let ci = -1; for (let i = 0; i < MOVIE_CAPS.length; i++) if (t >= MOVIE_CAPS[i][0]) ci = i;
+  if (ci !== movie.capI) { movie.capI = ci; const el = $("mvCap"); el.classList.remove("on"); void el.offsetWidth; el.textContent = ci >= 0 ? MOVIE_CAPS[ci][1] : ""; el.classList.add("on"); }
+  // 音楽
+  const song = t < 44 ? "paint" : t < 53 ? "sneak" : "town";
+  if (song !== movie.song) { movie.song = song; playMusic(song); }
+  const H = O.hero; let hp = null, hry = 0, limp = true, air = false, emote = null;
+  const night = t >= 44;
+  // 空と光
+  const bg = t < 17 ? 0x5a4a3a : night ? 0x0a1030 : 0x9fd8ff;
+  scene.background.setHex(bg);
+  hemi.intensity = t < 17 ? 0.55 : night ? 0.35 : 0.9; sun.intensity = t < 17 ? 0.45 : night ? 0.25 : 0.8;
+  O.stars.material.opacity = night ? Math.min(1, (t - 44) / 2) : 0; O.moon.visible = night;
+  O.win.material.opacity = night && t < 48 ? 0.8 : 0;
+  for (const s of O.townLights) s.material.opacity = t > 52 ? Math.min(1, (t - 52) / 2) * 0.9 : 0;
+  if (t < 17) {
+    // A：お店のたなの上 → 箱の中へ
+    const dpos = O.dust.geometry.attributes.position; for (let i = 0; i < dpos.count; i++) { let y = dpos.getY(i) - dt * 0.1; if (y < 0.4) y = 3.5; dpos.setY(i, y); } dpos.needsUpdate = true;
+    if (t < 11.5) { hp = new V3(-1.1, 1.05, -2.35); hry = 0; }
+    else { const k = ease(clamp((t - 12) / 2.5, 0, 1)); hp = lerpV([-1.1, 1.05, -2.35], [0.3, 0.35, 0.6], k); hp.y += Math.sin(k * Math.PI) * 1.2; air = k < 1; }
+    const fk = clamp((t - 14.8) / 1.2, 0, 1); O.flapL.rotation.z = (1 - fk) * 1.9; O.flapR.rotation.z = -(1 - fk) * 1.9;
+    O.box.visible = t > 11; H.g.visible = !(t > 16);
+    const cam = t < 11.5 ? lerpV([1.6, 2.2, 3.5], [-0.4, 1.6, -0.6], ease(clamp(t / 11, 0, 1))) : lerpV([-0.4, 1.6, -0.6], [2.4, 2.6, 3.2], ease(clamp((t - 11.5) / 3, 0, 1)));
+    camera.position.copy(cam); camera.lookAt(t < 11.5 ? new V3(-1.1, 1.3, -2.4) : new V3(0.2, 0.8, 0));
+  } else if (t < 23) {
+    // B：トラック
+    const k = (t - 17) / 6, x = 30 + k * 60;
+    O.truck.position.set(x, Math.abs(Math.sin(t * 9)) * 0.06, 0); O.truck.rotation.z = Math.sin(t * 7) * 0.02;
+    camera.position.set(x - 6 + k * 3, 3.2, 8); camera.lookAt(x, 1, 0);
+    H.g.visible = false;
+    if (Math.floor(t * 2.5) !== Math.floor((t - dt) * 2.5)) play("car");
+  } else {
+    // C／D：ようちえん
+    H.g.visible = true;
+    const kids = O.kids;
+    if (t < 30) {
+      // 子どもたちがかけよってくる
+      const k = ease(clamp((t - 23) / 3, 0, 1));
+      hp = new V3(120, 0.3, 0.5);
+      kids.forEach((K, i) => { const a = i / kids.length * Math.PI * 2; const r = 6 - k * 4.4; K.g.position.set(120 + Math.cos(a) * r, Math.abs(Math.sin((t + i) * 6)) * 0.25 * (1 - k * 0.4), 0.5 + Math.sin(a) * r); K.g.rotation.y = Math.atan2(120 - K.g.position.x, 0.5 - K.g.position.z); for (const [j, A] of K.arms.entries()) A.rotation.z = (j ? -1 : 1) * (1.5 + Math.sin(t * 8 + i) * 0.4); });
+      camera.position.copy(lerpV([120, 6, 12], [120, 2.6, 5.5], ease(clamp((t - 23) / 6, 0, 1)))); camera.lookAt(120, 0.8, 0.5);
+      if (Math.floor(t * 3) !== Math.floor((t - dt) * 3) && t < 27) play("jump");
+    } else if (t < 38) {
+      // だっこ・なげる：子どもからとなりの子どもへ、ぽーんと投げる
+      const lt = (t - 30) % 1.6, from = Math.floor((t - 30) / 1.6) % kids.length, to = (from + 2) % kids.length;
+      kids.forEach((K, i) => { const a = i / kids.length * Math.PI * 2; K.g.position.set(120 + Math.cos(a) * 2.6, Math.max(0, Math.sin((t + i) * 5)) * (i === to ? 0.35 : 0.15), 0.5 + Math.sin(a) * 2.6); K.g.rotation.y = Math.atan2(120 - K.g.position.x, 0.5 - K.g.position.z); for (const [j, A] of K.arms.entries()) A.rotation.z = (j ? -1 : 1) * (i === from && lt < 0.4 ? 2.6 : i === to ? 2.2 : 0.4); });
+      const A = kids[from].g.position, B = kids[to].g.position, k = clamp((lt - 0.35) / 0.9, 0, 1);
+      hp = lerpV([A.x, 1.2, A.z], [B.x, 1.2, B.z], k); hp.y += Math.sin(k * Math.PI) * 2.4; air = k > 0 && k < 1;
+      if (lt < dt * 1.5) play("jump");
+      camera.position.set(120 + Math.sin(t * 0.25) * 7, 3.6, 0.5 + Math.cos(t * 0.25) * 7); camera.lookAt(120, 1.2, 0.5);
+    } else if (t < 44) {
+      // ものほしざおで、かわかしてもらう
+      kids.forEach((K, i) => { K.g.position.set(116 + i * 2, 0, 6.5); K.g.rotation.y = Math.PI; for (const [j, A] of K.arms.entries()) A.rotation.z = (j ? -1 : 1) * (0.5 + Math.sin(t * 4 + i) * 0.3); });
+      hp = new V3(120, 1.55, 4); hry = Math.PI;
+      if (Math.random() < dt * 8) puff(120 + rand(-0.4, 0.4), 1.8 + rand(0, 0.5), 4, 1, 0.6);
+      camera.position.set(120, 2.4, 10.5); camera.lookAt(120, 1.6, 4);
+    } else {
+      // 夜：子どもはいない。まどべのぬいぐるみが起きて、町へ走っていく
+      kids.forEach((K) => { K.g.visible = false; });
+      if (t < 48.5) { hp = new V3(120, 0.2, -3.2); hry = 0; camera.position.copy(lerpV([126, 4, 6], [121.5, 1.6, 0.2], ease(clamp((t - 44) / 4, 0, 1)))); camera.lookAt(120, 0.6, -3.2); }
+      else {
+        limp = false; H.setFace("big", "smile");
+        if (t < 51) { hp = new V3(120, 0, -3.2); hry = 0; emote = t > 49.5 ? "wave" : null; camera.position.set(121, 1.4, -0.6); camera.lookAt(120, 0.7, -3.2); }
+        else { const k = clamp((t - 51) / 6, 0, 1); hp = lerpV([120, 0, -3.2], [120, 0, 30], k); hp.y = Math.abs(Math.sin(t * 7)) * 0.25; hry = 0; air = hp.y > 0.1;
+          const ck = ease(clamp((t - 51) / 9, 0, 1)); camera.position.copy(lerpV([121, 1.4, -6], [120, 9, -14], ck)); camera.lookAt(120, 1.5 + ck * 2, hp.z + 6); }
+      }
+    }
+  }
+  if (hp) {
+    H.g.position.copy(hp); H.g.rotation.y = hry;
+    H.animate(dt, { speed: !limp && t > 51 ? 5 : 0, air, limp, punch: 0, stun: 0, t, emote, hold: limp ? new V3(hp.x, hp.y + 0.45, hp.z) : undefined });
+  }
+  for (const K of O.kids || []) { K.t += dt; }
+  // タイトル
+  const tt = $("mvTitle"); const show = t > 56; if (tt.classList.contains("on") !== show) tt.classList.toggle("on", show);
+  if (t >= MOVIE_LEN) endMovie();
+}
+function startMovie(after) {
+  initAudio();
+  movie.on = true; movie.t = 0; movie.capI = -1; movie.song = null; movie.after = after || null;
+  world.visible = false; if (me) me.model.g.visible = false;
+  hidePanel(); $("msgP").hidden = true; $("titleP").hidden = true; $("paintUI").hidden = true;
+  buildMovie();
+  $("movieP").hidden = false; $("mvTitle").classList.remove("on");
+  scene.fog = null; camera.up.set(0, 1, 0);
+}
+function endMovie() {
+  if (!movie.on) return;
+  movie.on = false;
+  try { localStorage.setItem("funyaland_movieSeen", "1"); } catch (e) {}
+  if (movie.g) { scene.remove(movie.g); movie.g.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); movie.g = null; }
+  $("movieP").hidden = true;
+  world.visible = true; if (me) me.model.g.visible = true;
+  scene.background = new THREE.Color(0x2a1a4a); hemi.intensity = 0.8; sun.intensity = 0.7;
+  playMusic(null);
+  const f = movie.after; movie.after = null;
+  if (f) f(); else $("titleP").hidden = false;
+}
+$("mvSkip").onclick = () => endMovie();
+$("bMovie").onclick = () => startMovie();
+// はじめて開いたときは、ムービーを見るかきく
+setTimeout(() => {
+  let seen = false; try { seen = !!localStorage.getItem("funyaland_movieSeen"); } catch (e) {}
+  if (seen || mode || paintMode) return;
+  showMsg("🎬 ようこそ！", "さいしょに、ぬいぐるみのお話（オープニングムービー・約1分）を見る？<br><span class='small'>あとからでも、タイトルの「🎬 ムービー」で見られるよ</span>", [
+    { label: "▶ 見る！", fn: () => startMovie() },
+    { label: "あとで", fn: () => { try { localStorage.setItem("funyaland_movieSeen", "1"); } catch (e) {} } },
+  ]);
+}, 900);
+
+// =====================================================================
+//  23-2. チュートリアル（はじめて町に来たとき。ひとつずつやってみる）
+// =====================================================================
+const TUT = [
+  { t: () => touchMode ? "🕹️ 左がわをさわって、歩いてみよう" : "🕹️ <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> キーで歩いてみよう", ok: (s) => s.moved > 6 },
+  { t: () => touchMode ? "⬆️ 「ジャンプ」ボタンでジャンプ！" : "⬆️ <kbd>スペース</kbd>キーでジャンプ！", ok: () => me.vel.y > 2 },
+  { t: () => touchMode ? "👀 右がわを指でなぞって、まわりを見回そう" : "👀 マウスを動かして見回そう（画面をクリックすると、マウスで見回せるよ）", ok: (s) => s.looked > 1.6 },
+  { t: () => touchMode ? "✊ 「パンチ」ボタンでパンチ！" : "✊ クリックでパンチ！", ok: () => me.punch > 0 },
+  { t: () => touchMode ? "🧸 「力をぬく」ボタンで、ただのぬいぐるみのふり（見つかりにくい）" : "🧸 <kbd>Shift</kbd>キーで力をぬいて、ただのぬいぐるみのふり（見つかりにくい）", ok: () => me.limp },
+  { t: () => "🪙 近くに出た ✨コイン✨ を拾おう！（コインでいろいろ買えるよ）", setup: tutCoins, ok: (s) => wallet > s.w0 },
+  { t: () => touchMode ? "🤾 近くのぬいぐるみを「つかむ」ボタンでつかんで、もう一回おして投げよう！" : "🤾 近くのぬいぐるみを <b>右クリック</b>でつかんで、はなしてぶん投げよう！", setup: tutBot, ok: (s) => s.threw, skipIf: () => !net.isHost },
+  { t: () => touchMode ? "🥤 ▼の自販機の前の光る輪で「調べる」ボタン。お店も同じように使えるよ" : "🥤 ▼の自販機の前の光る輪で <kbd>E</kbd>（調べる）。お店も同じように使えるよ", target: () => [VENDING[0][0] - 0.6, 3.2, VENDING[0][1] + 0.4], ok: () => !$("shopP").hidden },
+  { t: () => touchMode ? "🗺️ 上の 🗺️ ボタンで地図を見よう" : "🗺️ <kbd>Tab</kbd>キーで地図を見よう（もう一回おすと海まで、もう一回でとじる）", ok: () => !!bigMap },
+  { t: () => touchMode ? "📋 ▼の掲示板で「調べる」。ミッション・アルバイト・あそびかたが見られるよ" : "📋 ▼の掲示板で <kbd>E</kbd>。ミッション・アルバイト・あそびかたが見られるよ", target: () => [-9.5, 3.9, -5], ok: () => !$("shopP").hidden && $("shopTitle").textContent.includes("掲示板") },
+];
+const tut = { on: false, i: 0, s: null, wait: 0, arrow: null, lastYaw: 0, lastPos: null };
+function askTutorial() {
+  showMsg("🎓 はじめてかな？", "かんたんな<b>チュートリアル</b>で、あそびかたを1つずつやってみる？<br><span class='small'>（さいごまでやると、100コインもらえるよ）</span>", [
+    { label: "🎓 やってみる！", fn: () => { controls = true; startTutorial(); } },
+    { label: "スキップ", fn: () => { townSave.tutDone = true; saveTown(true); townIntro(); } },
+  ]);
+}
+function startTutorial() {
+  if (mode !== "town") return;
+  tut.on = true; tut.i = -1; $("tutBox").hidden = false;
+  tutNext();
+}
+function tutNext() {
+  tut.i++;
+  while (tut.i < TUT.length && TUT[tut.i].skipIf && TUT[tut.i].skipIf()) tut.i++;
+  if (tut.arrow) { world.remove(tut.arrow); tut.arrow = null; }
+  if (tut.i >= TUT.length) { tutEnd(true); return; }
+  const T = TUT[tut.i];
+  tut.s = { moved: 0, looked: 0, w0: wallet, threw: false }; tut.lastPos = me.pos.clone(); tut.lastYaw = camYaw; tut.wait = 0;
+  if (T.setup) T.setup();
+  if (T.target) { const [x, y, z] = T.target(); tut.arrow = makeLabel("▼", "#ffd84a", 2.4); tut.arrow.position.set(x, y, z); tut.arrow.userData.y = y; world.add(tut.arrow); }
+  $("tutText").innerHTML = T.t(); $("tutStep").textContent = `チュートリアル ${tut.i + 1}/${TUT.length}`; $("tutBox").classList.remove("done");
+}
+function tutUpdate(dt) {
+  if (!tut.on) return;
+  if (mode !== "town") { tutEnd(false); return; }
+  if (tut.arrow) tut.arrow.position.y = tut.arrow.userData.y + Math.sin(gameTime * 4) * 0.3;
+  if (tut.wait > 0) { tut.wait -= dt; if (tut.wait <= 0) tutNext(); return; }
+  const s = tut.s; if (!s) return;
+  s.moved += Math.hypot(me.pos.x - tut.lastPos.x, me.pos.z - tut.lastPos.z); tut.lastPos.copy(me.pos);
+  s.looked += Math.abs(camYaw - tut.lastYaw); tut.lastYaw = camYaw;
+  if (TUT[tut.i].ok(s)) { play("item"); $("tutBox").classList.add("done"); $("tutText").innerHTML = "✅ できた！"; tut.wait = 1.0; }
+}
+function tutEnd(done) {
+  tut.on = false; $("tutBox").hidden = true; if (tut.arrow) { world.remove(tut.arrow); tut.arrow = null; }
+  if (!done) return;
+  const first = !townSave.tutDone; townSave.tutDone = true; saveTown(true);
+  if (first) gotCoins(100, "🎓 チュートリアルクリア！");
+  setTimeout(() => showMsg("🎓 チュートリアルクリア！", `これで準備OK！<br>まよったら <b>📖 あそびかた</b>（${touchMode ? "上の 📖" : "H キー"}）や、広場の <b>📋掲示板</b> を見てね。<br>コインを集めて、お店・ガチャ・つり・ボードゲーム…自由に遊ぼう！`, [{ label: "遊ぶ！", fn: () => { controls = true; } }]), 900);
+}
+function tutCoins() { if (!net.isHost) { tut.s.w0 = -1; return; } for (let k = 0; k < 3; k++) { const a = me.ry + rand(-0.6, 0.6), r = 2.5 + k; spawnCoin(me.pos.x + Math.sin(a) * r, 0, me.pos.z + Math.cos(a) * r, 1); } }
+function tutBot() { const b = town.bots[2]; if (!b) return; b.pos.set(me.pos.x + Math.sin(me.ry) * 2, 0, me.pos.z + Math.cos(me.ry) * 2); b.vel.set(0, 0, 0); b.model.g.position.copy(b.pos); b.model.place(); }
+$("tutSkip").onclick = () => { tutEnd(false); townSave.tutDone = true; saveTown(true); toast("チュートリアルをスキップした（掲示板からもう一度できるよ）", 2200); };
+
 // 町モードで届いたメッセージ（onNet から呼ばれる）
 function onNetTown(d, conn) {
   if (onNetCity(d, conn)) return;
@@ -9497,7 +10030,7 @@ function startMode(m, stage = 0) {
   else {
     playMusic("town");
     buildTown();
-    townIntro();
+    if (!townSave.tutDone) askTutorial(); else townIntro();
   }
 }
 
@@ -9509,7 +10042,7 @@ function loop() {
   const dt = Math.min(clock.getDelta(), 0.05);
   gameTime += dt;
   try {
-    if (paintMode || !mode) {
+    if (movie.on) { movieUpdate(dt); } else if (paintMode || !mode) {
       // キャラメイク・タイトル：ぬいぐるみが回る
       me.model.g.position.set(0, 0, 0);
       me.model.g.rotation.y = previewRot(dt);
