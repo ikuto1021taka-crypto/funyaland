@@ -333,6 +333,15 @@
   #pauseP[hidden] { display: none; }
   .pzBox { background: rgba(40, 25, 80, .95); border: 3px solid #ffd84a; border-radius: 20px; padding: 18px 28px; display: flex; flex-direction: column; gap: 10px; align-items: center; min-width: 240px; }
   .pzBox h2 { margin: 0; color: #ffd84a; } .pzBox button { width: 100%; font-size: 17px; }
+  #catchBar { position: fixed; z-index: 8; left: 50%; top: 70%; transform: translateX(-50%); width: min(320px, 72vw); text-align: center; pointer-events: none; }
+  #catchBar[hidden] { display: none; }
+  #catchBar .cbT { font-weight: bold; font-size: 17px; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+  #catchBar .cbB { position: relative; height: 22px; background: rgba(0,0,0,.6); border: 3px solid #fff; border-radius: 12px; overflow: hidden; margin-top: 4px; }
+  #catchBar .cbZ { position: absolute; top: 0; bottom: 0; background: #4ad86a; } #catchBar .cbP { position: absolute; top: 0; bottom: 0; background: #ffd84a; }
+  #catchBar .cbM { position: absolute; top: 0; bottom: 0; width: 5px; margin-left: -2px; background: #fff; box-shadow: 0 0 5px #000; }
+  #catchBar.alert .cbB { background: #ff4a4a; animation: cbBlink .15s infinite alternate; } #catchBar.alert .cbT { color: #ffd84a; font-size: 22px; }
+  @keyframes cbBlink { from { opacity: 1; } to { opacity: .5; } }
+  body.touch #catchBar { top: 52%; } body.touch #catchBar .cbT { font-size: 13px; }
 </style>
 <!-- 3D 表示の部品（Three.js）と、部屋コードで遊ぶための部品（PeerJS）。インターネットから読み込む -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -406,6 +415,7 @@
 <div id="tutBox" hidden><div id="tutStep"></div><div id="tutText"></div><button id="tutSkip" class="sub">スキップ</button></div>
 <div id="ateP" hidden></div>
 <div id="skHud" hidden></div>
+<div id="catchBar" hidden><div class="cbT"></div><div class="cbB"><div class="cbZ"></div><div class="cbP"></div><div class="cbM"></div></div></div>
 <div id="chatLog"></div>
 <div id="chatBox" hidden><input id="chatIn" type="text" maxlength="60" placeholder="メッセージ（Enter で送る）" autocomplete="off"><button id="chatSend">送る</button><button id="chatClose" class="pink">とじる</button><div id="chatQuick"></div></div>
 <div id="wanted" hidden></div>
@@ -2945,7 +2955,7 @@ const SHOPS = [
     { id: "skate", name: "スケボー", price: 20, kind: "own", desc: "スイスイ速い（F で乗る）" },
     { id: "car", name: "おもちゃの車", price: 50, kind: "own", desc: "W/S で進む・A/D でハンドル。2人乗り" },
     { id: "bmx", name: "BMX", price: 40, kind: "own", desc: "スケボーより速い自転車。空中でクリック（🤸）で技！" },
-    { id: "proskate", name: "プロスケボー（むずかしい）", price: 120, kind: "own", desc: "とても速いけど、すべってまがりにくい。技の点が2倍！（成功させるのもむずかしい）" },
+    { id: "proskate", name: "プロスケボー（むずかしい）", price: 120, kind: "own", desc: "とても速いけど、すべってまがりにくい。技のあとに「キャッチ」が必要！ レールでは「グラッ」とする。点は2倍・プロだけの大技もある！" },
     { id: "sports", name: "スポーツカー", price: 600, kind: "own", desc: "ものすごく速い車！ 2人乗り" },
     { id: "monster", name: "モンスタートラック", price: 900, kind: "own", desc: "でっかいタイヤの大きい車。ぶつかると強い！ 2人乗り" },
     { id: "garage", name: "車の改造ガレージ", price: 0, kind: "garage", desc: "エンジン・タイヤ・ニトロで車をパワーアップ" },
@@ -3444,7 +3454,7 @@ function useTool() {
   const h = me.held || "hand";
   const w = WEAPONS[h];
   if (me.ride && !(w && w.type === "gun")) return; // うしろに乗っているときは銃だけ使える
-  if (me.skate && !me.onGround && skTrick()) return; // スケボーで空中 → 技！
+  if (me.skate && (!me.onGround || sk.grind) && skTrick()) return; // スケボーで空中 → 技！（プロはキャッチ・たてなおし）
   if (w && me.punch > 0) return; // 武器は少し待ってから
   if (w && w.type === "gun") { if (!me.car) shoot(h); return; }
   if (h === "peel") {
@@ -10031,12 +10041,44 @@ const SK_TRICKS = [
 const SK_PARK = { x: 60, z: -60, r: 17 };
 const sk = { air: false, trick: null, last: -1, combo: [], session: false, pts: 0, tricks: 0, wasPark: false };
 function skInPark() { return Math.abs(me.pos.x - SK_PARK.x) < SK_PARK.r && Math.abs(me.pos.z - SK_PARK.z) < SK_PARK.r; }
+const PRO_TRICKS = [
+  { n: "720ふにゃスピン", pts: 520, spin: 2 },
+  { n: "トリプルフリップ", pts: 450, bz: 3 },
+  { n: "ダークスライド", pts: 400, bx: 0.5, bz: 0.5 },
+  { n: "ハードフリップ", pts: 300, bx: 1, bz: 1 },
+  { n: "ゴールデン900", pts: 800, spin: 2.5 },
+];
+function catchShow(title, zoneC, zoneW, pos, alert) {
+  const el = $("catchBar"); el.hidden = false;
+  el.querySelector(".cbT").innerHTML = title;
+  el.classList.toggle("alert", !!alert);
+  const z = el.querySelector(".cbZ"), p = el.querySelector(".cbP"), m = el.querySelector(".cbM");
+  z.style.display = p.style.display = m.style.display = alert ? "none" : "";
+  if (!alert) { z.style.left = (zoneC - zoneW / 2) * 100 + "%"; z.style.width = zoneW * 100 + "%"; p.style.left = (zoneC - zoneW * 0.15) * 100 + "%"; p.style.width = zoneW * 30 + "%"; m.style.left = pos * 100 + "%"; }
+}
+function catchHide() { const el = $("catchBar"); if (!el.hidden) el.hidden = true; }
+// プロのときに、もう一回おしたとき（キャッチ・グラッのたてなおし）
+function skProPress() {
+  if (sk.catchOn) {
+    const C = sk.catchOn, pos = (Math.sin(C.t * C.sp - Math.PI / 2) + 1) / 2, d = Math.abs(pos - C.c);
+    sk.catchOn = null; catchHide();
+    if (d < C.w / 2) {
+      const perfect = d < C.w * 0.15;
+      sk.combo.push(perfect ? { ...C.T, n: C.T.n + "★", pts: Math.round(C.T.pts * 1.5) } : C.T);
+      popText(me.pos.x, me.pos.y + 2.2, me.pos.z, perfect ? "パーフェクト キャッチ！" : "キャッチ！", perfect ? "#ffd84a" : "#7cf0ff"); play(perfect ? "clear" : "item");
+    } else { sk.failed = true; popText(me.pos.x, me.pos.y + 2.2, me.pos.z, "あっ… キャッチ失敗", "#ff8a8a"); play("hmm"); }
+    return true;
+  }
+  if (sk.grind && sk.wob) { sk.wob = null; sk.wobT = rand(0.6, 1.3); sk.grind.pts += 60; catchHide(); popText(me.pos.x, me.pos.y + 2, me.pos.z, "セーフ！ +60", "#7cf0ff"); play("item"); return true; }
+  return false;
+}
 function skTrick() {
+  if (me.veh === "proskate" && skProPress()) return true;
   if (!me.skate || me.onGround || sk.trick || me.limp) return false;
-  const LIST = me.veh === "bmx" ? BMX_TRICKS : SK_TRICKS;
+  const LIST = me.veh === "bmx" ? BMX_TRICKS : me.veh === "proskate" ? SK_TRICKS.concat(PRO_TRICKS) : SK_TRICKS;
   let i; do { i = Math.floor(Math.random() * LIST.length); } while (i === sk.last && LIST.length > 1);
   sk.last = i; const T = LIST[i];
-  sk.trick = { T, t: 0, dur: (0.42 + (T.spin || 0) * 0.16 + Math.abs(T.bz || 0) * 0.06) * 0.8, ry0: me.ry };
+  sk.trick = { T, t: 0, dur: (0.42 + (T.spin || 0) * 0.16 + Math.abs(T.bz || 0) * 0.06) * (me.veh === "proskate" ? 1.15 : 0.8), ry0: me.ry };
   popText(me.pos.x, me.pos.y + 2.4, me.pos.z, T.n, "#7cf0ff"); play("jump");
   return true;
 }
@@ -10054,12 +10096,13 @@ function skUpdate(dt) {
   const hud = $("skHud");
   if (!me.skate || mode !== "town") {
     if (sk.trick) sk.trick = null;
+    sk.catchOn = null; sk.failed = false; sk.wob = null; catchHide();
     sk.air = false; skEndSession();
     if (!hud.hidden) hud.hidden = true;
     return;
   }
   const park = skInPark();
-  if (park && !sk.session) { sk.session = true; sk.pts = 0; sk.tricks = 0; toast(`🛹 ジャンプ中に ${touchMode ? "🤸" : "クリック"}で技！<br><span class="small">つなげるとコンボで点が倍！</span>`, 2600); }
+  if (park && !sk.session) { sk.session = true; sk.pts = 0; sk.tricks = 0; toast(me.veh === "proskate" ? `🛹 プロモード！ 技のあと、バーが<b>緑</b>のときにもう一回おして<b>キャッチ</b>！<br><span class="small">レールでは「グラッ！」としたらすぐおす</span>` : `🛹 ジャンプ中に ${touchMode ? "🤸" : "クリック"}で技！<br><span class="small">つなげるとコンボで点が倍！</span>`, 3200); }
   if (!park && sk.session && me.onGround && !sk.trick) skEndSession();
   // 空中
   if (!me.onGround) sk.air = true;
@@ -10070,17 +10113,25 @@ function skUpdate(dt) {
     const k = Math.min(1, K.t / K.dur), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
     if (board) { board.rotation.order = "YXZ"; board.rotation.set((T.bx || 0) * Math.PI * 2 * e, me.ry + (T.by || 0) * Math.PI * 2 * e, (T.bz || 0) * Math.PI * 2 * e); if (T.grab) board.position.y += Math.sin(k * Math.PI) * 0.25; }
     if (T.spin) me.ry = K.ry0 + T.spin * Math.PI * 2 * e;
-    if (k >= 1) { sk.combo.push(T); sk.trick = null; }
+    if (k >= 1) {
+      if (me.veh === "proskate") sk.catchOn = { T, t: 0, c: rand(0.22, 0.78), w: Math.max(0.09, 0.24 - sk.combo.length * 0.04), sp: 4.2 + sk.combo.length * 1.4 };
+      else sk.combo.push(T);
+      sk.trick = null;
+    }
   }
+  if (sk.catchOn) { const C = sk.catchOn; C.t += dt; catchShow(`✋ ${touchMode ? "✋ボタン" : "クリック"}でキャッチ！（緑のところで）`, C.c, C.w, (Math.sin(C.t * C.sp - Math.PI / 2) + 1) / 2); }
+  else if (!sk.wob) catchHide();
   // 着地
   if (sk.air && me.onGround) {
     sk.air = false;
-    if (sk.trick && sk.trick.t >= sk.trick.dur * (me.veh === "proskate" ? 0.75 : 0.4)) { sk.combo.push(sk.trick.T); sk.trick = null; } // ほとんどできていれば成功
-    if (sk.trick) {
-      // 技のとちゅうで着地 → ずてーん！
-      sk.trick = null; sk.combo = [];
-      me.stun = 1.2; me.vel.x *= 0.2; me.vel.z *= 0.2; play("squish"); shake = Math.max(shake, 0.15);
-      popText(me.pos.x, me.pos.y + 2, me.pos.z, "ずてーん！ 失敗…", "#ff8a8a");
+    if (me.veh !== "proskate" && sk.trick && sk.trick.t >= sk.trick.dur * 0.4) { sk.combo.push(sk.trick.T); sk.trick = null; } // ほとんどできていれば成功
+    if (sk.trick || sk.catchOn || sk.failed) {
+      // 技のとちゅう・キャッチしていない → ずてーん！
+      const pro = me.veh === "proskate", why = sk.catchOn ? "キャッチしてない！" : sk.failed ? "キャッチ失敗…" : "失敗…";
+      sk.trick = null; sk.catchOn = null; sk.failed = false; sk.combo = []; catchHide();
+      me.stun = pro ? 2 : 1.2; me.vel.x *= 0.2; me.vel.z *= 0.2; play("squish"); shake = Math.max(shake, pro ? 0.3 : 0.15);
+      if (pro) { me.hp = Math.max(1, me.hp - 5); me.model.knock(rand(-2, 2), 3, rand(-2, 2), 0.8); }
+      popText(me.pos.x, me.pos.y + 2, me.pos.z, "ずてーん！ " + why, "#ff8a8a");
     } else if (sk.combo.length) {
       const n = sk.combo.length, sum = sk.combo.reduce((a, t) => a + t.pts, 0), got = sum * n * (me.veh === "proskate" ? 2 : 1);
       popText(me.pos.x, me.pos.y + 2.6, me.pos.z, n > 1 ? `${n}コンボ！ +${got}` : `ナイス！ +${got}`, "#ffd84a"); play(n > 1 ? "clear" : "item");
@@ -10454,7 +10505,19 @@ function railUnder() {
   return null;
 }
 function grindUpdate(dt, board) {
-  const rail = me.onGround && !sk.trick ? railUnder() : null;
+  sk.grindCD = Math.max(0, (sk.grindCD || 0) - dt);
+  const rail = me.onGround && !sk.trick && sk.grindCD <= 0 ? railUnder() : null;
+  if (rail && me.veh === "proskate") {
+    if (!sk.grind) { sk.wobT = rand(0.5, 1.1); sk.wob = null; }
+    else if (sk.wob) {
+      sk.wob.t -= dt; catchShow(`⚠️ グラッ！ いま${touchMode ? "✋" : "クリック"}！`, 0, 0, 0, true);
+      if (sk.wob.t <= 0) {
+        sk.wob = null; sk.grind = null; sk.combo = []; sk.grindCD = 1.2; catchHide();
+        const off = rail.ax === "x" ? [0, 1] : [1, 0]; me.pos.x += off[0] * 0.75; me.pos.z += off[1] * 0.75; me.vel.y = 3; me.onGround = false; me.stun = 1.8;
+        play("squish"); popText(me.pos.x, me.pos.y + 2, me.pos.z, "ずてーん！ バランスが…", "#ff8a8a"); return;
+      }
+    } else { sk.wobT -= dt; if (sk.wobT <= 0) { sk.wob = { t: 0.6 }; play("hmm"); } }
+  }
   if (rail) {
     if (!sk.grind) { sk.grind = { pts: 0, fx: 0 }; popText(me.pos.x, me.pos.y + 2.2, me.pos.z, me.veh === "bmx" ? "ペグ グラインド！" : "グラインド！", "#ffd84a"); play("item"); }
     const G = sk.grind; G.pts += 90 * dt; G.fx -= dt;
@@ -10464,7 +10527,7 @@ function grindUpdate(dt, board) {
     if (board) board.rotation.set(0, me.ry + Math.PI / 2, 0);
     if (G.fx <= 0) { G.fx = 0.12; popText(me.pos.x + rand(-0.2, 0.2), me.pos.y + 0.15, me.pos.z + rand(-0.2, 0.2), "✦", "#ffe08a"); }
   } else if (sk.grind) {
-    sk.combo.push({ n: "グラインド", pts: Math.round(sk.grind.pts) }); sk.grind = null;
+    sk.combo.push({ n: "グラインド", pts: Math.round(sk.grind.pts) }); sk.grind = null; sk.wob = null; catchHide();
   }
 }
 
@@ -10719,7 +10782,7 @@ function updateTouchUI() {
   const jb = $("tbJump"), lb = $("tbLimp");
   const jt = me.fly ? "🔼" : me.heldBy ? "💥" : me.ufo ? "🕹️" : "⬆️";
   const lt = me.fly ? "🔽" : me.car ? "🔥" : "🧸";
-  const ab = $("tbAtk"), at = me.skate && !me.onGround ? "🤸" : "👊";
+  const ab = $("tbAtk"), at = me.skate && (sk.catchOn || sk.wob) ? "✋" : me.skate && !me.onGround ? "🤸" : "👊";
   if (ab && ab.dataset.t !== at) { ab.dataset.t = at; ab.textContent = at; }
   const eb = $("tbE");
   if (eb && mode === "town") { const sp = nearSpot(); const et = sp && /買う|話す|注文|たのむ|受付|相談|聞く|やとう|店|とまる|ガチャ/.test(sp.label) ? "🗣️" : "🔍"; if (eb.dataset.t !== et) { eb.dataset.t = et; eb.textContent = et; } }
