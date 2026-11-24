@@ -361,6 +361,7 @@
     <button id="bPaint" class="pink">キャラメイク</button>
     <button id="bSync" class="sub">🔄 データ連携</button>
     <button id="bFriends" class="pink">👫 フレンド</button>
+    <button id="bGfx" class="sub">⚙️ 画質：ふつう</button>
   </div>
   <p class="small" id="libMsg"></p>
   <p id="fsHint" hidden></p>
@@ -428,6 +429,9 @@
     <button class="tool face" data-mouth="frown">への字</button>
     <button class="tool face" data-mouth="tongue">ぺろっ</button>
     <button class="tool face" data-mouth="o">おー</button>
+  </div>
+  <div class="row">
+    <button class="tool" id="bRotL">◀ 回す</button><button class="tool" id="bRotR">回す ▶</button><button class="tool" id="bSpin">🔄 自動でまわす：ON</button><span class="small">キャラをドラッグしても回せるよ</span>
   </div>
   <div class="row">
     <button class="tool" id="bRandom">おまかせ柄</button>
@@ -1080,7 +1084,7 @@ function makePlush(texture, limbColor, label) {
     animate(dt, s) {
       const x = g.position.x, y = g.position.y, z = g.position.z, ry = g.rotation.y;
       // 遠くのぬいぐるみは計算しない（軽くするため）
-      if (camera.position.distanceTo(g.position) > 75) { parts.visible = false; st.far = true; return; }
+      if (camera.position.distanceTo(g.position) > plushDist) { parts.visible = false; st.far = true; return; }
       if (st.far) { st.far = false; if (rd) rdPlace(rd, x, y, z, ry); st.last = null; }
       if (!rd) rd = rdMake(x, y, z, ry);
       // 近くの当たり判定だけを使う（0.3秒ごとに選びなおす）
@@ -1287,6 +1291,7 @@ function updateMe(dt) {
   const weapon = held && WEAPONS[held] && held !== "hand" ? held : null;
   // ---- つかまれている・洗濯機の中・ボウリング中・UFOキャッチャー中 ----
   if (p.heldBy && heldByUpdate(p, dt)) return;
+  if (p.coaster) { coasterRide(p, dt); return; }
   if (p.wash) { washUpdate(p, dt); return; }
   if (p.bowl) { bowlUpdate(p, dt); return; }
   if (p.ufo) { p.vel.set(0, 0, 0); $("limpOverlay").hidden = true; p.model.g.position.copy(p.pos); p.model.g.rotation.y = p.ry; p.model.animate(dt, { speed: 0, air: false, limp: false, punch: 0, stun: 0, t: p.t }); return; }
@@ -3207,7 +3212,7 @@ function getHit(d) {
   if (d.from === "ぬい" || d.from === "わるもの" || d.why === "撃たれた！") noteBotHit();
   else if (typeof d.fromId === "string" && net.players[d.fromId]) noteBotHit(d.fromId);
   if (me.buffs.small > 0 && Math.random() < 0.4) { toast("ちびなので、よけた！", 900); return; }
-  if (me.wash || me.bowl || me.ufo) return;
+  if (me.wash || me.bowl || me.ufo || me.coaster) return;
   if (me.buffs.fluffy > 0) d = { ...d, dmg: Math.ceil(d.dmg * 0.5) };
   puff(me.pos.x, me.pos.y + 0.6, me.pos.z, 5 + Math.round(d.dmg / 3));
   if (d.flat) { me.flat = 2.5; toast("ぺしゃんこ！", 1200); }
@@ -3265,7 +3270,7 @@ function initTownExt() {
 }
 function applyWx(a) { wx.cur = a[0]; wx.next = a[1]; wx.left = a[2]; wx.told = !!a[3]; }
 function makeWeatherFx() {
-  const N = 1500, pos = new Float32Array(N * 3);
+  const N = 1000, pos = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) { pos[i * 3] = rand(-26, 26); pos[i * 3 + 1] = rand(0, 24); pos[i * 3 + 2] = rand(-26, 26); }
   const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   const m = new THREE.PointsMaterial({ size: 0.1, color: 0xaaccff, transparent: true, opacity: 0.85, depthWrite: false });
@@ -7168,6 +7173,7 @@ function badUpdate(dt) {
 // =====================================================================
 function funTownUpdate(dt) {
   trailsUpdate(dt);
+  fpsWatch(dt);
   armyUpdate(dt);
   stayUpdate(dt);
   tagUpdate(dt);
@@ -7228,7 +7234,7 @@ const GUIDE = [
   { t: "🕹️ そうさ", h: () => touchMode
     ? `<div class="gd"><span>🕹️</span><div><b>うごく</b>：左がわをさわって動かす<br><b>見回す</b>：右がわをなぞる（2本指でズーム）</div></div><div class="gd"><span>✊</span><div><b>パンチ／使う</b>・<b>つかむ→投げる</b>・<b>調べる</b>・<b>乗り物</b>は右下のボタン</div></div><div class="gd"><span>🔝</span><div>上のボタン：👁一人称 🗺️地図 📸写真 🍙食べる 👋💃エモート 🤝わたす 📞けいさつ 📖あそびかた</div></div>`
     : `<div class="gd"><span>🕹️</span><div><kbd>WASD</kbd> うごく　<kbd>スペース</kbd> ジャンプ　マウス：見回す　ホイール：ズーム</div></div><div class="gd"><span>✊</span><div><b>クリック</b>：パンチ・使う（長おしでぐるぐるパンチ）<br><b>右クリック</b>：つかむ → はなすとぶん投げる！</div></div><div class="gd"><span>⌨️</span><div><kbd>E</kbd> 調べる・入る　<kbd>F</kbd> 乗り物　<kbd>Q</kbd> 食べる　<kbd>1</kbd>〜<kbd>5</kbd> 持ちかえ　<kbd>Tab</kbd> 地図<br><kbd>R</kbd> わたす・フレンド　<kbd>C</kbd> けいさつを呼ぶ　<kbd>H</kbd> このガイド　<kbd>P</kbd> 写真　<kbd>V</kbd> 一人称　<kbd>Shift</kbd> 力をぬく</div></div>` },
-  { t: "🗺️ 町の場所", h: () => `<div class="gd"><span>🏪</span><div><b>広場のまわり</b>：服屋・ご飯屋・おもちゃ屋・乗り物屋　<b>道ぞい</b>：武器屋・空の乗り物屋・ハローワーク</div></div><div class="gd"><span>🎰</span><div><b>ガチャ屋</b>（東）・<b>ボードゲームカフェ</b>（西：オセロ・五目ならべ・4目ならべ・トランプ。ちがう機械の友だちとネット対戦も！）・<b>📋掲示板</b>（広場：ミッション・宝の地図・スタンプラリー・おにごっこ・フレンド）</div></div><div class="gd"><span>🎡</span><div><b>南</b>：遊園地（観覧車・レース）・<b>🎣つり場</b>（南の桟橋の先）・<b>♨️旅館と温泉</b>・<b>🍹リゾート</b>（南東）<br><b>北</b>：ビル街・<b>🏨ホテル</b>　<b>北西</b>：展望タワー・<b>⛺キャンプ場</b><br><b>西</b>：サッカー場・ゲームセンター・コインランドリー　<b>東</b>：けいさつ署・ろうや</div></div><div class="gd"><span>🏝️</span><div>海の<b>小島</b>には番人と金庫。<b>大砲</b>で飛んでいける。お金をためたら<b>自分の島</b>も！</div></div>` },
+  { t: "🗺️ 町の場所", h: () => `<div class="gd"><span>🏪</span><div><b>広場のまわり</b>：服屋・ご飯屋・おもちゃ屋・乗り物屋　<b>道ぞい</b>：武器屋・空の乗り物屋・ハローワーク</div></div><div class="gd"><span>🎰</span><div><b>ガチャ屋</b>（東）・<b>ボードゲームカフェ</b>（西：オセロ・五目ならべ・4目ならべ・トランプ。ちがう機械の友だちとネット対戦も！）・<b>📋掲示板</b>（広場：ミッション・宝の地図・スタンプラリー・おにごっこ・フレンド）</div></div><div class="gd"><span>🎡</span><div><b>南</b>：遊園地（観覧車・<b>🎢ジェットコースター</b>・レース）・<b>🎣つり場</b>（南の桟橋の先）・<b>♨️旅館と温泉</b>・<b>🍹リゾート</b>（南東）<br><b>北</b>：ビル街・<b>🏨ホテル</b>　<b>北西</b>：展望タワー・<b>⛺キャンプ場</b><br><b>西</b>：サッカー場・ゲームセンター・コインランドリー　<b>東</b>：けいさつ署・ろうや</div></div><div class="gd"><span>🏝️</span><div>海の<b>小島</b>には番人と金庫。<b>大砲</b>で飛んでいける。お金をためたら<b>自分の島</b>も！</div></div>` },
   { t: "💰 お金", h: () => `<div class="gd"><span>⬆️</span><div><b>かせぐ</b>：コインを拾う・仕事（ハローワーク）・つり・ボードゲーム・🗺️宝の地図・ミッション・わるもの退治・モンスター退治・おばけの写真</div></div><div class="gd"><span>⬇️</span><div><b>使う</b>：🎰ガチャ（ぼうし・エフェクト・金ピカ）・お店・武器・乗り物・つりのエサ・オセロのかけ・ぬいへのプレゼント・自分の島</div></div><div class="gd"><span>📋</span><div><b>きょうのミッション</b>：毎日3つ。ぜんぶクリアで🎫ガチャ券！（広場の掲示板）</div></div>` },
   { t: "⚡ イベント", h: () => `<div class="gd"><span>😈</span><div><b>わるものぬい団</b>：何人もせめてくる。みんなでやっつけよう</div></div><div class="gd"><span>🦖</span><div><b>モンスター</b>／<b>👑キングモンスター</b>（まれ）／<b>💀最強の魔王モンスター</b>（すごくまれ）</div></div><div class="gd"><span>✨</span><div>金色のぬい・ダンスパーティー・家族が来る・天気（雨・雷・マグマ・お金の雨）</div></div><div class="gd"><span>🚨</span><div>悪いことを見られると<b>けいさつ</b>が追ってくる。つかまると<b>ろうや</b>→脱獄！<br>なぐられたり撃たれたら、10秒以内に <b>C で通報</b>できる（なにもされていないのに呼ぶと<b>罰金</b>！）</div></div>` },
   { t: "🌙 朝と夜", h: () => `<div class="gd"><span>🌅</span><div>1日＝12分。毎朝おこづかい。<b>日曜日はお祭り</b>（コイン2倍）</div></div><div class="gd"><span>🎆</span><div>夜は<b>花火大会</b>・<b>👻おばけぬい</b>（P で写真にとるとコイン）・<b>🌠流れ星</b>（Z でおねがい）・夜だけの魚</div></div><div class="gd"><span>📜</span><div><b>やくそく書</b>：相手のそばで R。3日以内にわたさないと…ろうや！</div></div>` },
@@ -7285,6 +7291,7 @@ function buildFunTown() {
   town.bad = []; callP.cars = []; fish.state = null; town.trSpot = null; town.trSpark = null; armyReset();
   buildStamps();
   buildStay();
+  buildCoaster();
 }
 // R でえらぶ：友だち → フレンド・やくそく書　／　町のぬい → プレゼント・やくそく書・親友
 function personMenu(P) {
@@ -8358,7 +8365,7 @@ function buildStay() {
   makeTent(C.x - 5.5, C.z - 3, 0.3, 0xff8a3a); makeTent(C.x + 5.5, C.z - 3, -0.3, 0x4aa0e0); makeTent(C.x, C.z - 4.2, 0, 0x6ad06a);
   for (let k = 0; k < 4; k++) { const lg = mesh(new THREE.CylinderGeometry(0.12, 0.12, 1.2, 8), 0x7a4a2a); lg.rotation.z = Math.PI / 2; lg.rotation.y = k * Math.PI / 4; lg.position.set(C.x, 0.15, C.z + 1.5); }
   stay.fire = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.1, 8), new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.9 })); stay.fire.position.set(C.x, 0.7, C.z + 1.5); world.add(stay.fire);
-  stay.fireLight = new THREE.PointLight(0xffa050, 0, 14); stay.fireLight.position.set(C.x, 1.4, C.z + 1.5); world.add(stay.fireLight);
+  stay.fireLight = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffa050, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); stay.fireLight.scale.setScalar(7); stay.fireLight.position.set(C.x, 1.4, C.z + 1.5); world.add(stay.fireLight);
   for (const [dx, dz, ry] of [[-2.4, 1.5, 0], [2.4, 1.5, 0], [0, 3.8, Math.PI / 2]]) { const lg = mesh(new THREE.CylinderGeometry(0.28, 0.28, 2, 10), 0x8a5a3a); lg.rotation.z = Math.PI / 2; lg.rotation.y = ry + Math.PI / 2; lg.position.set(C.x + dx, 0.28, C.z + dz); }
   const cl = makeLabel("⛺ キャンプ場", "#fff", 1.8); cl.position.set(C.x, 4.6, C.z); world.add(cl);
   town.mapRects.push({ x: C.x, z: C.z, w: 18, d: 12, color: 0x6ab84a, label: "キャンプ", icon: "⛺", flat: true });
@@ -8375,7 +8382,7 @@ function stayUpdate(dt) {
   // たき火
   stay.fire.scale.set(1 + Math.sin(gameTime * 13) * 0.08, 1 + Math.sin(gameTime * 9) * 0.15, 1 + Math.cos(gameTime * 11) * 0.08);
   stay.fire.material.color.setHSL(0.07 + Math.sin(gameTime * 7) * 0.02, 1, 0.55);
-  stay.fireLight.intensity = (0.3 + nf * 1.6) * (0.85 + Math.sin(gameTime * 17) * 0.15);
+  stay.fireLight.material.opacity = (0.25 + nf * 0.7) * (0.85 + Math.sin(gameTime * 17) * 0.15);
   // 温泉の湯気
   for (const s of stay.steam) { s.position.y += dt * 0.5; s.material.opacity = 0.32 * (1 - s.position.y / 3); if (s.position.y > 3) s.position.y = 0.3; }
   // 温泉につかる
@@ -8827,6 +8834,136 @@ function onNetArmy(d, conn) {
   return false;
 }
 
+// =====================================================================
+//  20. ジェットコースター・キャラメイクで自分で回す・画質の設定（かるくする）
+// =====================================================================
+// ---- 画質（きれい／ふつう／かるい） ----
+const GFX = {
+  high: { name: "きれい", ratio: 1.75, shadow: true, map: 2048, dist: 75, extras: true, outline: true },
+  mid: { name: "ふつう", ratio: 1.25, shadow: true, map: 1024, dist: 55, extras: true, outline: true },
+  low: { name: "かるい", ratio: 1, shadow: false, map: 512, dist: 38, extras: false, outline: false },
+};
+let gfxKey = "mid";
+try { const g = localStorage.getItem("funyaland_gfx"); if (GFX[g]) gfxKey = g; } catch (e) {}
+let plushDist = 55;
+function applyGfx() {
+  const G = GFX[gfxKey];
+  renderer.setPixelRatio(Math.min(devicePixelRatio, touchMode ? Math.min(G.ratio, 1.25) : G.ratio));
+  renderer.setSize(innerWidth, innerHeight);
+  sun.castShadow = G.shadow;
+  const size = touchMode ? Math.min(G.map, 1024) : G.map;
+  if (sun.shadow.mapSize.x !== size) { sun.shadow.mapSize.set(size, size); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
+  plushDist = G.dist;
+  OUTLINE_MAT.visible = G.outline;
+  LAMP_POOL.visible = G.extras;
+  const b = $("bGfx"); if (b) b.textContent = `⚙️ 画質：${G.name}`;
+}
+function cycleGfx() {
+  gfxKey = gfxKey === "mid" ? "low" : gfxKey === "low" ? "high" : "mid";
+  try { localStorage.setItem("funyaland_gfx", gfxKey); } catch (e) {}
+  applyGfx();
+  toast(`⚙️ 画質「${GFX[gfxKey].name}」${gfxKey === "low" ? "：かげ・りんかく線なし。動きが軽くなるよ" : gfxKey === "high" ? "：いちばんきれい（重いかも）" : "：ちょうどいい"}`, 2200);
+}
+// 重いときは「かるい」をすすめる（1回だけ）
+const fpsMon = { t: 0, n: 0, told: false };
+function fpsWatch(dt) {
+  if (fpsMon.told || gfxKey === "low" || mode !== "town" || !controls) return;
+  fpsMon.t += dt; fpsMon.n++;
+  if (fpsMon.t >= 6) { const fps = fpsMon.n / fpsMon.t; fpsMon.t = 0; fpsMon.n = 0; if (fps < 28) { fpsMon.told = true; toast("🐢 ちょっと重いみたい… タイトルの「⚙️ 画質」を「かるい」にすると、サクサク動くよ", 4000); } }
+}
+
+// ---- キャラメイク：ドラッグやボタンで自分で回す ----
+const pv = { rot: 0, auto: true, drag: null };
+renderer.domElement.addEventListener("pointerdown", (e) => { if (!paintMode && mode) return; pv.drag = { x: e.clientX, r: pv.rot }; pv.auto = false; updatePvBtn(); });
+addEventListener("pointermove", (e) => { if (!pv.drag) return; pv.rot = pv.drag.r + (e.clientX - pv.drag.x) * 0.012; });
+addEventListener("pointerup", () => { pv.drag = null; });
+function updatePvBtn() { const b = $("bSpin"); if (b) b.textContent = pv.auto ? "🔄 自動でまわす：ON" : "🔄 自動でまわす：OFF"; }
+function previewRot(dt) { if (pv.auto && !pv.drag) pv.rot += dt * 0.8; return pv.rot; }
+
+// ---- ジェットコースター（遊園地の上を走る） ----
+const COASTER_PTS = [[8, 3.2, 49], [-4, 3.2, 49], [-15, 8, 49], [-25, 17, 49.5], [-33, 16, 51.5], [-38, 6, 56], [-35, 3.5, 62], [-26, 9, 66], [-13, 14, 66], [-3, 6, 63.5], [6, 10.5, 60], [12.5, 7, 56], [14, 4.2, 52]];
+const cst = { curve: null, L: 0, cars: [], liftEnd: 0.27, ride: null };
+function buildCoaster() {
+  const pts = COASTER_PTS.map(([x, y, z]) => new V3(x, y, z));
+  const curve = new THREE.CatmullRomCurve3(pts, true, "centripetal");
+  cst.curve = curve; cst.L = curve.getLength();
+  // レール（2本）
+  const N = 260, left = [], right = [], up = new V3(0, 1, 0);
+  for (let i = 0; i < N; i++) { const u = i / N, p = curve.getPointAt(u), t = curve.getTangentAt(u); const side = new V3().crossVectors(t, up).normalize().multiplyScalar(0.48); left.push(p.clone().add(side)); right.push(p.clone().sub(side)); }
+  const railMat = toonMat(0xff3a5a);
+  for (const arr of [left, right]) { const c = new THREE.CatmullRomCurve3(arr, true); const tube = new THREE.Mesh(new THREE.TubeGeometry(c, 520, 0.09, 6, true), railMat); world.add(tube); }
+  // まくら木と柱（まとめて1回でかく）
+  const nTie = Math.floor(cst.L / 1.6), nSup = Math.floor(cst.L / 6);
+  const ties = new THREE.InstancedMesh(new THREE.BoxGeometry(1.25, 0.08, 0.22), toonMat(0x8a6a4a), nTie);
+  const sups = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.11, 0.14, 1, 6), toonMat(0xd8d8e0), nSup);
+  const o = new THREE.Object3D();
+  for (let i = 0; i < nTie; i++) { const u = i / nTie, p = curve.getPointAt(u), q = curve.getPointAt((u + 0.002) % 1); o.position.copy(p); o.position.y -= 0.12; o.lookAt(q.x, q.y - 0.12, q.z); o.scale.set(1, 1, 1); o.updateMatrix(); ties.setMatrixAt(i, o.matrix); }
+  for (let i = 0; i < nSup; i++) { const u = (i + 0.5) / nSup, p = curve.getPointAt(u), h = Math.max(0.5, p.y - 0.2); o.position.set(p.x, h / 2, p.z); o.rotation.set(0, 0, 0); o.scale.set(1, h, 1); o.updateMatrix(); sups.setMatrixAt(i, o.matrix); }
+  world.add(ties, sups);
+  // 駅
+  addBox(5, 0, 49, 9, 2.75, 3.2, 0xffd84a);
+  addBox(5, 5.6, 49, 9.6, 0.3, 3.6, 0xff5ca8, { collide: false });
+  for (const [px, pz] of [[0.6, 47.6], [9.4, 47.6], [0.6, 50.4], [9.4, 50.4]]) addBox(px, 2.75, pz, 0.2, 2.9, 0.2, 0xffffff, { collide: false });
+  const lb = makeLabel("🎢 ジェットコースター", "#fff", 2.2); lb.position.set(5, 7.4, 49); world.add(lb);
+  addSpot(5, 51.6, () => "[E] ジェットコースターに乗る（20コイン）", startCoaster, 1.8);
+  town.mapRects.push({ x: 5, z: 49, w: 9, d: 3.2, color: 0xffd84a, label: "コースター", icon: "🎢" });
+  // 車両（3両）
+  cst.cars = [];
+  const colors = [0xff3a5a, 0x4cc9f0, 0xffd84a];
+  for (let k = 0; k < 3; k++) {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.55, 1.5), toonMat(colors[k])); body.position.y = 0.3; g.add(body);
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.1, 0.9), toonMat(0x2a2a3a)); seat.position.set(0, 0.5, -0.1); g.add(seat);
+    const bar = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.04, 6, 12, Math.PI), toonMat(0xd8d8e0)); bar.position.set(0, 0.62, 0.35); bar.rotation.x = -0.4; g.add(bar);
+    if (k === 0) { const nose = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.6, 8), toonMat(0xffffff)); nose.rotation.x = Math.PI / 2; nose.position.set(0, 0.3, 1.0); g.add(nose); }
+    world.add(g); cst.cars.push(g);
+  }
+  cst.s = 0; cst.ride = null; placeCoasterCars(0);
+}
+function placeCoasterCars(s) {
+  if (!cst.curve) return;
+  cst.cars.forEach((g, k) => {
+    const u = (((s - k * 1.75) % cst.L) + cst.L) % cst.L / cst.L;
+    const p = cst.curve.getPointAt(u), q = cst.curve.getPointAt((u + 0.003) % 1);
+    g.position.copy(p); g.lookAt(q);
+  });
+}
+function startCoaster() {
+  if (me.coaster) return;
+  if (!pay(20)) return;
+  if (me.veh) setVehicle(null);
+  me.coaster = { s: 0, v: 3, cheer: 0, top: false }; me.vel.set(0, 0, 0);
+  play("item"); toast("🎢 しゅっぱーつ！ スペース（ジャンプ）をおしてると、ばんざいするよ", 2600);
+}
+function coasterRide(p, dt) {
+  const C = p.coaster, L = cst.L;
+  const u = C.s / L, P = cst.curve.getPointAt(u % 1);
+  if (u < cst.liftEnd) { C.v += (4 - C.v) * Math.min(1, dt * 2); if (Math.random() < dt * 4) play("place"); }
+  else if (u > 0.93) C.v += (2.5 - C.v) * Math.min(1, dt * 1.5);
+  else C.v = clamp(Math.sqrt(Math.max(16, 2 * 9.8 * (17.6 - P.y))), 4, 24);
+  C.s += C.v * dt;
+  const cheering = keys.Space || touchJump();
+  if (cheering && C.v > 13) C.cheer += dt;
+  if (u > 0.3 && u < 0.4 && !C.top) { C.top = true; play("whistle"); }
+  placeCoasterCars(C.s);
+  const uu = (C.s / L) % 1, pos = cst.curve.getPointAt(uu), nx = cst.curve.getPointAt((uu + 0.003) % 1);
+  p.pos.set(pos.x, pos.y + 0.45, pos.z);
+  p.ry = Math.atan2(nx.x - pos.x, nx.z - pos.z);
+  camYaw = lerpAngle(camYaw, p.ry + Math.PI, Math.min(1, dt * 4));
+  p.onGround = true; p.vel.set(0, 0, 0);
+  p.model.g.position.copy(p.pos); p.model.g.rotation.y = p.ry;
+  p.model.animate(dt, { speed: 0, air: false, limp: false, punch: 0, stun: 0, t: p.t, emote: cheering ? "dance" : null });
+  if (C.s >= L) {
+    p.coaster = null; placeCoasterCars(0);
+    p.pos.set(5, 0, 52.2); p.model.g.position.copy(p.pos); p.model.place(); p.vel.set(0, 0, 0);
+    if (C.cheer > 2.5) gotCoins(15, `🎢 さいこう！ ばんざい ${C.cheer.toFixed(1)}秒！`);
+    else toast("🎢 たのしかった〜！ 目がまわる〜", 2000);
+    p.stun = 1.2;
+  }
+}
+function touchJump() { const b = $("tbJump"); return !!(b && b.classList.contains("on")); }
+
+applyGfx();
 // 町モードで届いたメッセージ（onNet から呼ばれる）
 function onNetTown(d, conn) {
   if (onNetCity(d, conn)) return;
@@ -8864,6 +9001,7 @@ function showMsg(title, html, buttons) {
   for (const bt of buttons) { const el = document.createElement("button"); el.textContent = bt.label; el.onclick = () => { initAudio(); $("msgP").hidden = true; bt.fn(); if (controls) lockPointer(); }; b.appendChild(el); }
   $("msgP").hidden = false;
 }
+function setH(el, html) { if (el._h !== html) { el._h = html; el.innerHTML = html; } }
 function updateHud() {
   if (!mode) return;
   const room = net.online ? `<br>部屋コード：${net.code || net.joinCode || "（参加中）"}　人数：${1 + Object.keys(net.players).length}/${MAX_PLAYERS}` : "";
@@ -8883,16 +9021,16 @@ function updateHud() {
     // 持ち物（1〜4キーで使う）
     coinLine += "<br>" + Object.entries(ITEMS).map(([k, it]) => `<span style="opacity:${inv[k] ? 1 : 0.45}">[${it.key}]${it.name}×${inv[k]}</span>`).join("　");
   }
-  $("hud").innerHTML = `<b>${hudTitle}</b><br>${coinLine}${room}${extra}`;
+  setH($("hud"), `<b>${hudTitle}</b><br>${coinLine}${room}${extra}`);
   $("bTitle").hidden = false;
   const T = mode === "town";
   $("hpbar").hidden = !T; $("foodbar").hidden = !T; $("minimap").hidden = !T; $("hudR").hidden = !T;
   if (!T) { $("mapP").hidden = true; $("wanted").hidden = true; }
-  $("help").innerHTML = mode === "story"
+  setH($("help"), mode === "story"
     ? "<kbd>WASD</kbd> 移動　<kbd>スペース</kbd> ジャンプ　<kbd>Shift</kbd> 力をぬく（ただのぬいぐるみのふり）　マウス：視点（画面クリック）　<kbd>Esc</kbd> マウスを自由にする（右下の「タイトルへ」が押せる）　<kbd>P</kbd> 写真　<kbd>V</kbd> 一人称　ホイール：ズーム　<kbd>M</kbd> 音"
     : me.car ? "🚗 <kbd>W</kbd> アクセル　<kbd>S</kbd> ブレーキ・バック　<kbd>A</kbd><kbd>D</kbd> ハンドル　<kbd>スペース</kbd> ジャンプ　<kbd>F</kbd> 乗りかえ・おりる　<kbd>Tab</kbd> 地図　<kbd>P</kbd> 写真"
     : me.fly ? "🕊️ <kbd>WASD</kbd> 移動　<kbd>スペース</kbd> 上がる　<kbd>Shift</kbd> 下がる　クリック：銃を撃てる　<kbd>F</kbd> 乗りかえ・おりる　<kbd>Tab</kbd> 地図　<kbd>P</kbd> 写真"
-    : "<kbd>WASD</kbd> 移動　<kbd>スペース</kbd> ジャンプ　クリック：使う（すでで長押し＝ぐるぐるパンチ）　<b>右クリック：つかむ→はなして投げる</b>　<kbd>1</kbd>〜<kbd>5</kbd> 持ちかえ　<kbd>E</kbd> 調べる・入る　<kbd>F</kbd> 乗り物・車をぬすむ　<kbd>Q</kbd> 食べる（自分の島では島の管理）　<kbd>R</kbd> わたす・フレンド　<kbd>C</kbd> けいさつを呼ぶ　<kbd>H</kbd> あそびかた　<kbd>T</kbd> チャット　<kbd>Tab</kbd> 地図　<kbd>P</kbd> 写真　<kbd>Z</kbd><kbd>X</kbd> エモート　<kbd>V</kbd> 一人称　ホイール：ズーム　<kbd>Shift</kbd> 力をぬく";
+    : "<kbd>WASD</kbd> 移動　<kbd>スペース</kbd> ジャンプ　クリック：使う（すでで長押し＝ぐるぐるパンチ）　<b>右クリック：つかむ→はなして投げる</b>　<kbd>1</kbd>〜<kbd>5</kbd> 持ちかえ　<kbd>E</kbd> 調べる・入る　<kbd>F</kbd> 乗り物・車をぬすむ　<kbd>Q</kbd> 食べる（自分の島では島の管理）　<kbd>R</kbd> わたす・フレンド　<kbd>C</kbd> けいさつを呼ぶ　<kbd>H</kbd> あそびかた　<kbd>T</kbd> チャット　<kbd>Tab</kbd> 地図　<kbd>P</kbd> 写真　<kbd>Z</kbd><kbd>X</kbd> エモート　<kbd>V</kbd> 一人称　ホイール：ズーム　<kbd>Shift</kbd> 力をぬく");
   // 持ち物（町だけ）
   updateTouchUI();
   const hb = $("hotbar");
@@ -8905,7 +9043,7 @@ function updateHud() {
       const n = hh.id === "peel" || hh.id === "balloon" ? `×${townSave[hh.id]}` : "";
       return `<div class="${slot === hh.id ? "on" : ""} ${hasTool(hh.id) ? "" : "off"}">${touchMode ? name.split(" ")[0] : "[" + hh.key + "] " + name}${n}</div>`;
     }).join("");
-    if (hb.innerHTML !== html) hb.innerHTML = html;
+    setH(hb, html);
     // 右がわの情報：天気・仕事・島
     const W = WEATHERS[wx.cur];
     let r = nightHud() + `${W.icon} 天気：${W.name}`;
@@ -8922,7 +9060,7 @@ function updateHud() {
     const mv = monView(); if (mv && mv.hp > 0) r += `<br><span style="color:#ff8a8a">${MON_TIER[mv.tier || 1].name}出現中！ ${mv.hp}/${mv.max}</span>`;
     if (townSave.island) r += `<br>🏝️ ${townSave.island.name}：${townSave.island.funds}🪙`;
     if (townSave.residentOf) r += `<br>🏠 ${townSave.residentOf.island}の住民`;
-    if ($("hudR").innerHTML !== r) $("hudR").innerHTML = r;
+    setH($("hudR"), r);
     // 上のまん中：手配・ろうや・レース・イベント
     const ws = wantedStars(), mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
     let wt = "";
@@ -9070,7 +9208,7 @@ function updateTouchUI() {
   const show = !!mode && !paintMode && $("shopP").hidden && $("msgP").hidden && $("photoP").hidden;
   ui.hidden = !show;
   if (!show) { if (joy.id !== null) resetJoy(); return; }
-  ui.dataset.mode = mode;
+  if (ui.dataset.mode !== mode) ui.dataset.mode = mode;
   // 乗り物に乗っている・空を飛んでいるときは、ボタンの名前をかえる
   const jb = $("tbJump"), lb = $("tbLimp");
   const jt = me.fly ? "上がる" : me.heldBy ? "連打で逃げる" : me.ufo ? "アームを落とす" : "ジャンプ";
@@ -9156,6 +9294,10 @@ $("bSolo").onclick = () => { goFullscreen(); initAudio(); readName(); needLook((
 $("bHost").onclick = () => { goFullscreen(); initAudio(); readName(); needLook(() => { showModeSelect(); hostRoom(); }); };
 $("bJoin").onclick = () => { goFullscreen(); initAudio(); readName(); needLook(() => { $("titleP").hidden = true; $("joinP").hidden = false; $("codeIn").focus(); }); };
 $("bJoinGo").onclick = () => { const c = $("codeIn").value.trim(); if (!/^\d{5}$/.test(c)) { $("joinMsg").textContent = "5けたの数字を入れてね"; return; } joinRoom(c); };
+$("bRotL").onclick = () => { pv.auto = false; pv.rot -= 0.7; updatePvBtn(); };
+$("bRotR").onclick = () => { pv.auto = false; pv.rot += 0.7; updatePvBtn(); };
+$("bSpin").onclick = () => { pv.auto = !pv.auto; updatePvBtn(); };
+$("bGfx").onclick = () => { initAudio(); cycleGfx(); };
 $("bFriends").onclick = () => { initAudio(); openFriendsTitle(); refreshFriendStatus(() => { if (panelReopen === openFriendsTitle && !$("shopP").hidden) openFriendsTitle(); }); };
 $("bJoinBack").onclick = () => { $("joinP").hidden = true; $("titleP").hidden = false; };
 $("bBack").onclick = () => location.reload();
@@ -9179,7 +9321,7 @@ $("bTown").onclick = () => { netSend({ t: "mode", mode: "town" }); startMode("to
 function startMode(m, stage = 0) {
   mode = m;
   ["titleP", "modeP", "joinP", "msgP"].forEach((id) => ($(id).hidden = true));
-  me.car = false; me.skate = false; me.veh = null; me.fly = false; me.ride = null; me.float = 0; me.emote = null; me.held = "hand"; me.dish = null; me.cooking = null; me.grab = null; me.heldBy = null; me.wash = null; me.bowl = null; me.ufo = null; me.spin = 0; me.flat = 0;
+  me.car = false; me.skate = false; me.veh = null; me.fly = false; me.ride = null; me.float = 0; me.emote = null; me.held = "hand"; me.dish = null; me.cooking = null; me.grab = null; me.heldBy = null; me.wash = null; me.bowl = null; me.ufo = null; me.spin = 0; me.flat = 0; me.coaster = null;
   $("rvP").hidden = true; $("cardP").hidden = true; $("fishP").hidden = true; fish.state = null; hemi.intensity = 0.8; sun.intensity = 0.7; hemi.color.copy(HEMI_DAY); sun.color.copy(SUN_DAY); town.night = null; bigMap = false; $("mapP").hidden = true;
   $("crosshair").hidden = true;
   if (m === "story") { playMusic("sneak"); loadStage(stage || 0); }
@@ -9201,7 +9343,7 @@ function loop() {
     if (paintMode || !mode) {
       // キャラメイク・タイトル：ぬいぐるみが回る
       me.model.g.position.set(0, 0, 0);
-      me.model.g.rotation.y += dt * 0.8;
+      me.model.g.rotation.y = previewRot(dt);
       me.t += dt;
       me.model.animate(dt, { speed: 0, air: false, limp: false, punch: 0, stun: 0, t: me.t });
       camera.position.set(0, 1.0, 2.6); camera.lookAt(0, 0.6, 0);
