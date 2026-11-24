@@ -293,6 +293,33 @@
   #ateP[hidden] { display: none; }
   @keyframes atePop { 0% { transform: translate(-50%, 0) scale(.3); } 70% { transform: translate(-50%, 0) scale(1.15); } 100% { transform: translate(-50%, 0) scale(1); } }
   body.touch #ateP { font-size: 22px; top: 40%; padding: 5px 18px; }
+  /* ===== 画面の配置（左上：体力・おなか／右上：モード・お金・地図／右はし：持ち物） ===== */
+  html body #hpbar, html body #foodbar { left: calc(12px + env(safe-area-inset-left)); right: auto; transform: none; width: 240px; bottom: auto; height: 16px; border: 2px solid #fff8; box-sizing: border-box; }
+  html body #hpbar { top: calc(10px + env(safe-area-inset-top)); } html body #foodbar { top: calc(30px + env(safe-area-inset-top)); }
+  html body #hpbar span, html body #foodbar span { font-size: 11px; top: 0; line-height: 12px; }
+  html body #hudR { left: calc(12px + env(safe-area-inset-left)); right: auto; top: calc(54px + env(safe-area-inset-top)) !important; bottom: auto; text-align: left; }
+  html body #hud { left: auto; right: calc(12px + env(safe-area-inset-right)); top: calc(8px + env(safe-area-inset-top)); text-align: right; }
+  html body #minimap { right: calc(12px + env(safe-area-inset-right)); top: calc(86px + env(safe-area-inset-top)); }
+  html body #hotbar { left: auto; right: calc(12px + env(safe-area-inset-right)); top: auto; bottom: calc(84px + env(safe-area-inset-bottom)); transform: none; flex-direction: column; align-items: flex-end; }
+  html body #hotbar div { min-width: 0; text-align: right; }
+  /* スマホ */
+  html body.touch #hpbar, html body.touch #foodbar { width: 170px; height: 14px; }
+  html body.touch #hpbar { top: calc(6px + env(safe-area-inset-top)); } html body.touch #foodbar { top: calc(23px + env(safe-area-inset-top)); }
+  html body.touch #hpbar span, html body.touch #foodbar span { font-size: 10px; line-height: 10px; }
+  html body.touch #hudR { top: calc(42px + env(safe-area-inset-top)) !important; font-size: 11px; line-height: 1.45; }
+  html body.touch #hud { top: calc(4px + env(safe-area-inset-top)); font-size: 12px; line-height: 1.45; }
+  html body.touch #minimap { top: calc(46px + env(safe-area-inset-top)); width: 100px; height: 100px; }
+  html body.touch #bTitle { top: calc(48px + env(safe-area-inset-top)); right: calc(122px + env(safe-area-inset-right)); }
+  html body.touch #tFull { top: auto; right: auto; left: calc(24px + env(safe-area-inset-left)); bottom: calc(154px + env(safe-area-inset-bottom)); }
+  html body.touch #hotbar { top: calc(154px + env(safe-area-inset-top)); transform: none; right: calc(4px + env(safe-area-inset-right)); bottom: auto; gap: 4px; }
+  html body.touch #hotbar div { padding: 1px 6px; font-size: 16px; }
+  html body.touch #tBtns { right: calc(56px + env(safe-area-inset-right)); }
+  /* 上のボタンは、下のまん中に2だん */
+  html body #tTop { top: auto; bottom: calc(8px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: grid; grid-template-columns: repeat(6, auto); gap: 5px; }
+  html body #tTop button { width: 40px; height: 40px; font-size: 18px; }
+  html body.touch #tTop { left: calc(160px + env(safe-area-inset-left)); transform: none; gap: 4px; }
+  html body.touch #tTop button { width: 38px; height: 38px; font-size: 17px; }
+  @media (max-height: 560px) { html body:not(.touch) #minimap { width: 120px; height: 120px; } }
 </style>
 <!-- 3D 表示の部品（Three.js）と、部屋コードで遊ぶための部品（PeerJS）。インターネットから読み込む -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -583,7 +610,7 @@ function makeLabel(text, color = "#fff", size = 1, opt = {}) {
   c.lineWidth = opt.bg ? 12 : 16; c.strokeStyle = "#000"; c.strokeText(text, w / 2, 66);
   c.fillStyle = color; c.fillText(text, w / 2, 66);
   const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: !opt.xray, depthWrite: false }));
   sp.scale.set(2 * size * w / 512, 0.5 * size, 1);
   sp.renderOrder = 10;
   sp.userData.size = size;
@@ -7298,7 +7325,7 @@ addEventListener("keydown", (e) => {
 // =====================================================================
 const GUIDE = [
   { t: "🕹️ そうさ", h: () => touchMode
-    ? `<div class="gd"><span>🕹️</span><div><b>うごく</b>：左がわをさわって動かす<br><b>見回す</b>：右がわをなぞる（2本指でズーム）</div></div><div class="gd"><span>✊</span><div><b>パンチ／使う</b>・<b>つかむ→投げる</b>・<b>調べる</b>・<b>乗り物</b>は右下のボタン</div></div><div class="gd"><span>🔝</span><div>上のボタン：👁一人称 🗺️地図 📸写真 🍙食べる 👋💃エモート 🤝わたす 📞けいさつ 📖あそびかた</div></div>`
+    ? `<div class="gd"><span>🕹️</span><div><b>うごく</b>：左がわをさわって動かす<br><b>見回す</b>：右がわをなぞる（2本指でズーム）</div></div><div class="gd"><span>✊</span><div><b>パンチ／使う</b>・<b>つかむ→投げる</b>・<b>調べる</b>・<b>乗り物</b>は右下のボタン</div></div><div class="gd"><span>🔽</span><div>下のまん中のボタン：👁一人称 🗺️地図 📸写真 🍙食べる 👋💃エモート 🤝わたす 📞けいさつ 📖あそびかた</div></div>`
     : `<div class="gd"><span>🕹️</span><div><kbd>WASD</kbd> うごく　<kbd>スペース</kbd> ジャンプ　マウス：見回す　ホイール：ズーム</div></div><div class="gd"><span>✊</span><div><b>クリック</b>：パンチ・使う（長おしでぐるぐるパンチ）<br><b>右クリック</b>：つかむ → はなすとぶん投げる！</div></div><div class="gd"><span>⌨️</span><div><kbd>E</kbd> 調べる・入る　<kbd>F</kbd> 乗り物　<kbd>Q</kbd> 食べる　<kbd>1</kbd>〜<kbd>5</kbd> 持ちかえ　<kbd>Tab</kbd> 地図<br><kbd>R</kbd> わたす・フレンド　<kbd>C</kbd> けいさつを呼ぶ　<kbd>H</kbd> このガイド　<kbd>P</kbd> 写真　<kbd>V</kbd> 一人称　<kbd>Shift</kbd> 力をぬく</div></div>` },
   { t: "🗺️ 町の場所", h: () => `<div class="gd"><span>🏪</span><div><b>広場のまわり</b>：服屋・ご飯屋・おもちゃ屋・乗り物屋　<b>道ぞい</b>：武器屋・空の乗り物屋・ハローワーク</div></div><div class="gd"><span>🎰</span><div><b>ガチャ屋</b>（東）・<b>ボードゲームカフェ</b>（西：オセロ・五目ならべ・4目ならべ・トランプ。ちがう機械の友だちとネット対戦も！）・<b>📋掲示板</b>（広場：ミッション・宝の地図・スタンプラリー・おにごっこ・フレンド）</div></div><div class="gd"><span>🎡</span><div><b>南</b>：遊園地（観覧車・<b>🎢ジェットコースター</b>・レース）・<b>🎣つり場</b>（南の桟橋の先）・<b>♨️旅館と温泉</b>・<b>🍹リゾート</b>（南東）<br><b>北</b>：ビル街・<b>🏨ホテル</b>　<b>北西</b>：展望タワー・<b>⛺キャンプ場</b><br><b>西</b>：サッカー場・ゲームセンター・コインランドリー　<b>東</b>：けいさつ署・ろうや</div></div><div class="gd"><span>🏝️</span><div>海の<b>小島</b>には番人と金庫。<b>大砲</b>で飛んでいける。お金をためたら<b>自分の島</b>も！</div></div>` },
   { t: "💰 お金", h: () => `<div class="gd"><span>⬆️</span><div><b>かせぐ</b>：コインを拾う・仕事（ハローワーク）・📰新聞配達・👏広場でおどってストリートライブ・🔍自販機の下・つり・ボードゲーム・🗺️宝の地図・ミッション・わるもの退治・モンスター退治・おばけの写真</div></div><div class="gd"><span>⬇️</span><div><b>使う</b>：🎰ガチャ（ぼうし・エフェクト・金ピカ）・お店・武器・乗り物・つりのエサ・オセロのかけ・ぬいへのプレゼント・自分の島</div></div><div class="gd"><span>📋</span><div><b>きょうのミッション</b>：毎日3つ。ぜんぶクリアで🎫ガチャ券！（広場の掲示板）</div></div>` },
@@ -7321,7 +7348,7 @@ function townIntro() {
     <div class="gd"><span>🪙</span><div>コインを集めて、<b>お店・ガチャ・つり・オセロ</b>で使おう</div></div>
     <div class="gd"><span>📋</span><div>まよったら広場の<b>掲示板</b>で「きょうのミッション」</div></div>
     <div class="gd"><span>🎮</span><div>${touchMode ? "左で動く・右で見回す・右下のボタンで操作" : "<kbd>WASD</kbd> 動く　クリック パンチ　右クリック つかむ　<kbd>E</kbd> 調べる"}</div></div>
-  </div><div class="small">くわしいことは「📖 あそびかた」（${touchMode ? "上の 📖" : "H キー"}）でいつでも見られるよ</div>`, [
+  </div><div class="small">くわしいことは「📖 あそびかた」（${touchMode ? "下の 📖" : "H キー"}）でいつでも見られるよ</div>`, [
     { label: "遊ぶ！", fn: () => { controls = true; } },
     { label: "📖 あそびかた", fn: () => openGuide(0) },
   ]);
@@ -9638,7 +9665,7 @@ const TUT = [
   { t: () => "🪙 近くに出た ✨コイン✨ を拾おう！（コインでいろいろ買えるよ）", setup: tutCoins, ok: (s) => wallet > s.w0 },
   { t: () => touchMode ? "🤾 近くのぬいぐるみを「つかむ」ボタンでつかんで、もう一回おして投げよう！" : "🤾 近くのぬいぐるみを <b>右クリック</b>でつかんで、はなしてぶん投げよう！", setup: tutBot, ok: (s) => s.threw, skipIf: () => !net.isHost },
   { t: () => touchMode ? "🥤 ▼の自販機の前の光る輪で「調べる」ボタン。お店も同じように使えるよ" : "🥤 ▼の自販機の前の光る輪で <kbd>E</kbd>（調べる）。お店も同じように使えるよ", target: () => [VENDING[0][0] - 0.6, 3.2, VENDING[0][1] + 0.4], ok: () => !$("shopP").hidden },
-  { t: () => touchMode ? "🗺️ 上の 🗺️ ボタンで地図を見よう" : "🗺️ <kbd>Tab</kbd>キーで地図を見よう（もう一回おすと海まで、もう一回でとじる）", ok: () => !!bigMap },
+  { t: () => touchMode ? "🗺️ 下の 🗺️ ボタンで地図を見よう" : "🗺️ <kbd>Tab</kbd>キーで地図を見よう（もう一回おすと海まで、もう一回でとじる）", ok: () => !!bigMap },
   { t: () => touchMode ? "📋 ▼の掲示板で「調べる」。ミッション・アルバイト・あそびかたが見られるよ" : "📋 ▼の掲示板で <kbd>E</kbd>。ミッション・アルバイト・あそびかたが見られるよ", target: () => [-9.5, 3.9, -5], ok: () => !$("shopP").hidden && $("shopTitle").textContent.includes("掲示板") },
 ];
 const tut = { on: false, i: 0, s: null, wait: 0, arrow: null, lastYaw: 0, lastPos: null };
@@ -9661,7 +9688,7 @@ function tutNext() {
   const T = TUT[tut.i];
   tut.s = { moved: 0, looked: 0, w0: wallet, threw: false }; tut.lastPos = me.pos.clone(); tut.lastYaw = camYaw; tut.wait = 0;
   if (T.setup) T.setup();
-  if (T.target) { const [x, y, z] = T.target(); tut.arrow = makeLabel("▼", "#ffd84a", 2.4); tut.arrow.position.set(x, y, z); tut.arrow.userData.y = y; world.add(tut.arrow); }
+  if (T.target) { const [x, y, z] = T.target(); tut.arrow = makeLabel("▼", "#ffd84a", 2.4, { xray: true }); tut.arrow.position.set(x, y, z); tut.arrow.userData.y = y; world.add(tut.arrow); }
   $("tutText").innerHTML = T.t(); $("tutStep").textContent = `チュートリアル ${tut.i + 1}/${TUT.length}`; $("tutBox").classList.remove("done");
 }
 function tutUpdate(dt) {
@@ -9679,7 +9706,7 @@ function tutEnd(done) {
   if (!done) return;
   const first = !townSave.tutDone; townSave.tutDone = true; saveTown(true);
   if (first) gotCoins(100, "🎓 チュートリアルクリア！");
-  setTimeout(() => showMsg("🎓 チュートリアルクリア！", `これで準備OK！<br>まよったら <b>📖 あそびかた</b>（${touchMode ? "上の 📖" : "H キー"}）や、広場の <b>📋掲示板</b> を見てね。<br>コインを集めて、お店・ガチャ・つり・ボードゲーム…自由に遊ぼう！`, [{ label: "遊ぶ！", fn: () => { controls = true; } }]), 900);
+  setTimeout(() => showMsg("🎓 チュートリアルクリア！", `これで準備OK！<br>まよったら <b>📖 あそびかた</b>（${touchMode ? "下の 📖" : "H キー"}）や、広場の <b>📋掲示板</b> を見てね。<br>コインを集めて、お店・ガチャ・つり・ボードゲーム…自由に遊ぼう！`, [{ label: "遊ぶ！", fn: () => { controls = true; } }]), 900);
 }
 function tutCoins() { if (!net.isHost) { tut.s.w0 = -1; return; } for (let k = 0; k < 3; k++) { const a = me.ry + rand(-0.6, 0.6), r = 2.5 + k; spawnCoin(me.pos.x + Math.sin(a) * r, 0, me.pos.z + Math.cos(a) * r, 1); } }
 function tutBot() { const b = town.bots[2]; if (!b) return; b.pos.set(me.pos.x + Math.sin(me.ry) * 2, 0, me.pos.z + Math.cos(me.ry) * 2); b.vel.set(0, 0, 0); b.model.g.position.copy(b.pos); b.model.place(); }
