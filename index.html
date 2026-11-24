@@ -309,7 +309,7 @@
     <button id="tbJump" class="big" data-k="Space">ジャンプ</button>
   </div>
   <div id="tTop" class="town">
-    <button data-k="KeyV">👁</button><button data-k="Tab">🗺️</button><button data-k="KeyP">📸</button><button data-k="KeyQ">🍙</button><button data-k="KeyZ">👋</button><button data-k="KeyX">💃</button><button data-k="KeyR">🤝</button><button data-k="KeyC">📞</button><button data-k="KeyH">📖</button><button data-k="KeyT">💬</button>
+    <button data-k="KeyV">👁</button><button data-k="Tab">🗺️</button><button data-k="KeyP">📸</button><button data-k="KeyQ">🍙</button><button data-k="KeyZ">👋</button><button data-k="KeyX">💃</button><button data-k="KeyR">🤝</button><button data-k="KeyC">📞</button><button data-k="KeyH">📖</button><button data-k="KeyT">💬</button><button data-k="KeyJ" id="tbHunt" style="display:none">🏹</button>
   </div>
   <div id="tItems" class="story">
     <button data-k="Digit1">1</button><button data-k="Digit2">2</button><button data-k="Digit3">3</button><button data-k="Digit4">4</button><button data-k="KeyV">👁</button><button data-k="KeyP">📸</button><button data-k="KeyT">💬</button>
@@ -1466,6 +1466,8 @@ function myState() {
 }
 
 function updateCamera(dt) {
+  camera.up.set(0, 1, 0);
+  if (mode === "town" && me.coaster && cst.curve) { coasterCam(); return; }
   // ゲームセンター・コインランドリーでは、カメラを決まった場所に
   if (mode === "town" && me.ufo) { const U = me.ufo.U; camera.position.set(U.x, 2.7, U.z - 3.3); camera.lookAt(U.x, 1.5, U.z); return; }
   if (mode === "town" && me.wash) { const w = me.wash.w; camera.position.set(w.x + 3.2, 1.7, w.z); camera.lookAt(w.x, 0.9, w.z); return; }
@@ -1630,7 +1632,7 @@ function onNet(d, conn) {
     case "relay": // （ホスト）ほかの人へとどける
       if (d.to === net.myId) onNet(d.msg, conn); else sendTo(d.to, d.msg);
       break;
-    case "mode": startMode(d.mode, d.stage); break;
+    case "mode": startMode("town"); break;
     case "stage": loadStage(d.index); break;
     case "over": storyGameOver(d.name, d.who); break;
     case "clearStage": stageClear(); break;
@@ -7173,6 +7175,8 @@ function badUpdate(dt) {
 // =====================================================================
 function funTownUpdate(dt) {
   trailsUpdate(dt);
+  hunterUpdate(dt);
+  monHint();
   fpsWatch(dt);
   armyUpdate(dt);
   stayUpdate(dt);
@@ -7225,6 +7229,7 @@ addEventListener("keydown", (e) => {
   if (!controls || mode !== "town" || e.repeat) return;
   if (e.code === "KeyC") callPolice();
   if (e.code === "KeyH") openGuide(0);
+  if (e.code === "KeyJ") openHunters();
 });
 
 // =====================================================================
@@ -7236,7 +7241,7 @@ const GUIDE = [
     : `<div class="gd"><span>🕹️</span><div><kbd>WASD</kbd> うごく　<kbd>スペース</kbd> ジャンプ　マウス：見回す　ホイール：ズーム</div></div><div class="gd"><span>✊</span><div><b>クリック</b>：パンチ・使う（長おしでぐるぐるパンチ）<br><b>右クリック</b>：つかむ → はなすとぶん投げる！</div></div><div class="gd"><span>⌨️</span><div><kbd>E</kbd> 調べる・入る　<kbd>F</kbd> 乗り物　<kbd>Q</kbd> 食べる　<kbd>1</kbd>〜<kbd>5</kbd> 持ちかえ　<kbd>Tab</kbd> 地図<br><kbd>R</kbd> わたす・フレンド　<kbd>C</kbd> けいさつを呼ぶ　<kbd>H</kbd> このガイド　<kbd>P</kbd> 写真　<kbd>V</kbd> 一人称　<kbd>Shift</kbd> 力をぬく</div></div>` },
   { t: "🗺️ 町の場所", h: () => `<div class="gd"><span>🏪</span><div><b>広場のまわり</b>：服屋・ご飯屋・おもちゃ屋・乗り物屋　<b>道ぞい</b>：武器屋・空の乗り物屋・ハローワーク</div></div><div class="gd"><span>🎰</span><div><b>ガチャ屋</b>（東）・<b>ボードゲームカフェ</b>（西：オセロ・五目ならべ・4目ならべ・トランプ。ちがう機械の友だちとネット対戦も！）・<b>📋掲示板</b>（広場：ミッション・宝の地図・スタンプラリー・おにごっこ・フレンド）</div></div><div class="gd"><span>🎡</span><div><b>南</b>：遊園地（観覧車・<b>🎢ジェットコースター</b>・レース）・<b>🎣つり場</b>（南の桟橋の先）・<b>♨️旅館と温泉</b>・<b>🍹リゾート</b>（南東）<br><b>北</b>：ビル街・<b>🏨ホテル</b>　<b>北西</b>：展望タワー・<b>⛺キャンプ場</b><br><b>西</b>：サッカー場・ゲームセンター・コインランドリー　<b>東</b>：けいさつ署・ろうや</div></div><div class="gd"><span>🏝️</span><div>海の<b>小島</b>には番人と金庫。<b>大砲</b>で飛んでいける。お金をためたら<b>自分の島</b>も！</div></div>` },
   { t: "💰 お金", h: () => `<div class="gd"><span>⬆️</span><div><b>かせぐ</b>：コインを拾う・仕事（ハローワーク）・つり・ボードゲーム・🗺️宝の地図・ミッション・わるもの退治・モンスター退治・おばけの写真</div></div><div class="gd"><span>⬇️</span><div><b>使う</b>：🎰ガチャ（ぼうし・エフェクト・金ピカ）・お店・武器・乗り物・つりのエサ・オセロのかけ・ぬいへのプレゼント・自分の島</div></div><div class="gd"><span>📋</span><div><b>きょうのミッション</b>：毎日3つ。ぜんぶクリアで🎫ガチャ券！（広場の掲示板）</div></div>` },
-  { t: "⚡ イベント", h: () => `<div class="gd"><span>😈</span><div><b>わるものぬい団</b>：何人もせめてくる。みんなでやっつけよう</div></div><div class="gd"><span>🦖</span><div><b>モンスター</b>／<b>👑キングモンスター</b>（まれ）／<b>💀最強の魔王モンスター</b>（すごくまれ）</div></div><div class="gd"><span>✨</span><div>金色のぬい・ダンスパーティー・家族が来る・天気（雨・雷・マグマ・お金の雨）</div></div><div class="gd"><span>🚨</span><div>悪いことを見られると<b>けいさつ</b>が追ってくる。つかまると<b>ろうや</b>→脱獄！<br>なぐられたり撃たれたら、10秒以内に <b>C で通報</b>できる（なにもされていないのに呼ぶと<b>罰金</b>！）</div></div>` },
+  { t: "⚡ イベント", h: () => `<div class="gd"><span>😈</span><div><b>わるものぬい団</b>：何人もせめてくる。みんなでやっつけよう</div></div><div class="gd"><span>🏹</span><div><b>怪獣ハンター</b>：モンスターが来たら J（スマホは🏹）でハンターを呼べる。よけたり遠くからうったりして、ちゃんと戦ってくれる</div></div><div class="gd"><span>🦖</span><div><b>モンスター</b>／<b>👑キングモンスター</b>（まれ）／<b>💀最強の魔王モンスター</b>（すごくまれ）</div></div><div class="gd"><span>✨</span><div>金色のぬい・ダンスパーティー・家族が来る・天気（雨・雷・マグマ・お金の雨）</div></div><div class="gd"><span>🚨</span><div>悪いことを見られると<b>けいさつ</b>が追ってくる。つかまると<b>ろうや</b>→脱獄！<br>なぐられたり撃たれたら、10秒以内に <b>C で通報</b>できる（なにもされていないのに呼ぶと<b>罰金</b>！）</div></div>` },
   { t: "🌙 朝と夜", h: () => `<div class="gd"><span>🌅</span><div>1日＝12分。毎朝おこづかい。<b>日曜日はお祭り</b>（コイン2倍）</div></div><div class="gd"><span>🎆</span><div>夜は<b>花火大会</b>・<b>👻おばけぬい</b>（P で写真にとるとコイン）・<b>🌠流れ星</b>（Z でおねがい）・夜だけの魚</div></div><div class="gd"><span>📜</span><div><b>やくそく書</b>：相手のそばで R。3日以内にわたさないと…ろうや！</div></div>` },
   { t: "👫 フレンド", h: () => `<div class="gd"><span>💛</span><div>部屋で友だちのそばで <b>R →「フレンドになろう」</b>。いっしょに遊ぶとレベルが上がってコインがもらえる。掲示板からそばにワープもできる</div></div><div class="gd"><span>🧸</span><div>町のぬいに <b>R →「プレゼント」</b>。❤5で<b>親友</b>になって、ついてきていっしょに戦ってくれる</div></div><div class="gd"><span>🪖</span><div><b>島の軍隊</b>：自分の島で Q →「島の軍隊」。兵士（剣士・弓兵・盾兵）をやとって、島を守る・ボディガード・部隊を作って地図に作戦をかく！</div></div><div class="gd"><span>🏅</span><div><b>称号</b>：いろいろなことをすると手に入る。名札に出るよ</div></div>` },
 ];
@@ -7275,6 +7280,7 @@ function openBoard() {
     { html: `<div style="width:100%"><b>📋 きょうのミッション</b><br>${missionsHtml()}</div>` },
     { html: stampCard() },
     { name: "🏃 おにごっこ（部屋のみんなで）", desc: tag.on ? "いまおにごっこ中！" : net.online ? "部屋にいるみんなでおにごっこ！ にげきると30コイン" : "部屋に2人以上いるときにできるよ", btn: tag.on ? "やっている" : "はじめる", disabled: tag.on || !net.online, fn: () => { startTag(); closeShop(); return false; } },
+    { name: "🏹 怪獣ハンターをよぶ", desc: "コインでハンターをやとうと、モンスターとたたかってくれる（J キーでも呼べる）", btn: "えらぶ", fn: () => { openHunters(); return false; } },
     { name: "🗺️ 宝の地図", desc: townSave.treasure ? "持っている！ 右上のヒントをたよりにさがそう" : "町のどこかにうまっている宝箱の場所がわかる（コイン・ガチャ券・レアなぼうしなど）", btn: townSave.treasure ? "持っている" : "50🪙で買う", disabled: !!townSave.treasure, fn: () => { buyTreasureMap(); } },
     { name: "👫 フレンド・プロフィール・称号", desc: "", btn: "ひらく", fn: () => { openFriends(); return false; } },
     { name: "📖 あそびかた", desc: "そうさ・町の場所・お金・イベント…", btn: "ひらく", fn: () => { closeShop(); openGuide(0); return false; } },
@@ -7288,7 +7294,7 @@ function buildFunTown() {
   buildFishing();
   buildBoard();
   Object.assign(badEv, { on: false, remote: null, meshes: [], timer: rand(260, 420) });
-  town.bad = []; callP.cars = []; fish.state = null; town.trSpot = null; town.trSpark = null; armyReset();
+  town.bad = []; callP.cars = []; fish.state = null; town.trSpot = null; town.trSpark = null; armyReset(); hunterReset();
   buildStamps();
   buildStay();
   buildCoaster();
@@ -8880,26 +8886,49 @@ addEventListener("pointerup", () => { pv.drag = null; });
 function updatePvBtn() { const b = $("bSpin"); if (b) b.textContent = pv.auto ? "🔄 自動でまわす：ON" : "🔄 自動でまわす：OFF"; }
 function previewRot(dt) { if (pv.auto && !pv.drag) pv.rot += dt * 0.8; return pv.rot; }
 
-// ---- ジェットコースター（遊園地の上を走る） ----
-const COASTER_PTS = [[8, 3.2, 49], [-4, 3.2, 49], [-15, 8, 49], [-25, 17, 49.5], [-33, 16, 51.5], [-38, 6, 56], [-35, 3.5, 62], [-26, 9, 66], [-13, 14, 66], [-3, 6, 63.5], [6, 10.5, 60], [12.5, 7, 56], [14, 4.2, 52]];
-const cst = { curve: null, L: 0, cars: [], liftEnd: 0.27, ride: null };
+// ---- ジェットコースター（遊園地の上を走る・一回転つき） ----
+const LOOP_C = { x: -28, y: 9.5, r: 5.2, z0: 62.6, z1: 65.0 };
+const COASTER_PTS = (() => {
+  const a = [[8, 3.2, 49], [-4, 3.2, 49], [-15, 8, 49], [-25, 17, 49.5], [-33, 16, 51.5], [-38, 6, 56], [-36, 3.6, 61]];
+  for (let k = 0; k <= 8; k++) { const th = k / 8 * Math.PI * 2; a.push([LOOP_C.x + LOOP_C.r * Math.sin(th), LOOP_C.y - LOOP_C.r * Math.cos(th), LOOP_C.z0 + (LOOP_C.z1 - LOOP_C.z0) * k / 8]); }
+  a.push([-21, 5.2, 66.2], [-13, 12, 66], [-3, 6, 63.5], [6, 10.5, 60], [12.5, 7, 56], [14, 4.2, 52]);
+  return a;
+})();
+const cst = { curve: null, L: 0, cars: [], liftEnd: 0.24, ride: null, up: [] };
+const WORLD_UP = new V3(0, 1, 0);
+// 一回転の中では「上」が輪の中心を向く（さかさまになる）
+function coasterUpAt(p) {
+  const dx = LOOP_C.x - p.x, dy = LOOP_C.y - p.y, d = Math.hypot(dx, dy);
+  if (p.z > LOOP_C.z0 - 0.5 && p.z < LOOP_C.z1 + 0.5 && Math.abs(d - LOOP_C.r) < 1.6 && p.y > LOOP_C.y - LOOP_C.r - 0.6) return new V3(dx / d, dy / d, 0);
+  return WORLD_UP.clone();
+}
+function coasterFrame(u) {
+  const p = cst.curve.getPointAt(u), t = cst.curve.getTangentAt(u).normalize();
+  let up = coasterUpAt(p); up.sub(t.clone().multiplyScalar(up.dot(t))).normalize();
+  if (!isFinite(up.x) || up.lengthSq() < 0.5) up = WORLD_UP.clone();
+  const side = new V3().crossVectors(t, up).normalize();
+  return { p, t, up, side };
+}
+function setBasis(obj, f) { const m = new THREE.Matrix4().makeBasis(f.side.clone().negate(), f.up, f.t); obj.quaternion.setFromRotationMatrix(m); }
 function buildCoaster() {
   const pts = COASTER_PTS.map(([x, y, z]) => new V3(x, y, z));
-  const curve = new THREE.CatmullRomCurve3(pts, true, "centripetal");
-  cst.curve = curve; cst.L = curve.getLength();
+  cst.curve = new THREE.CatmullRomCurve3(pts, true, "centripetal"); cst.L = cst.curve.getLength();
   // レール（2本）
-  const N = 260, left = [], right = [], up = new V3(0, 1, 0);
-  for (let i = 0; i < N; i++) { const u = i / N, p = curve.getPointAt(u), t = curve.getTangentAt(u); const side = new V3().crossVectors(t, up).normalize().multiplyScalar(0.48); left.push(p.clone().add(side)); right.push(p.clone().sub(side)); }
+  const N = 320, left = [], right = [];
+  for (let i = 0; i < N; i++) { const f = coasterFrame(i / N); left.push(f.p.clone().addScaledVector(f.side, 0.48)); right.push(f.p.clone().addScaledVector(f.side, -0.48)); }
   const railMat = toonMat(0xff3a5a);
-  for (const arr of [left, right]) { const c = new THREE.CatmullRomCurve3(arr, true); const tube = new THREE.Mesh(new THREE.TubeGeometry(c, 520, 0.09, 6, true), railMat); world.add(tube); }
+  for (const arr of [left, right]) world.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arr, true), 640, 0.09, 6, true), railMat));
   // まくら木と柱（まとめて1回でかく）
-  const nTie = Math.floor(cst.L / 1.6), nSup = Math.floor(cst.L / 6);
+  const nTie = Math.floor(cst.L / 1.5), o = new THREE.Object3D();
   const ties = new THREE.InstancedMesh(new THREE.BoxGeometry(1.25, 0.08, 0.22), toonMat(0x8a6a4a), nTie);
-  const sups = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.11, 0.14, 1, 6), toonMat(0xd8d8e0), nSup);
-  const o = new THREE.Object3D();
-  for (let i = 0; i < nTie; i++) { const u = i / nTie, p = curve.getPointAt(u), q = curve.getPointAt((u + 0.002) % 1); o.position.copy(p); o.position.y -= 0.12; o.lookAt(q.x, q.y - 0.12, q.z); o.scale.set(1, 1, 1); o.updateMatrix(); ties.setMatrixAt(i, o.matrix); }
-  for (let i = 0; i < nSup; i++) { const u = (i + 0.5) / nSup, p = curve.getPointAt(u), h = Math.max(0.5, p.y - 0.2); o.position.set(p.x, h / 2, p.z); o.rotation.set(0, 0, 0); o.scale.set(1, h, 1); o.updateMatrix(); sups.setMatrixAt(i, o.matrix); }
+  for (let i = 0; i < nTie; i++) { const f = coasterFrame(i / nTie); o.position.copy(f.p).addScaledVector(f.up, -0.12); setBasis(o, f); o.scale.set(1, 1, 1); o.updateMatrix(); ties.setMatrixAt(i, o.matrix); }
+  const supList = [];
+  for (let i = 0; i < Math.floor(cst.L / 6); i++) { const f = coasterFrame((i + 0.5) / Math.floor(cst.L / 6)); if (f.up.y > 0.9) supList.push(f.p); }
+  supList.push(new V3(LOOP_C.x - 2.5, LOOP_C.y - LOOP_C.r, 63.8), new V3(LOOP_C.x + 2.5, LOOP_C.y - LOOP_C.r, 63.8)); // 一回転の足
+  const sups = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.11, 0.14, 1, 6), toonMat(0xd8d8e0), supList.length);
+  supList.forEach((p, i) => { const h = Math.max(0.5, p.y - 0.2); o.position.set(p.x, h / 2, p.z); o.quaternion.identity(); o.scale.set(1, h, 1); o.updateMatrix(); sups.setMatrixAt(i, o.matrix); });
   world.add(ties, sups);
+  const ll = makeLabel("🌀 一回転！", "#ffd84a", 1.6); ll.position.set(LOOP_C.x, LOOP_C.y + LOOP_C.r + 2, 63.8); world.add(ll);
   // 駅
   addBox(5, 0, 49, 9, 2.75, 3.2, 0xffd84a);
   addBox(5, 5.6, 49, 9.6, 0.3, 3.6, 0xff5ca8, { collide: false });
@@ -8918,52 +8947,192 @@ function buildCoaster() {
     if (k === 0) { const nose = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.6, 8), toonMat(0xffffff)); nose.rotation.x = Math.PI / 2; nose.position.set(0, 0.3, 1.0); g.add(nose); }
     world.add(g); cst.cars.push(g);
   }
-  cst.s = 0; cst.ride = null; placeCoasterCars(0);
+  cst.ride = null; placeCoasterCars(0);
 }
 function placeCoasterCars(s) {
   if (!cst.curve) return;
-  cst.cars.forEach((g, k) => {
-    const u = (((s - k * 1.75) % cst.L) + cst.L) % cst.L / cst.L;
-    const p = cst.curve.getPointAt(u), q = cst.curve.getPointAt((u + 0.003) % 1);
-    g.position.copy(p); g.lookAt(q);
-  });
+  cst.cars.forEach((g, k) => { const u = (((s - k * 1.75) % cst.L) + cst.L) % cst.L / cst.L; const f = coasterFrame(u); g.position.copy(f.p); setBasis(g, f); });
 }
 function startCoaster() {
   if (me.coaster) return;
   if (!pay(20)) return;
   if (me.veh) setVehicle(null);
-  me.coaster = { s: 0, v: 3, cheer: 0, top: false }; me.vel.set(0, 0, 0);
-  play("item"); toast("🎢 しゅっぱーつ！ スペース（ジャンプ）をおしてると、ばんざいするよ", 2600);
+  me.coaster = { s: 0, v: 3, cheer: 0, top: false, loop: false }; me.vel.set(0, 0, 0);
+  play("item"); toast("🎢 しゅっぱーつ！ 一回転もあるよ！<br>スペース（ジャンプ）をおしてると、ばんざいする", 2800);
 }
 function coasterRide(p, dt) {
   const C = p.coaster, L = cst.L;
-  const u = C.s / L, P = cst.curve.getPointAt(u % 1);
-  if (u < cst.liftEnd) { C.v += (4 - C.v) * Math.min(1, dt * 2); if (Math.random() < dt * 4) play("place"); }
-  else if (u > 0.93) C.v += (2.5 - C.v) * Math.min(1, dt * 1.5);
-  else C.v = clamp(Math.sqrt(Math.max(16, 2 * 9.8 * (17.6 - P.y))), 4, 24);
+  const u = (C.s / L) % 1, f0 = coasterFrame(u);
+  if (C.s / L < cst.liftEnd) { C.v += (4 - C.v) * Math.min(1, dt * 2); if (Math.random() < dt * 4) play("place"); }
+  else if (C.s / L > 0.94) C.v += (2.5 - C.v) * Math.min(1, dt * 1.5);
+  else C.v = clamp(Math.sqrt(Math.max(16, 2 * 9.8 * (17.6 - f0.p.y))), 4, 24);
   C.s += C.v * dt;
   const cheering = keys.Space || touchJump();
-  if (cheering && C.v > 13) C.cheer += dt;
-  if (u > 0.3 && u < 0.4 && !C.top) { C.top = true; play("whistle"); }
+  if (cheering && C.v > 12) C.cheer += dt;
+  if (C.s / L > 0.27 && !C.top) { C.top = true; play("whistle"); }
   placeCoasterCars(C.s);
-  const uu = (C.s / L) % 1, pos = cst.curve.getPointAt(uu), nx = cst.curve.getPointAt((uu + 0.003) % 1);
-  p.pos.set(pos.x, pos.y + 0.45, pos.z);
-  p.ry = Math.atan2(nx.x - pos.x, nx.z - pos.z);
-  camYaw = lerpAngle(camYaw, p.ry + Math.PI, Math.min(1, dt * 4));
+  const f = coasterFrame((C.s / L) % 1);
+  if (f.up.y < -0.5 && !C.loop) { C.loop = true; toast("🌀 一回転〜〜！！", 1500); play("whistle"); }
+  p.pos.copy(f.p).addScaledVector(f.up, 0.45);
+  p.ry = Math.atan2(f.t.x, f.t.z);
   p.onGround = true; p.vel.set(0, 0, 0);
   p.model.g.position.copy(p.pos); p.model.g.rotation.y = p.ry;
   p.model.animate(dt, { speed: 0, air: false, limp: false, punch: 0, stun: 0, t: p.t, emote: cheering ? "dance" : null });
   if (C.s >= L) {
     p.coaster = null; placeCoasterCars(0);
     p.pos.set(5, 0, 52.2); p.model.g.position.copy(p.pos); p.model.place(); p.vel.set(0, 0, 0);
+    camYaw = Math.PI;
     if (C.cheer > 2.5) gotCoins(15, `🎢 さいこう！ ばんざい ${C.cheer.toFixed(1)}秒！`);
     else toast("🎢 たのしかった〜！ 目がまわる〜", 2000);
     p.stun = 1.2;
   }
 }
+// コースターのカメラ（一回転ではいっしょにさかさまになる）
+function coasterCam() {
+  const f = coasterFrame((me.coaster.s / cst.L) % 1);
+  camera.up.copy(f.up);
+  if (firstPerson) {
+    camera.position.copy(f.p).addScaledVector(f.up, 1.15);
+    camera.lookAt(f.p.x + f.t.x * 6 + f.up.x * 0.9, f.p.y + f.t.y * 6 + f.up.y * 0.9, f.p.z + f.t.z * 6 + f.up.z * 0.9);
+    me.model.g.visible = false;
+  } else {
+    camera.position.copy(f.p).addScaledVector(f.t, -4.6).addScaledVector(f.up, 2.3);
+    camera.lookAt(f.p.x + f.t.x * 3 + f.up.x * 0.8, f.p.y + f.t.y * 3 + f.up.y * 0.8, f.p.z + f.t.z * 3 + f.up.z * 0.8);
+    me.model.g.visible = true;
+  }
+  return true;
+}
 function touchJump() { const b = $("tbJump"); return !!(b && b.classList.contains("on")); }
 
 applyGfx();
+// =====================================================================
+//  21. 怪獣ハンターを呼ぶ（コインでやとう。よけたり、遠くからうったり、ちゃんと戦う）
+// =====================================================================
+const HUNTERS = {
+  solo: { name: "ハンター", e: "🏹", cost: 150, list: ["bow"], desc: "弓のハンターが1人来る" },
+  team: { name: "ハンター隊", e: "⚔️", cost: 400, list: ["sword", "bow", "sword"], desc: "大剣2人＋弓1人のチーム" },
+  legend: { name: "伝説のハンター", e: "👑", cost: 1000, list: ["legend"], desc: "とても強い！ 大ジャンプぎり（キングモンスターも1人でたおせるかも）" },
+};
+const HK = {
+  bow: { name: "弓ハンター", hp: 140, dmg: 18, cd: 1.1, far: true, sp: 6.5, c1: "#8a6a3a", hat: "cap", hc: "#5a3a1a" },
+  sword: { name: "大剣ハンター", hp: 220, dmg: 26, cd: 0.85, far: false, sp: 6.5, c1: "#a03a3a", hat: "helmet", hc: "#c0c8d0" },
+  legend: { name: "伝説のハンター", hp: 600, dmg: 55, cd: 0.7, far: false, sp: 8, c1: "#ffd84a", hat: "crown", hc: "#ffd84a" },
+};
+const hunt = { list: [], prevWind: false, prevTier: 0 };
+function makeHunterModel(k) {
+  const H = HK[k];
+  const cv = document.createElement("canvas"); cv.width = 256; cv.height = 128; const c = cv.getContext("2d");
+  c.fillStyle = H.c1; c.fillRect(0, 0, 256, 128); c.fillStyle = "#2a1a1a"; c.fillRect(0, 70, 256, 14); c.fillStyle = "#ffd84a"; c.fillRect(120, 70, 16, 14);
+  const model = makePlush(new THREE.CanvasTexture(cv), H.c1, `${k === "legend" ? "👑" : "🏹"}${H.name}`);
+  model.setHat(H.hat, H.hc); model.setFace("goro", "smile");
+  const g = new THREE.Group(); model.g.add(g);
+  if (k === "bow") { const b = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.025, 6, 14, Math.PI), toonMat(0x6a3a1a)); b.position.set(0.32, 0.6, 0.12); b.rotation.set(0, Math.PI / 2, Math.PI / 2); g.add(b); }
+  else { const big = k === "legend"; const bl = new THREE.Mesh(new THREE.BoxGeometry(big ? 0.14 : 0.1, big ? 1.3 : 0.95, 0.04), toonMat(big ? 0xfff0a0 : 0xd8e0ea)); bl.position.set(0.35, 0.85, -0.1); bl.rotation.z = -0.3; g.add(bl); }
+  // パラシュート
+  const chute = new THREE.Mesh(new THREE.SphereGeometry(1.1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: pick([0xff5c7a, 0x4cc9f0, 0xffd84a]), side: THREE.DoubleSide }));
+  chute.position.y = 2.6; model.g.add(chute);
+  world.add(model.g);
+  return { model, chute };
+}
+function openHunters() {
+  const m = monView();
+  const rows = [{ html: m && m.hp > 0 ? `<b style="color:#ff8a8a">${MON_TIER[m.tier || 1].name} があばれている！</b>　HP ${m.hp}/${m.max}` : "<span class='small'>いまはモンスターがいないよ。モンスターが来たら呼んでね（呼んだハンターは、モンスターが来るまでまっていてくれる）</span>" }];
+  for (const [k, H] of Object.entries(HUNTERS)) rows.push({ name: `${H.e} ${H.name}をよぶ`, desc: H.desc, btn: `${H.cost}🪙`, fn: () => { if (hunt.list.filter((h) => !h.gone).length >= 6) { toast("ハンターはいっぺんに6人まで", 1500); return; } if (!pay(H.cost)) return; callHunters(H.list); closeShop(); return false; } });
+  rows.push({ html: "<span class='small'>ハンターがあたえたダメージは、あなたのぶんになるよ（モンスターをたおすとお礼がもらえる）</span>" });
+  openPanel("🏹 怪獣ハンター事務所", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい`, rows, openHunters);
+}
+function callHunters(kinds) {
+  kinds.forEach((k, i) => {
+    const { model, chute } = makeHunterModel(k), a = rand(0, Math.PI * 2) + i;
+    const pos = new V3(me.pos.x + Math.cos(a) * 5, me.pos.y + 22 + i * 2, me.pos.z + Math.sin(a) * 5);
+    model.g.position.copy(pos); model.place();
+    hunt.list.push({ k, model, chute, pos, vel: new V3(), ry: 0, hp: HK[k].hp, max: HK[k].hp, state: "drop", cd: rand(0.3, 1), t: 0, punch: 0, leap: 0, jumpCD: 3, gone: false, leaveT: 0 });
+  });
+  play("item"); toast(`🪂 ${kinds.length > 1 ? "ハンター隊" : HK[kinds[0]].name}が空からやってきた！`, 2200);
+}
+function hunterUpdate(dt) {
+  if (!hunt.list.length) return;
+  const m = monView(), alive = m && m.hp > 0;
+  const T = m ? MON_TIER[m.tier || 1] : MON_TIER[1];
+  const R = 4.8 * T.r, sc = T.sc;
+  // ふみつけの瞬間（ためが終わったとき）
+  const wind = !!(m && m.wind), stomped = hunt.prevWind && !wind && alive;
+  hunt.prevWind = wind;
+  for (const h of hunt.list) {
+    if (h.gone) continue;
+    const H = HK[h.k]; h.t += dt; if (h.punch > 0) h.punch -= dt; h.cd -= dt; h.jumpCD -= dt;
+    let goal = null, sp = H.sp, air = false;
+    if (h.state === "drop") {
+      h.vel.y = -4; h.pos.y += h.vel.y * dt; air = true;
+      const gy = groundAt(h.pos, 0.26);
+      if (h.pos.y <= gy) { h.pos.y = gy; h.state = "fight"; h.model.g.remove(h.chute); puff(h.pos.x, h.pos.y + 0.3, h.pos.z, 8); }
+    } else if (h.state === "dead") {
+      h.leaveT -= dt; if (h.leaveT <= 0) { h.gone = true; world.remove(h.model.g); continue; }
+    } else if (h.state === "leave") {
+      h.leaveT -= dt; goal = new V3(h.pos.x + Math.cos(h.ry) * 10, 0, h.pos.z + Math.sin(h.ry) * 10);
+      if (h.leaveT <= 0) { h.gone = true; puff(h.pos.x, h.pos.y + 0.5, h.pos.z, 10); world.remove(h.model.g); continue; }
+    } else if (!alive) {
+      // モンスターがいない：あなたのそばでまつ（たおしたあとは、よろこんで帰る）
+      if (hunt.prevTier && m && m.hp <= 0 && !h.cheered) { h.cheered = true; h.emote = "dance"; h.state = "leave"; h.leaveT = 6; continue; }
+      h.idle = (h.idle || 0) + dt; if (h.idle > 180) { h.state = "leave"; h.leaveT = 5; hunterSay(h, "またよんでね！"); continue; }
+      const d = Math.hypot(me.pos.x - h.pos.x, me.pos.z - h.pos.z); if (d > 4) goal = me.pos;
+      if (d > 40) { h.pos.set(me.pos.x + rand(-3, 3), me.pos.y + 0.5, me.pos.z + rand(-3, 3)); h.model.place(); }
+    } else {
+      // たたかう
+      h.idle = 0;
+      const dx = m.pos.x - h.pos.x, dz = m.pos.z - h.pos.z, d = Math.hypot(dx, dz) || 1;
+      if (wind && d < R + 1.5) { goal = new V3(m.pos.x - dx / d * (R + 4), 0, m.pos.z - dz / d * (R + 4)); sp = H.sp * 1.4; if (!h.saidDodge) { h.saidDodge = true; hunterSay(h, pick(["よけろ！", "くるぞ！", "ひらり！"])); } }
+      else {
+        h.saidDodge = false;
+        const want = H.far ? R + 5 : 2.6 * sc + 0.6;
+        if (d > want + 1) goal = new V3(m.pos.x - dx / d * want, 0, m.pos.z - dz / d * want);
+        else if (H.far && d < want - 2) goal = new V3(m.pos.x - dx / d * (want + 1), 0, m.pos.z - dz / d * (want + 1));
+        h.ry = Math.atan2(dx, dz);
+        if (d <= want + 1.5 && h.cd <= 0) {
+          h.cd = H.cd * rand(0.9, 1.15); h.punch = 0.3;
+          if (H.far) { shootArrow(h.pos, new V3(m.pos.x, m.pos.y + 3 * sc, m.pos.z)); }
+          else play("punch");
+          doHitMon(H.dmg);
+          if (Math.random() < 0.15) hunterSay(h, pick(["くらえ！", "まだまだ！", "ねらいうち！", "とどめだ！"]));
+        }
+        // 伝説のハンター：大ジャンプぎり
+        if (h.k === "legend" && h.jumpCD <= 0 && d < 12 && !wind) { h.jumpCD = 5; h.vel.y = 11; h.leap = 1; hunterSay(h, "大ジャンプぎり！"); }
+      }
+      if (stomped && d < R) { const dmg = T.dmg; h.hp -= dmg; puff(h.pos.x, h.pos.y + 0.6, h.pos.z, 8); popText(h.pos.x, h.pos.y + 1.8, h.pos.z, `-${dmg}`, "#ff8a8a"); h.vel.y = 6; }
+      if (h.hp <= 0) { h.state = "dead"; h.leaveT = 3; hunterSay(h, "む、むねん…"); play("ko"); toast(`🏹 ${H.name}がやられた…`, 1500); }
+    }
+    // 動く
+    if (h.state !== "drop") {
+      let mx = 0, mz = 0;
+      if (goal && h.state !== "dead") { const gx = goal.x - h.pos.x, gz = goal.z - h.pos.z, gd = Math.hypot(gx, gz); if (gd > 0.6) { mx = gx / gd; mz = gz / gd; } }
+      h.vel.x += (mx * sp - h.vel.x) * Math.min(1, dt * 6); h.vel.z += (mz * sp - h.vel.z) * Math.min(1, dt * 6);
+      h.vel.y -= 20 * dt; h.pos.addScaledVector(h.vel, dt);
+      if (onLand(h.pos.x, h.pos.z)) resolveXZ(h.pos, 0.26, 1);
+      const gy = groundAt(h.pos, 0.26);
+      if (h.pos.y <= gy) { h.pos.y = gy; h.vel.y = 0; if (h.leap) { h.leap = 0; if (alive) { doHitMon(H.dmg * 2); explodeFx(h.pos.clone(), 2, 0xfff0a0); play("boom"); } } }
+      if (!onLand(h.pos.x, h.pos.z) && h.pos.y < SEA_Y - 0.3) { h.pos.y = SEA_Y - 0.3; h.vel.y = 0; }
+      air = h.pos.y > gy + 0.3;
+      if (Math.hypot(h.vel.x, h.vel.z) > 0.5 && !(alive && h.state === "fight")) h.ry = lerpAngle(h.ry, Math.atan2(h.vel.x, h.vel.z), Math.min(1, dt * 8));
+    }
+    if (h.bubbleT > 0) { h.bubbleT -= dt; if (h.bubble) h.bubble.position.set(h.pos.x, h.pos.y + 2.4, h.pos.z); if (h.bubbleT <= 0 && h.bubble) { world.remove(h.bubble); h.bubble = null; } }
+    if (h.label !== Math.round(h.hp) && h.model.nameTag && h.state !== "drop") { h.label = Math.round(h.hp); relabel(h.model.nameTag, `${HK[h.k].name} ${Math.max(0, h.label)}/${h.max}`, h.k === "legend" ? "#ffd84a" : "#fff"); }
+    h.model.g.position.copy(h.pos); h.model.g.rotation.y = h.ry;
+    h.model.animate(dt, { speed: Math.hypot(h.vel.x, h.vel.z), air, limp: h.state === "dead", punch: h.punch, stun: 0, t: h.t, emote: h.state === "leave" ? "dance" : null });
+  }
+  hunt.prevTier = alive ? m.tier || 1 : hunt.prevTier && m ? hunt.prevTier : 0;
+  hunt.list = hunt.list.filter((h) => !h.gone);
+}
+function hunterSay(h, text) { if (h.bubble) world.remove(h.bubble); h.bubble = makeLabel(text, "#fff", 0.8); world.add(h.bubble); h.bubbleT = 1.8; }
+function hunterReset() { hunt.list = []; hunt.prevWind = false; hunt.prevTier = 0; }
+
+// モンスターが来たら、ハンターを呼べることを教える（スマホは🏹ボタンを出す）
+function monHint() {
+  const m = monView(), alive = !!(m && m.hp > 0);
+  if (alive && !hunt.hinted) { hunt.hinted = true; setTimeout(() => toast("🏹 J（スマホは 🏹）で、怪獣ハンターを呼べるよ！", 3000), 3800); }
+  if (!alive) hunt.hinted = false;
+  const b = $("tbHunt"); if (b) { const v = alive ? "" : "none"; if (b.style.display !== v) b.style.display = v; }
+}
+
 // 町モードで届いたメッセージ（onNet から呼ばれる）
 function onNetTown(d, conn) {
   if (onNetCity(d, conn)) return;
@@ -9290,7 +9459,7 @@ function openPainter(after) {
 }
 $("bPaint").onclick = () => { initAudio(); readName(); openPainter(() => { $("titleP").hidden = false; playMusic(null); }); };
 function needLook(next) { if (!hadLook) { toast("まずは体に絵をかこう！"); openPainter(next); } else next(); }
-$("bSolo").onclick = () => { goFullscreen(); initAudio(); readName(); needLook(() => { net.online = false; net.isHost = true; showModeSelect(); }); };
+$("bSolo").onclick = () => { goFullscreen(); initAudio(); readName(); needLook(() => { net.online = false; net.isHost = true; startMode("town"); }); };
 $("bHost").onclick = () => { goFullscreen(); initAudio(); readName(); needLook(() => { showModeSelect(); hostRoom(); }); };
 $("bJoin").onclick = () => { goFullscreen(); initAudio(); readName(); needLook(() => { $("titleP").hidden = true; $("joinP").hidden = false; $("codeIn").focus(); }); };
 $("bJoinGo").onclick = () => { const c = $("codeIn").value.trim(); if (!/^\d{5}$/.test(c)) { $("joinMsg").textContent = "5けたの数字を入れてね"; return; } joinRoom(c); };
@@ -9303,7 +9472,7 @@ $("bJoinBack").onclick = () => { $("joinP").hidden = true; $("titleP").hidden = 
 $("bBack").onclick = () => location.reload();
 function showModeSelect() {
   $("titleP").hidden = true; $("modeP").hidden = false;
-  $("bStory").hidden = false; $("bTown").hidden = false;
+  $("bStory").hidden = true; $("bTown").hidden = false; // ストーリーモードはなくした
   $("modeTitle").textContent = "モードをえらぼう";
   $("roomInfo").textContent = net.online || net.peer ? $("roomInfo").textContent : "";
 }
