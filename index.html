@@ -326,6 +326,13 @@
   #tBtns button.ico { font-size: 28px; line-height: 1; } #tBtns button.big.ico { font-size: 34px; }
   body:has(#shopP:not([hidden])) #hpbar, body:has(#shopP:not([hidden])) #foodbar { z-index: 14; }
   body:has(#shopP:not([hidden])) #hpbar { box-shadow: 0 0 0 3px #ffd84a88; } body:has(#shopP:not([hidden])) #foodbar { box-shadow: 0 0 0 3px #ffd84a88; }
+  #bPause { position: fixed; z-index: 7; right: calc(130px + env(safe-area-inset-right)); bottom: 34px; font-size: 16px; padding: 6px 12px; background: #ffffffdd; }
+  body.touch:not(.oldUI) #bPause { bottom: auto; top: calc(48px + env(safe-area-inset-top)); right: calc(214px + env(safe-area-inset-right)); font-size: 13px; padding: 4px 9px; }
+  body.touch.oldUI #bPause { bottom: auto; top: calc(120px + env(safe-area-inset-top)); right: calc(104px + env(safe-area-inset-right)); font-size: 13px; padding: 4px 9px; }
+  #pauseP { position: fixed; inset: 0; z-index: 20; background: rgba(20, 10, 40, .6); display: flex; align-items: center; justify-content: center; }
+  #pauseP[hidden] { display: none; }
+  .pzBox { background: rgba(40, 25, 80, .95); border: 3px solid #ffd84a; border-radius: 20px; padding: 18px 28px; display: flex; flex-direction: column; gap: 10px; align-items: center; min-width: 240px; }
+  .pzBox h2 { margin: 0; color: #ffd84a; } .pzBox button { width: 100%; font-size: 17px; }
 </style>
 <!-- 3D 表示の部品（Three.js）と、部屋コードで遊ぶための部品（PeerJS）。インターネットから読み込む -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -335,6 +342,8 @@
 <div id="hud"></div>
 <div id="hudR"></div>
 <button id="bTitle" hidden>タイトルへ</button>
+<button id="bPause" hidden title="一時停止">⏸</button>
+<div id="pauseP" hidden><div class="pzBox"><h2>⏸ 一時停止中</h2><p class="small">ひとりで遊んでいるときだけ止められるよ</p><button id="bResume">▶ つづける</button><button id="bPauseGuide" class="sub">📖 あそびかた</button><button id="bPauseTitle" class="pink">タイトルへ</button></div></div>
 <div id="watch" hidden><div>👀 あやしまれている…</div><div class="bar"><div></div></div></div>
 <div id="saveInd" hidden>💾 オートセーブしました</div>
 <div id="help"></div>
@@ -492,6 +501,46 @@
     <button class="tool face" data-mouth="frown">への字</button>
     <button class="tool face" data-mouth="tongue">ぺろっ</button>
     <button class="tool face" data-mouth="o">おー</button>
+  </div>
+  <div class="row" data-def="curl">
+    <span class="small">しっぽ</span>
+    <button class="tool" data-part="tail" data-v="curl">くるん</button>
+    <button class="tool" data-part="tail" data-v="long">ながい</button>
+    <button class="tool" data-part="tail" data-v="fox">きつね</button>
+    <button class="tool" data-part="tail" data-v="bunny">まるい</button>
+    <button class="tool" data-part="tail" data-v="devil">あくま</button>
+    <button class="tool" data-part="tail" data-v="dragon">ドラゴン</button>
+    <button class="tool" data-part="tail" data-v="none">なし</button>
+  </div>
+  <div class="row" data-def="none">
+    <span class="small">かみがた</span>
+    <button class="tool" data-part="hair" data-v="none">なし</button>
+    <button class="tool" data-part="hair" data-v="bob">おかっぱ</button>
+    <button class="tool" data-part="hair" data-v="spiky">ツンツン</button>
+    <button class="tool" data-part="hair" data-v="twin">ツイン</button>
+    <button class="tool" data-part="hair" data-v="pony">ポニー</button>
+    <button class="tool" data-part="hair" data-v="afro">アフロ</button>
+    <button class="tool" data-part="hair" data-v="mohawk">モヒカン</button>
+  </div>
+  <div class="row">
+    <span class="small">かみの色</span><span id="hairColors" class="row"></span>
+  </div>
+  <div class="row" data-def="round">
+    <span class="small">頭の形</span>
+    <button class="tool" data-part="head" data-v="round">まる</button>
+    <button class="tool" data-part="head" data-v="big">でっかい</button>
+    <button class="tool" data-part="head" data-v="small">ちいさい</button>
+    <button class="tool" data-part="head" data-v="long">たて長</button>
+    <button class="tool" data-part="head" data-v="wide">よこ長</button>
+  </div>
+  <div class="row" data-def="none">
+    <span class="small">角</span>
+    <button class="tool" data-part="horn" data-v="none">なし</button>
+    <button class="tool" data-part="horn" data-v="devil">あくま</button>
+    <button class="tool" data-part="horn" data-v="unicorn">ユニコーン</button>
+    <button class="tool" data-part="horn" data-v="oni">おに</button>
+    <button class="tool" data-part="horn" data-v="deer">シカ</button>
+    <button class="tool" data-part="horn" data-v="dragon">ドラゴン</button>
   </div>
   <div class="row">
     <button class="tool" id="bRotL">◀ 回す</button><button class="tool" id="bRotR">回す ▶</button><button class="tool" id="bSpin">🔄 自動でまわす：ON</button><span class="small">キャラをドラッグしても回せるよ</span>
@@ -1038,7 +1087,52 @@ function makePlush(texture, limbColor, label) {
   ];
   const hands = { lHand: ball(0.075), rHand: ball(0.075), lFoot: ball(0.09), rFoot: ball(0.09) };
   hands.lFoot.scale.set(1, 0.7, 1.4); hands.rFoot.scale.set(1, 0.7, 1.4);
-  const tail = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.05, 8, 18, Math.PI * 1.6), limb); parts.add(tail);
+  // しっぽ・かみがた・角（キャラメイクでえらべる）
+  const tail = new THREE.Group(); parts.add(tail);
+  const hairG = new THREE.Group(), hornG = new THREE.Group(); headG.add(hairG); headG.add(hornG);
+  let partsKey = null;
+  function buildParts(o) {
+    const key = [o.tail, o.hair, o.hairColor, o.head, o.horn].join("|"); if (key === partsKey) return; partsKey = key;
+    const add = (grp, geo, m, x, y, z) => { const ms = new THREE.Mesh(geo, m); ms.position.set(x, y, z); grp.add(ms); return ms; };
+    const clear = (grp) => { while (grp.children.length) grp.remove(grp.children[0]); };
+    // 頭の形（顔・かみ・角・ぼうしも形に合わせる）
+    const HS = { round: [1.12, 0.95, 1.1], big: [1.3, 1.1, 1.25], small: [0.95, 0.82, 0.95], long: [1.0, 1.22, 1.05], wide: [1.38, 0.86, 1.12] }[o.head] || [1.12, 0.95, 1.1];
+    head.scale.set(HS[0], HS[1], HS[2]);
+    const r = [HS[0] / 1.12, HS[1] / 0.95, HS[2] / 1.1];
+    for (const gg of [faceG, hairG, hornG]) gg.scale.set(r[0], r[1], r[2]);
+    hatG.position.y = 0.27 * r[1];
+    // しっぽ（うしろ = +x、上 = +y）
+    clear(tail);
+    const tk = o.tail || "curl";
+    if (tk === "curl") tail.add(new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.05, 8, 18, Math.PI * 1.6), limb));
+    else if (tk === "long") { for (let i = 0; i < 6; i++) add(tail, new THREE.SphereGeometry(0.055 - i * 0.005, 8, 6), limb, 0.02 + i * 0.07, i * i * 0.012, 0); }
+    else if (tk === "bunny") add(tail, new THREE.SphereGeometry(0.1, 10, 8), white, 0.05, 0, 0);
+    else if (tk === "fox") { const c = add(tail, new THREE.SphereGeometry(0.1, 10, 8), limb, 0.17, 0.08, 0); c.scale.set(2.2, 1, 1); c.rotation.z = 0.5; add(tail, new THREE.SphereGeometry(0.075, 8, 6), white, 0.35, 0.19, 0); }
+    else if (tk === "devil") { for (let i = 0; i < 5; i++) add(tail, new THREE.SphereGeometry(0.03, 6, 5), limb, 0.03 + i * 0.06, Math.sin(i * 0.9) * 0.04 + i * 0.02, 0); const c = add(tail, new THREE.ConeGeometry(0.06, 0.12, 4), black, 0.34, 0.12, 0); c.rotation.z = -Math.PI / 2; }
+    else if (tk === "dragon") { for (let i = 0; i < 5; i++) { add(tail, new THREE.SphereGeometry(0.07 - i * 0.01, 8, 6), limb, 0.03 + i * 0.08, -i * 0.025, 0); add(tail, new THREE.ConeGeometry(0.025, 0.07, 4), gold, 0.03 + i * 0.08, 0.06 - i * 0.03, 0); } }
+    // かみがた
+    clear(hairG);
+    const hm = new THREE.MeshToonMaterial({ color: new THREE.Color(o.hairColor || "#5a3a2a") });
+    const hk = o.hair || "none";
+    const cap = () => { const c = add(hairG, new THREE.SphereGeometry(0.335, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.42), hm, 0, 0, -0.02); c.scale.set(1.12, 0.95, 1.1); c.rotation.x = -0.55; return c; };
+    if (hk === "bob") cap();
+    else if (hk === "spiky") { for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; const c = add(hairG, new THREE.ConeGeometry(0.06, 0.2, 6), hm, Math.cos(a) * 0.14, 0.27, Math.sin(a) * 0.12 - 0.04); c.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5); } add(hairG, new THREE.ConeGeometry(0.07, 0.24, 6), hm, 0, 0.33, -0.02); }
+    else if (hk === "twin") { cap(); for (const sx of [-1, 1]) { const b = add(hairG, new THREE.SphereGeometry(0.09, 10, 8), hm, sx * 0.36, -0.02, -0.06); b.scale.set(0.9, 1.6, 0.9); } }
+    else if (hk === "pony") { cap(); const b = add(hairG, new THREE.SphereGeometry(0.1, 10, 8), hm, 0, 0.1, -0.38); b.scale.set(0.9, 1.7, 0.9); b.rotation.x = 0.5; }
+    else if (hk === "afro") add(hairG, new THREE.SphereGeometry(0.36, 14, 10), hm, 0, 0.16, -0.12);
+    else if (hk === "mohawk") { for (let i = 0; i < 6; i++) add(hairG, new THREE.BoxGeometry(0.06, 0.16, 0.08), hm, 0, 0.3 - Math.abs(i - 2.5) * 0.02, 0.18 - i * 0.08); }
+    // 角
+    clear(hornG);
+    const nk = o.horn || "none";
+    if (nk === "devil") { const m2 = new THREE.MeshToonMaterial({ color: 0xc02a3a }); for (const sx of [-1, 1]) { const e = add(hornG, new THREE.ConeGeometry(0.05, 0.18, 8), m2, sx * 0.13, 0.3, 0.04); e.rotation.z = -sx * 0.45; } }
+    else if (nk === "unicorn") { const e = add(hornG, new THREE.ConeGeometry(0.045, 0.28, 10), gold, 0, 0.3, 0.18); e.rotation.x = 0.55; }
+    else if (nk === "oni") add(hornG, new THREE.ConeGeometry(0.06, 0.16, 8), new THREE.MeshToonMaterial({ color: 0xffe08a }), 0, 0.33, 0.05);
+    else if (nk === "deer") { const m2 = new THREE.MeshToonMaterial({ color: 0x8a5a3a }); for (const sx of [-1, 1]) { const a = add(hornG, new THREE.CylinderGeometry(0.02, 0.025, 0.22, 6), m2, sx * 0.14, 0.36, 0); a.rotation.z = -sx * 0.3; const b = add(hornG, new THREE.CylinderGeometry(0.015, 0.02, 0.12, 6), m2, sx * 0.2, 0.42, 0.04); b.rotation.z = -sx * 1.0; } }
+    else if (nk === "dragon") { const m2 = new THREE.MeshToonMaterial({ color: 0xf4f0e0 }); for (const sx of [-1, 1]) { const e = add(hornG, new THREE.ConeGeometry(0.045, 0.24, 8), m2, sx * 0.14, 0.27, -0.1); e.rotation.set(-0.9, 0, -sx * 0.3); } }
+    toonify(tail); toonify(hairG); toonify(hornG);
+  }
+  buildParts({});
+
   const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.3, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.14, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2; parts.add(shadow);
   // ---- ここから：乗り物と武器（細かく作る） ----
@@ -1160,6 +1254,7 @@ function makePlush(texture, limbColor, label) {
     g, parts, skin, limb, headG, hatG, car, gun, st, nameTag,
     get rd() { return rd; },
     setLimb(c) { limb.color.set(c); },
+    setParts(o) { buildParts(o || {}); },
     setFace(eye, mouth) { const k = (eye || "goro") + (mouth || "smile"); if (k === faceKey) return; faceKey = k; buildFace(eye || "goro", mouth || "smile"); },
     setHat(kind, color) { model._setHat(kind, color); toonify(hatG); },
     _setHat(kind, color) {
@@ -1203,8 +1298,8 @@ function makePlush(texture, limbColor, label) {
       if (st.last && Math.hypot(x - st.last.x, y - st.last.y, z - st.last.z) > 3) { rdPlace(rd, x, y, z, ry); st.last = null; }
       const last = st.last || { x, y, z };
       const k = 1 / Math.max(dt, 1e-3);
-      const c = { x, y, z, ry, vx: (x - last.x) * k, vy: (y - last.y) * k, vz: (z - last.z) * k, speed: s.speed || 0, air: s.air, limp: s.limp, punch: s.punch > 0, aim: s.aim, car: veh === "car" || (veh && VEHICLES[veh] && VEHICLES[veh].fly), big: s.big,
-        small: s.small, skate: s.skate || veh === "skate", bmx: veh === "bmx", slide: s.slide, climb: s.climb, ride: s.ride, balloon: s.balloon, emote: s.emote, t: s.t || 0, mountH, grab: s.grab, spin: s.spin };
+      const c = { x, y, z, ry, vx: (x - last.x) * k, vy: (y - last.y) * k, vz: (z - last.z) * k, speed: s.speed || 0, air: s.air, limp: s.limp, punch: s.punch > 0, aim: s.aim, car: isCarV(veh) || (veh && VEHICLES[veh] && VEHICLES[veh].fly), big: s.big,
+        small: s.small, skate: s.skate || veh === "skate" || veh === "proskate", bmx: veh === "bmx", slide: s.slide, climb: s.climb, ride: s.ride, balloon: s.balloon, emote: s.emote, t: s.t || 0, mountH, grab: s.grab, spin: s.spin };
       if (Math.abs(c.vy) > 30) c.vy = 0;
       st.last = { x, y, z };
       // ほかの人・ボットが気絶したら、ここでふっとばす
@@ -1252,17 +1347,18 @@ function makePlush(texture, limbColor, label) {
       for (const e of eyes) { e.t += dt; e.p.position.y = e.by + Math.sin(e.t * 1.7) * e.amp * 1.5; e.p.position.x = e.bx + e.sx * Math.sin(e.t * 2.3) * e.amp; }
       // かげ・車・銃・名前
       shadow.position.set(pel.x, y + 0.02, pel.z); shadow.scale.setScalar(sc);
-      car.visible = veh === "car"; car.position.set(x, y, z); car.rotation.y = ry;
+      car.visible = isCarV(veh); car.position.set(x, y, z); car.rotation.y = ry;
+      if (car.visible && st.carKind !== veh) { st.carKind = veh; if (veh === "sports") car.scale.set(1.05, 0.8, 1.18); else if (veh === "monster") car.scale.set(1.35, 1.5, 1.3); else car.scale.set(1, 1, 1); }
       if (car.visible) { const cc = s.carColor != null ? s.carColor : 0xff5c7a; if (st.carCol !== cc) { st.carCol = cc; car.userData.body.material.color.set(cc); } }
       for (const k in mounts) { const on = veh === k; mounts[k].visible = on; if (on) { mounts[k].position.set(x, y, z); mounts[k].rotation.set(k === "carpet" ? Math.sin((s.t || 0) * 3) * 0.04 : 0, ry, 0); } }
       for (const w of mountWings) w.rotation.z = Math.sin((s.t || 0) * 9) * 0.5 * Math.sign(w.position.x);
-      skate.visible = !!c.skate; if (skate.visible) { skate.position.set(x, y, z); skate.rotation.set(0, ry, 0); const vc = s.vc != null ? s.vc : 0x9a5ad8; if (st.skc !== vc) { st.skc = vc; skate.userData.mat.color.setHex(vc); } }
+      skate.visible = !!c.skate; if (skate.visible) { skate.position.set(x, y, z); skate.rotation.set(0, ry, 0); const vc = s.vc != null ? s.vc : veh === "proskate" ? 0x2a2a2a : 0x9a5ad8; if (st.skc !== vc) { st.skc = vc; skate.userData.mat.color.setHex(vc); } }
       bmx.visible = veh === "bmx"; if (bmx.visible) { bmx.position.set(x, y, z); bmx.rotation.order = "YXZ"; bmx.rotation.set(0, ry, 0); const vc = s.vc != null ? s.vc : 0xd84a4a; if (st.bmc !== vc) { st.bmc = vc; bmx.userData.mat.color.setHex(vc); } }
       // 持っている武器
       const wpn = s.limp ? null : s.weapon || (s.gun ? "gun" : s.hammer ? "hammer" : null);
       for (const k in weapons) {
         const W = weapons[k], melee = k === "hammer" || k === "katana" || k === "sword";
-        W.visible = wpn === k && !(melee && veh && veh !== "skate") && veh !== "car";
+        W.visible = wpn === k && !(melee && veh && veh !== "skate") && !isCarV(veh);
         if (!W.visible) continue;
         if (melee) { const hA = P("rElbow").clone(), hB = P("rHand").clone(); W.position.copy(hB); orient(W, vB.copy(hB).sub(hA).normalize(), facing); W.scale.setScalar(sc); }
         else if (k === "bazooka") { W.position.copy(che).add(new V3(Math.cos(ry) * -0.22 * sc, 0.22 * sc, -Math.sin(ry) * -0.22 * sc)); W.rotation.set(0, ry, 0); W.scale.setScalar(sc); }
@@ -1370,6 +1466,7 @@ function makeMe() {
   if (me) world.remove(me.model.g);
   const model = makePlush(myTexture, myLook.limb, null);
   model.setHat(myLook.hat, myLook.hatColor);
+  model.setParts(lookParts());
   model.setFace(myLook.eye, myLook.mouth);
   me = {
     model, pos: new V3(), vel: new V3(), ry: 0, onGround: true, limp: false, stun: 0, punch: 0, aimT: 0,
@@ -1378,7 +1475,7 @@ function makeMe() {
   };
   scene.add(model.g);
 }
-function refreshMyModel() { if (me) { me.model.setLimb(myLook.limb); me.model.setHat(myLook.hat, myLook.hatColor); me.model.setFace(myLook.eye, myLook.mouth); if (me.model.setOutfit) me.model.setOutfit(myOutfit()); } }
+function refreshMyModel() { if (me) { me.model.setParts(lookParts()); me.model.setLimb(myLook.limb); me.model.setHat(myLook.hat, myLook.hatColor); me.model.setFace(myLook.eye, myLook.mouth); if (me.model.setOutfit) me.model.setOutfit(myOutfit()); } }
 function spawnMe(x, y, z, yaw = 0) {
   me.pos.set(x, y, z); me.vel.set(0, 0, 0); me.limp = false; me.stun = 0; me.ko = 0;
   camYaw = yaw; me.ry = yaw + Math.PI;
@@ -1453,18 +1550,23 @@ function updateMe(dt) {
   const inPond = town_ && town.waters.some((w) => Math.hypot(p.pos.x - w.x, p.pos.z - w.z) < w.r && p.pos.y < 0.3);
   // 海の中（泳ぐ）
   const inSea = town_ && !p.fly && p.pos.y < SEA_Y + 0.15 && !onLand(p.pos.x, p.pos.z);
-  if (inSea && !p.wasInSea) { play("squish"); if (p.veh === "skate" || p.veh === "car") { setVehicle(null); toast("ザブーン！ 泳ごう（スペースで水から上がる）", 1800); } }
+  if (inSea && !p.wasInSea) { play("squish"); if (isSkateV(p.veh) || isCarV(p.veh)) { setVehicle(null); toast("ザブーン！ 泳ごう（スペースで水から上がる）", 1800); } }
   p.wasInSea = inSea;
   let len = 0;
   if (p.car) {
     // ---- 車：W/S でアクセル・バック、A/D でハンドル ----
-    const maxF = 13 * (p.buffs.speed > 0 ? 1.3 : 1), maxB = -5;
-    if (iz > 0) p.carSpeed = Math.min(maxF, p.carSpeed + 9 * dt);
+    const CU = carUp();
+    if (controls && keys.ShiftLeft && !p.nitroHeld && (CU.nitro || 0) > 0 && !(p.nitroT > 0)) { CU.nitro--; p.nitroT = 2.5; saveTown(true); play("boom"); shake = Math.max(shake, 0.2); toast(`🔥 ニトロ！（のこり ${CU.nitro}）`, 1200); }
+    p.nitroHeld = !!keys.ShiftLeft; p.nitroT = Math.max(0, (p.nitroT || 0) - dt);
+    const nit = p.nitroT > 0, baseV = p.veh === "sports" ? 20 : p.veh === "monster" ? 12 : 13;
+    const maxF = baseV * (1 + 0.12 * (CU.engine || 0)) * (p.buffs.speed > 0 ? 1.3 : 1) * (nit ? 1.6 : 1), maxB = -5;
+    if (nit) p.carSpeed = Math.max(p.carSpeed, 6);
+    if (iz > 0 || nit) p.carSpeed = Math.min(maxF, p.carSpeed + 9 * (1 + 0.15 * (CU.engine || 0)) * (nit ? 3 : 1) * dt);
     else if (iz < 0) p.carSpeed = Math.max(maxB, p.carSpeed - (p.carSpeed > 0 ? 16 : 7) * dt);
     else p.carSpeed *= Math.pow(0.35, dt);
     if (inPond) p.carSpeed *= Math.pow(0.1, dt);
-    if (snowy) p.carSpeed *= Math.pow(0.8, dt);
-    const steer = clamp(Math.abs(p.carSpeed) / 4, 0, 1) * 2.4 * Math.sign(p.carSpeed);
+    if (snowy) p.carSpeed *= Math.pow(0.8 + 0.06 * (CU.tire || 0), dt);
+    const steer = clamp(Math.abs(p.carSpeed) / 4, 0, 1) * 2.4 * (1 + 0.2 * (CU.tire || 0)) * Math.sign(p.carSpeed);
     if (p.onGround) p.ry -= ix * steer * dt;
     const fx = Math.sin(p.ry), fz = Math.cos(p.ry);
     if (p.onGround) { p.vel.x = fx * p.carSpeed; p.vel.z = fz * p.carSpeed; }
@@ -1490,23 +1592,23 @@ function updateMe(dt) {
     let mx = fx * iz + rx * ix, mz = fz * iz + rz * ix;
     len = Math.hypot(mx, mz);
     if (len > 0) { mx /= len; mz /= len; }
-    let speed = p.skate ? (p.veh === "bmx" ? 9 : 7.5) : 4.2;
+    let speed = p.skate ? (p.veh === "bmx" ? 9 : p.veh === "proskate" ? 10.5 : 7.5) : 4.2;
     if (p.buffs.speed > 0) speed *= 1.6;
     if (p.buffs.big > 0) speed *= 1.15;
     if (p.buffs.small > 0) speed *= 0.9;
     if (inPond) speed *= 0.45;
     if (inSea) speed *= 0.5;
     // スケボーは、ゆっくり加速して、すーっとすべる。雪の日はつるつる
-    const accel = slip ? 5 : inSea ? 6 : p.skate ? (p.onGround ? 9 : 4) : snowy ? 7 : p.onGround ? 30 : 12;
+    const accel = slip ? 5 : inSea ? 6 : p.skate ? (p.onGround ? (p.veh === "proskate" ? 5.5 : 9) : 4) : snowy ? 7 : p.onGround ? 30 : 12;
     if (len || !p.skate) {
       p.vel.x += clamp(mx * speed - p.vel.x, -accel * dt, accel * dt);
       p.vel.z += clamp(mz * speed - p.vel.z, -accel * dt, accel * dt);
     }
     if (!len && p.onGround && p.stun <= 0 && !slip && !p.skate && !snowy) { p.vel.x *= Math.pow(0.0005, dt); p.vel.z *= Math.pow(0.0005, dt); }
-    if (!len && p.skate && p.onGround) { p.vel.x *= Math.pow(0.4, dt); p.vel.z *= Math.pow(0.4, dt); }
+    if (!len && p.skate && p.onGround) { const fr = p.veh === "proskate" ? 0.8 : 0.4; p.vel.x *= Math.pow(fr, dt); p.vel.z *= Math.pow(fr, dt); }
     const hs = Math.hypot(p.vel.x, p.vel.z);
     if (firstPerson && !p.skate) p.ry = Math.atan2(-Math.sin(camYaw), -Math.cos(camYaw));
-    else if (p.skate && hs > 0.5) p.ry = lerpAngle(p.ry, Math.atan2(p.vel.x, p.vel.z), Math.min(1, dt * 6));
+    else if (p.skate && hs > 0.5) p.ry = lerpAngle(p.ry, Math.atan2(p.vel.x, p.vel.z), Math.min(1, dt * (p.veh === "proskate" ? 3 : 6)));
     else if (len > 0.1) p.ry = lerpAngle(p.ry, Math.atan2(mx, mz), Math.min(1, dt * 12));
   }
   // ジャンプ
@@ -1528,10 +1630,18 @@ function updateMe(dt) {
   } else p.vel.y -= 18 * dt;
   if (!keys.Space) p.jumpLock = false;
   const r = 0.26 * (p.buffs.big > 0 ? 1.6 : p.buffs.small > 0 ? 0.6 : 1) * (p.car ? 1.7 : p.fly && p.veh !== "cow" ? 1.6 : 1), h = 1.0;
-  const oldY = p.pos.y;
+  const oldY = p.pos.y, ox0 = p.pos.x, oz0 = p.pos.z;
   p.pos.x += p.vel.x * dt; p.pos.z += p.vel.z * dt;
   const bx = p.pos.x, bz = p.pos.z;
   resolveXZ(p.pos, r, h);
+  // 車：前（バックのときはうしろ）のはしがかべに入りそうなら止まる（かべをすりぬけない）
+  if (p.car) {
+    const sg = p.carSpeed >= 0 ? 1 : -1, L = (p.veh === "monster" ? 1.45 : p.veh === "sports" ? 1.2 : 1.05) * (sg > 0 ? 1 : 1.1);
+    const fx = Math.sin(p.ry) * sg, fz = Math.cos(p.ry) * sg, rx = Math.cos(p.ry) * 0.42, rz = -Math.sin(p.ry) * 0.42, hy = p.pos.y + 0.8;
+    if (pointBlocked(p.pos.x + fx * L, hy, p.pos.z + fz * L) || pointBlocked(p.pos.x + fx * L + rx, hy, p.pos.z + fz * L + rz) || pointBlocked(p.pos.x + fx * L - rx, hy, p.pos.z + fz * L - rz)) {
+      p.pos.x = ox0; p.pos.z = oz0; if (Math.abs(p.carSpeed) > 8) { play("squish"); shake = 0.15; } p.carSpeed *= 0.2; p.vel.x *= 0.2; p.vel.z *= 0.2;
+    }
+  }
   // 車でかべにぶつかったら止まる
   if (p.car && Math.hypot(p.pos.x - bx, p.pos.z - bz) > 0.01) { if (Math.abs(p.carSpeed) > 8) { play("squish"); shake = 0.15; } p.carSpeed *= 0.3; }
   p.pos.y += p.vel.y * dt;
@@ -1580,7 +1690,7 @@ let respawnHere = () => {};
 
 function myState() {
   const p = me;
-  return { x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), ry: +p.ry.toFixed(2), sp: +Math.hypot(p.vel.x, p.vel.z).toFixed(1), air: !p.onGround, limp: p.limp || p.ko > 0 || !!p.wash || !!p.bowl || !!p.heldBy, mv: p.moving && !p.limp, pu: p.punch > 0, st: p.stun > 0, big: p.buffs.big > 0, sm: p.buffs.small > 0, car: p.car, sk: p.skate, vh: p.veh || null, gb: p.grab ? (p.grab.kind === "player" ? p.grab.id : 1) : 0, hl: p.heldBy ? 1 : 0, fz: p.flat > 0 ? 1 : 0, sn: p.spin > 0 ? 1 : 0, pol: mode === "town" ? policeState() : null, cc: p.carColor, vc: p.vehColor != null ? p.vehColor : null, sl: p.slideT > 0 ? 1 : 0, cl: p.climbT > 0 ? 1 : 0, wa: wantedStars(), hd: mode === "town" ? p.held : null, fl: p.float > 0, em: p.emote, rd: p.ride || null, inv: p.invis > 0, hat: myLook.hat, hc: myLook.hatColor, lc: myLook.limb, ey: myLook.eye, mo: myLook.mouth, tr: townSave.trailOn || null, gd: townSave.goldOn && townSave.goldBody ? 1 : 0, tt: townSave.title || 0, so: mode === "town" ? soldierState() : null, ou: myOutfit() };
+  return { x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), ry: +p.ry.toFixed(2), sp: +Math.hypot(p.vel.x, p.vel.z).toFixed(1), air: !p.onGround, limp: p.limp || p.ko > 0 || !!p.wash || !!p.bowl || !!p.heldBy, mv: p.moving && !p.limp, pu: p.punch > 0, st: p.stun > 0, big: p.buffs.big > 0, sm: p.buffs.small > 0, car: p.car, sk: p.skate, vh: p.veh || null, gb: p.grab ? (p.grab.kind === "player" ? p.grab.id : 1) : 0, hl: p.heldBy ? 1 : 0, fz: p.flat > 0 ? 1 : 0, sn: p.spin > 0 ? 1 : 0, pol: mode === "town" ? policeState() : null, cc: p.carColor, vc: p.vehColor != null ? p.vehColor : null, sl: p.slideT > 0 ? 1 : 0, cl: p.climbT > 0 ? 1 : 0, wa: wantedStars(), hd: mode === "town" ? p.held : null, fl: p.float > 0, em: p.emote, rd: p.ride || null, inv: p.invis > 0, hat: myLook.hat, hc: myLook.hatColor, lc: myLook.limb, ey: myLook.eye, mo: myLook.mouth, pt: [myLook.tail || "", myLook.hair || "", myLook.hairColor || "", myLook.head || "", myLook.horn || ""], tr: townSave.trailOn || null, gd: townSave.goldOn && townSave.goldBody ? 1 : 0, tt: townSave.title || 0, so: mode === "town" ? soldierState() : null, ou: myOutfit() };
 }
 
 function updateCamera(dt) {
@@ -1933,6 +2043,7 @@ function updateRemotes(dt) {
     r.model.g.position.copy(r.pos); r.model.g.rotation.y = r.ry;
     { const tagT = remoteTag(r, s); if (tagT !== r.lastTag && r.model.nameTag) { r.lastTag = tagT; relabel(r.model.nameTag, tagT, s.wa ? "#ff8a8a" : isFriend(r.name) ? "#ffe08a" : "#fff"); } }
     r.model.setLimb(s.lc || "#6bd66b"); r.model.setHat(s.hat, s.hc); r.model.setFace(s.ey, s.mo);
+    if (s.pt) r.model.setParts({ tail: s.pt[0] || undefined, hair: s.pt[1] || undefined, hairColor: s.pt[2] || undefined, head: s.pt[3] || undefined, horn: s.pt[4] || undefined });
     // うしろに乗っている人は、運転している人の乗り物の高さにすわる
     let rideH = 0;
     if (s.rd) { const dv = s.rd === net.myId ? me.veh : net.players[s.rd] && net.players[s.rd].state && net.players[s.rd].state.vh; rideH = dv && VEHICLES[dv] ? VEHICLES[dv].h || 0 : 0; }
@@ -2638,6 +2749,9 @@ const MELEE = ["hammer", "katana", "sword"], GUNS = ["gun", "mgun", "shotgun", "
 const VEHICLES = {
   skate:  { name: "スケボー",         seats: 1 },
   bmx:    { name: "BMX",              seats: 1, h: 0.18 },
+  proskate: { name: "プロスケボー",   seats: 1 },
+  sports: { name: "スポーツカー",     seats: 2, seatPos: [[0, 0, -0.8]] },
+  monster: { name: "モンスタートラック", seats: 2, h: 0.4, seatPos: [[0, 0, -0.95]] },
   car:    { name: "おもちゃの車",     seats: 2, seatPos: [[0, 0, -0.75]] },
   cow:    { name: "空飛ぶ牛",         seats: 1, fly: true, speed: 8,  h: 0.55 },
   horse:  { name: "空飛ぶ馬",         seats: 2, fly: true, speed: 10.5, h: 0.62, seatPos: [[0, 0, -0.55]] },
@@ -2756,6 +2870,10 @@ const SHOPS = [
     { id: "skate", name: "スケボー", price: 20, kind: "own", desc: "スイスイ速い（F で乗る）" },
     { id: "car", name: "おもちゃの車", price: 50, kind: "own", desc: "W/S で進む・A/D でハンドル。2人乗り" },
     { id: "bmx", name: "BMX", price: 40, kind: "own", desc: "スケボーより速い自転車。空中でクリック（🤸）で技！" },
+    { id: "proskate", name: "プロスケボー（むずかしい）", price: 120, kind: "own", desc: "とても速いけど、すべってまがりにくい。技の点が2倍！（成功させるのもむずかしい）" },
+    { id: "sports", name: "スポーツカー", price: 600, kind: "own", desc: "ものすごく速い車！ 2人乗り" },
+    { id: "monster", name: "モンスタートラック", price: 900, kind: "own", desc: "でっかいタイヤの大きい車。ぶつかると強い！ 2人乗り" },
+    { id: "garage", name: "車の改造ガレージ", price: 0, kind: "garage", desc: "エンジン・タイヤ・ニトロで車をパワーアップ" },
     { id: "vcolor", name: "乗り物の色をかえる", price: 0, kind: "vcolor", desc: "スケボー・BMX・車の色をえらべる（タダ）" },
   ] },
   // ここから下は道ぞいの建物
@@ -2785,7 +2903,7 @@ function openShop(s) {
     if (it.kind === "count") state = `持っている数：${townSave[it.id]}`;
     const free = (it.kind === "hat" && townSave.hats.includes(it.id)) || (it.kind === "cloth" && (townSave.clothes || []).includes(it.id)) || it.price === 0;
     const owned = it.kind === "own" && townSave.owned[it.id];
-    return { name: `${ITEM_ICON[it.id] || ""} ${shopItemName(it)}`, desc: it.desc + (state ? "　/　" + state : ""), btn: owned ? "買った" : free ? (it.kind === "hat" ? "かぶる" : it.kind === "cloth" ? "着る" : "えらぶ") : `${it.price}🪙で買う`, disabled: owned, fn: () => { if (it.kind === "vcolor") { openVehColor(); return false; } return buyItem(s, it); } };
+    return { name: `${ITEM_ICON[it.id] || ""} ${shopItemName(it)}`, desc: it.desc + (state ? "　/　" + state : ""), btn: owned ? "買った" : free ? (it.kind === "hat" ? "かぶる" : it.kind === "cloth" ? "着る" : "えらぶ") : `${it.price}🪙で買う`, disabled: owned, fn: () => { if (it.kind === "vcolor") { openVehColor(); return false; } if (it.kind === "garage") { openGarage(); return false; } return buyItem(s, it); } };
   });
   const hasFood = s.items.some((it) => it.kind === "food");
   openPanel(s.name, `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい${hasFood ? `　📦 ストック ${foodBag().length}/${FOOD_BAG_MAX}（${touchMode ? "🍙ボタン" : "Q"}で食べる）` : ""}`, rows, () => openShop(s));
@@ -3188,7 +3306,7 @@ function removePeel(id) { const p = town.peels.get(id); if (p) { world.remove(p.
 // ---- 乗り物 ----
 function setVehicle(v) {
   me.veh = v || null; me.stolen = false; me.carColor = null;
-  me.car = v === "car"; me.skate = v === "skate" || v === "bmx"; me.fly = !!(v && VEHICLES[v].fly); me.carSpeed = 0;
+  me.car = isCarV(v); me.skate = isSkateV(v); me.fly = !!(v && VEHICLES[v].fly); me.carSpeed = 0;
   if (me.car) camYaw = me.ry + Math.PI;
   if (me.fly) { me.vel.y = 3; me.onGround = false; }
   applyVehColor();
@@ -3204,7 +3322,7 @@ function cycleVehicle() {
   setVehicle(next);
   if (!next) toast("乗り物からおりた", 1200);
   else if (VEHICLES[next].fly) toast(`${VEHICLES[next].name}に乗った！ スペースで上がる・Shift で下がる`, 2000);
-  else toast(next === "car" ? "車に乗った！ W/S で進む・A/D でハンドル" : next === "bmx" ? "BMXに乗った！ ジャンプ中に技！" : "スケボーに乗った！", 1500);
+  else toast(isCarV(next) ? `${VEHICLES[next].name}に乗った！ W/S で進む・A/D でハンドル` : `${VEHICLES[next].name}に乗った！ ジャンプ中に技！`, 1500);
 }
 // 友だちの乗り物（車・馬・じゅうたん）のうしろに乗る
 function ridersOf(id) { let n = 0; for (const k in net.players) if (net.players[k].state && net.players[k].state.rd === id) n++; return n; }
@@ -4670,7 +4788,14 @@ function makeCarMesh(color, driver, police) {
   return g;
 }
 // 正方形の道（R）を、距離 s から位置と向きに（時計回り）
+function isCarV(v) { return v === "car" || v === "sports" || v === "monster"; }
+function isSkateV(v) { return v === "skate" || v === "bmx" || v === "proskate"; }
 function loopPos(R, s) {
+  if (R !== 70) return loopPosRaw(R, s);
+  const a = trafficDetour(...loopPosRaw(R, s)), b = trafficDetour(...loopPosRaw(R, s + 0.6));
+  return [a[0], a[1], Math.atan2(b[0] - a[0], b[1] - a[1])];
+}
+function loopPosRaw(R, s) {
   const L = R - 1.5, side = 2 * L, per = side * 4;
   s = ((s % per) + per) % per;
   const k = Math.floor(s / side), u = s - k * side;
@@ -4741,7 +4866,7 @@ function nearStealable() {
   const test = (x, z, o) => { const d = Math.hypot(x - me.pos.x, z - me.pos.z); if (d < bd && Math.abs(me.pos.y) < 2.5) { bd = d; best = o; } };
   T.cars.forEach((c, i) => { if (!c.taken) test(c.x, c.z, { kind: "traffic", i, ci: c.ci }); });
   for (const p of T.parked) test(p.x, p.z, { kind: "parked", id: p.id, ci: p.ci });
-  for (const id in net.players) { const r = net.players[id], s = r.state; if (s && s.vh === "car" && !s.limp) test(r.pos.x, r.pos.z, { kind: "player", id, color: s.cc }); }
+  for (const id in net.players) { const r = net.players[id], s = r.state; if (s && isCarV(s.vh) && !s.limp) test(r.pos.x, r.pos.z, { kind: "player", id, color: s.cc }); }
   return best;
 }
 function stealCar(t) {
@@ -5029,7 +5154,7 @@ function onNetCity(d, conn) {
     case "unpark": if (net.isHost) removeParked(d.id); return true;
     case "park": if (net.isHost && T) addParked(d.x, d.z, d.ry, d.ci); return true;
     case "carjack":
-      if (me.veh === "car") { setVehicle(null); me.stolen = false; me.model.knock(rand(-4, 4), 4, rand(-4, 4), 1); me.stun = 1; toast(`😡 ${d.from} に車をうばわれた！`, 2200); }
+      if (isCarV(me.veh)) { setVehicle(null); me.stolen = false; me.model.knock(rand(-4, 4), 4, rand(-4, 4), 1); me.stun = 1; toast(`😡 ${d.from} に車をうばわれた！`, 2200); }
       return true;
     case "kick": if (net.isHost) kickBall(d.dx, d.dz, d.p, conn.peer); return true;
     case "koBy":
@@ -5444,7 +5569,7 @@ const SHOP_LOOK = {
   laundry:    { icon: "🧺", stripe: ["#6ac8f0", "#ffffff"], prop: "bubbles",   sub: "わた全回復・ふわふわ" },
   arcade:     { icon: "🕹️", stripe: ["#ff5ca8", "#5a4a9a"], prop: "ufo",       sub: "UFOキャッチャー・ボウリング" },
 };
-const ITEM_ICON = { crown: "👑", cap: "🧢", ribbon: "🎀", party: "🎉", chef: "🍳", hatcolor: "🎨", nohat: "✖️", onigiri: "🍙", burger: "🍔", ramen: "🍜", cake: "🍰", banana: "🍌", mochi: "🍡", bigmush: "🍄", smallmush: "🍄", meat: "🍖", veg: "🥕", peel: "🍌", balloon: "🎈", skate: "🛹", bmx: "🚲", vcolor: "🎨", car: "🚗", hammer: "🔨", katana: "🗡️", sword: "⚔️", gun: "🔫", mgun: "🔫", shotgun: "🔫", bazooka: "🚀", cow: "🐄", horse: "🐎", carpet: "🧞", hand: "✊" };
+const ITEM_ICON = { crown: "👑", cap: "🧢", ribbon: "🎀", party: "🎉", chef: "🍳", hatcolor: "🎨", nohat: "✖️", onigiri: "🍙", burger: "🍔", ramen: "🍜", cake: "🍰", banana: "🍌", mochi: "🍡", bigmush: "🍄", smallmush: "🍄", meat: "🍖", veg: "🥕", peel: "🍌", balloon: "🎈", skate: "🛹", bmx: "🚲", vcolor: "🎨", proskate: "🛹", sports: "🏎️", monster: "🛻", garage: "🔧", car: "🚗", hammer: "🔨", katana: "🗡️", sword: "⚔️", gun: "🔫", mgun: "🔫", shotgun: "🔫", bazooka: "🚀", cow: "🐄", horse: "🐎", carpet: "🧞", hand: "✊" };
 function stripeTexture(a, b) {
   const cv = document.createElement("canvas"); cv.width = 64; cv.height = 8; const c = cv.getContext("2d");
   for (let i = 0; i < 8; i++) { c.fillStyle = i % 2 ? b : a; c.fillRect(i * 8, 0, 8, 8); }
@@ -7802,7 +7927,7 @@ function digTreasure() {
 // ---- 部屋のかぎ（バージョンがちがうと、うまく遊べないので教える） ----
 function oldVerMsg() { net.full = true; net.online = false; showMsg("バージョンがちがうよ", "部屋を作った人と、ゲームのバージョンがちがうみたい。<br>2人とも同じアドレス（GitHub のページなど）で開いて、ページを<b>読みこみ直して</b>からためしてね。", [{ label: "タイトルへ", fn: () => location.reload() }]); }
 // ---- メニューが出ている間は、マウスをゲームの画面からはなす（ボタンがおせなくなるのをふせぐ） ----
-function anyUiOpen() { return !mode || !$("titleP").hidden || !$("modeP").hidden || !$("joinP").hidden || !$("msgP").hidden || !$("shopP").hidden || !$("rvP").hidden || !$("cardP").hidden || !$("armyMap").hidden || chat.open || paintMode || movie.on; }
+function anyUiOpen() { return !mode || !$("titleP").hidden || !$("modeP").hidden || !$("joinP").hidden || !$("msgP").hidden || !$("shopP").hidden || !$("rvP").hidden || !$("cardP").hidden || !$("armyMap").hidden || chat.open || paintMode || movie.on || paused; }
 setInterval(() => { if (document.pointerLockElement && anyUiOpen() && document.exitPointerLock) document.exitPointerLock(); }, 200);
 
 // =====================================================================
@@ -9872,14 +9997,14 @@ function skUpdate(dt) {
   // 着地
   if (sk.air && me.onGround) {
     sk.air = false;
-    if (sk.trick && sk.trick.t >= sk.trick.dur * 0.4) { sk.combo.push(sk.trick.T); sk.trick = null; } // ほとんどできていれば成功
+    if (sk.trick && sk.trick.t >= sk.trick.dur * (me.veh === "proskate" ? 0.75 : 0.4)) { sk.combo.push(sk.trick.T); sk.trick = null; } // ほとんどできていれば成功
     if (sk.trick) {
       // 技のとちゅうで着地 → ずてーん！
       sk.trick = null; sk.combo = [];
       me.stun = 1.2; me.vel.x *= 0.2; me.vel.z *= 0.2; play("squish"); shake = Math.max(shake, 0.15);
       popText(me.pos.x, me.pos.y + 2, me.pos.z, "ずてーん！ 失敗…", "#ff8a8a");
     } else if (sk.combo.length) {
-      const n = sk.combo.length, sum = sk.combo.reduce((a, t) => a + t.pts, 0), got = sum * n;
+      const n = sk.combo.length, sum = sk.combo.reduce((a, t) => a + t.pts, 0), got = sum * n * (me.veh === "proskate" ? 2 : 1);
       popText(me.pos.x, me.pos.y + 2.6, me.pos.z, n > 1 ? `${n}コンボ！ +${got}` : `ナイス！ +${got}`, "#ffd84a"); play(n > 1 ? "clear" : "item");
       if (sk.session) { sk.pts += got; sk.tricks += n; }
       sk.combo = [];
@@ -9913,14 +10038,14 @@ const BMX_TRICKS = [
   { n: "540", pts: 320, spin: 1.5 },
 ];
 const VCOLS = [[0xff5c7a, "ピンク"], [0xff9a3a, "オレンジ"], [0xffd84a, "きいろ"], [0x6bd66b, "みどり"], [0x4ac0f0, "水色"], [0x3a6ad8, "青"], [0x9a5ad8, "むらさき"], [0x222222, "くろ"], [0xf4f4f4, "しろ"], [0xd8a050, "金色"]];
-const VCOL_DEF = { skate: 0x9a5ad8, bmx: 0xd84a4a, car: 0xff5c7a };
+const VCOL_DEF = { skate: 0x9a5ad8, bmx: 0xd84a4a, car: 0xff5c7a, proskate: 0x2a2a2a, sports: 0xffd84a, monster: 0x3a6ad8 };
 function vehColorOf(k) { const v = townSave.vehColor && townSave.vehColor[k]; return v != null ? v : null; }
 function applyVehColor() {
-  me.vehColor = me.veh === "skate" || me.veh === "bmx" ? vehColorOf(me.veh) : null;
-  if (me.veh === "car" && !me.stolen) me.carColor = vehColorOf("car");
+  me.vehColor = isSkateV(me.veh) ? vehColorOf(me.veh) : null;
+  if (isCarV(me.veh) && !me.stolen) { const c = vehColorOf(me.veh); me.carColor = c != null ? c : me.veh === "car" ? null : VCOL_DEF[me.veh]; }
 }
 function openVehColor() {
-  const list = ["skate", "bmx", "car"].filter((k) => townSave.owned[k]);
+  const list = ["skate", "proskate", "bmx", "car", "sports", "monster"].filter((k) => townSave.owned[k]);
   const hex = (c) => "#" + c.toString(16).padStart(6, "0");
   const rows = list.length ? list.map((k) => {
     const cur = vehColorOf(k) != null ? vehColorOf(k) : VCOL_DEF[k];
@@ -10024,6 +10149,63 @@ function wireFoodButtons(s) {
   });
 }
 
+// =====================================================================
+//  29. 車の改造・速い車・一時停止・キャラメイクのパーツ
+// =====================================================================
+// ---- 車の改造（エンジン・タイヤ・ニトロ） ----
+const CAR_UP = {
+  engine: { name: "🔧 エンジン", desc: "車が速くなる（1レベルで +12%）", price: [150, 300, 600] },
+  tire: { name: "🛞 タイヤ", desc: "ハンドルがよくきく・すべりにくい", price: [100, 200, 400] },
+};
+function carUp() { return (townSave.carUp = townSave.carUp || { engine: 0, tire: 0, nitro: 0 }); }
+function openGarage() {
+  const U = carUp();
+  const rows = Object.entries(CAR_UP).map(([k, d]) => {
+    const lv = U[k] || 0, max = lv >= d.price.length;
+    return { name: `${d.name}　Lv.${lv}${max ? "（MAX）" : ""}`, desc: d.desc, btn: max ? "MAX" : `${d.price[lv]}🪙で改造`, disabled: max,
+      fn: () => { if (!pay(d.price[lv])) return; U[k] = lv + 1; saveTown(true); play("clear"); toast(`${d.name} が Lv.${lv + 1} になった！`, 1600); } };
+  });
+  rows.push({ name: `🔥 ニトロ ×3　（いま ${U.nitro || 0} 回分）`, desc: `車に乗っているとき ${touchMode ? "🔥ボタン" : "Shift キー"}で2.5秒 ものすごく速くなる`, btn: "60🪙で買う",
+    fn: () => { if (!pay(60)) return; U.nitro = (U.nitro || 0) + 3; saveTown(true); play("item"); } });
+  openPanel("🔧 車の改造ガレージ", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい　（車・スポーツカー・モンスタートラック みんなに効くよ）`, rows, openGarage);
+}
+
+// ---- 走っている車は、スケートパークをよけて外がわを通る ----
+function trafficDetour(x, z) {
+  if (Math.abs(z + 68.5) < 0.01 && x > 38) { const t = clamp((x - 38) / 5, 0, 1); return [x > 58.5 ? x + (x - 58.5) : x, -68.5 - 10 * t]; }
+  if (Math.abs(x - 68.5) < 0.01 && z < -38) { const t = clamp((-38 - z) / 5, 0, 1); return [68.5 + 10 * t, z < -58.5 ? 2 * z + 58.5 : z]; }
+  return [x, z];
+}
+
+// ---- 一時停止（ひとりで遊んでいるときだけ） ----
+let paused = false;
+function canPause() { return !!mode && !net.online && !movie.on; }
+function setPause(on) {
+  if (on && !canPause()) return;
+  paused = !!on; $("pauseP").hidden = !paused;
+  if (paused) { if (document.exitPointerLock) document.exitPointerLock(); for (const k in keys) keys[k] = false; mouseHeld = false; }
+  play("item");
+}
+$("bPause").onclick = () => setPause(!paused);
+$("bResume").onclick = () => setPause(false);
+$("bPauseTitle").onclick = () => { setPause(false); $("bTitle").click(); };
+$("bPauseGuide").onclick = () => { setPause(false); openGuide(); };
+
+// ---- キャラメイク：しっぽ・かみがた・かみの色・頭の形・角 ----
+function lookParts(L = myLook) { return { tail: L.tail, hair: L.hair, hairColor: L.hairColor, head: L.head, horn: L.horn }; }
+(function setupPartsUI() {
+  const mark = () => document.querySelectorAll("[data-part]").forEach((b) => b.classList.toggle("on", (myLook[b.dataset.part] || b.parentElement.dataset.def) === b.dataset.v));
+  document.querySelectorAll("[data-part]").forEach((b) => b.onclick = () => { myLook[b.dataset.part] = b.dataset.v; mark(); refreshMyModel(); play("item"); });
+  const hc = $("hairColors");
+  ["#5a3a2a", "#1a1a22", "#ffd84a", "#ff8a3a", "#ff5c7a", "#a78bfa", "#4ac0f0", "#6bd66b", "#f4f4f4", "#c0c0c8"].forEach((c) => {
+    const s = document.createElement("div"); s.className = "swatch"; s.style.background = c;
+    s.onclick = () => { myLook.hairColor = c; if (!myLook.hair || myLook.hair === "none") { myLook.hair = "bob"; mark(); } refreshMyModel(); };
+    hc.appendChild(s);
+  });
+  setTimeout(mark, 0);
+  window.markParts = mark;
+})();
+
 // 町モードで届いたメッセージ（onNet から呼ばれる）
 function onNetTown(d, conn) {
   if (onNetCity(d, conn)) return;
@@ -10083,6 +10265,7 @@ function updateHud() {
   }
   setH($("hud"), `<b>${hudTitle}</b><br>${coinLine}${room}${extra}`);
   $("bTitle").hidden = false;
+  { const hp = !canPause(); if ($("bPause").hidden !== hp) $("bPause").hidden = hp; }
   const T = mode === "town";
   $("hpbar").hidden = !T; $("foodbar").hidden = !T; $("minimap").hidden = !T; $("hudR").hidden = !T;
   if (!T) { $("mapP").hidden = true; $("wanted").hidden = true; }
@@ -10272,7 +10455,7 @@ function updateTouchUI() {
   // 乗り物に乗っている・空を飛んでいるときは、ボタンの名前をかえる
   const jb = $("tbJump"), lb = $("tbLimp");
   const jt = me.fly ? "🔼" : me.heldBy ? "💥" : me.ufo ? "🕹️" : "⬆️";
-  const lt = me.fly ? "🔽" : "🧸";
+  const lt = me.fly ? "🔽" : me.car ? "🔥" : "🧸";
   const ab = $("tbAtk"), at = me.skate && !me.onGround ? "🤸" : "👊";
   if (ab && ab.dataset.t !== at) { ab.dataset.t = at; ab.textContent = at; }
   const eb = $("tbE");
@@ -10402,7 +10585,8 @@ function startMode(m, stage = 0) {
 // =====================================================================
 const clock = new THREE.Clock();
 function loop() {
-  const dt = Math.min(clock.getDelta(), 0.05);
+  let dt = Math.min(clock.getDelta(), 0.05);
+  if (paused) dt = 0;
   gameTime += dt;
   try {
     if (movie.on) { movieUpdate(dt); } else if (paintMode || !mode) {
