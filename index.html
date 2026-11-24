@@ -324,6 +324,8 @@
   #skHud[hidden] { display: none; } #skHud b { color: #ffd84a; font-size: 24px; }
   body.touch #skHud { font-size: 13px; top: calc(46px + env(safe-area-inset-top)); } body.touch #skHud b { font-size: 17px; }
   #tBtns button.ico { font-size: 28px; line-height: 1; } #tBtns button.big.ico { font-size: 34px; }
+  body:has(#shopP:not([hidden])) #hpbar, body:has(#shopP:not([hidden])) #foodbar { z-index: 14; }
+  body:has(#shopP:not([hidden])) #hpbar { box-shadow: 0 0 0 3px #ffd84a88; } body:has(#shopP:not([hidden])) #foodbar { box-shadow: 0 0 0 3px #ffd84a88; }
 </style>
 <!-- 3D 表示の部品（Three.js）と、部屋コードで遊ぶための部品（PeerJS）。インターネットから読み込む -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -357,14 +359,14 @@
   <div id="joyBase"><div id="joyKnob"></div></div>
   <div id="tBtns">
     <button class="town ico" data-act="grab" title="つかむ・投げる">✋</button>
-    <button class="town ico" data-k="KeyE" title="調べる">🔍</button>
+    <button id="tbE" class="town ico" data-k="KeyE" title="調べる・話す">🔍</button>
     <button class="town ico" data-k="KeyF" title="乗り物">🚗</button>
     <button id="tbLimp" class="ico" data-k="ShiftLeft" title="力をぬく">🧸</button>
     <button id="tbAtk" class="big town ico" data-act="attack" title="パンチ・使う">👊</button>
     <button id="tbJump" class="big ico" data-k="Space" title="ジャンプ">⬆️</button>
   </div>
   <div id="tTop" class="town">
-    <button data-k="KeyV">👁</button><button data-k="Tab">🗺️</button><button data-k="KeyP">📸</button><button data-k="KeyQ">🍙</button><button data-k="KeyZ">👋</button><button data-k="KeyX">💃</button><button data-k="KeyR">🤝</button><button data-k="KeyC">📞</button><button data-k="KeyH">📖</button><button data-k="KeyT">💬</button><button data-k="KeyJ" id="tbHunt" style="display:none">🏹</button>
+    <button data-k="KeyV">👁</button><button data-k="Tab">🗺️</button><button data-k="KeyP">📸</button><button data-k="KeyQ">🍙</button><button data-k="KeyZ">👋</button><button data-k="KeyX">💃</button><button data-k="KeyB" title="スライディング">🛝</button><button data-k="KeyR">🤝</button><button data-k="KeyC">📞</button><button data-k="KeyH">📖</button><button data-k="KeyT">💬</button><button data-k="KeyJ" id="tbHunt" style="display:none">🏹</button>
   </div>
   <div id="tItems" class="story">
     <button data-k="Digit1">1</button><button data-k="Digit2">2</button><button data-k="Digit3">3</button><button data-k="Digit4">4</button><button data-k="KeyV">👁</button><button data-k="KeyP">📸</button><button data-k="KeyT">💬</button>
@@ -852,6 +854,19 @@ function rdPose(n, c, phase) {
     if (n === "lHand") return [-0.46, 0.55 + Math.sin(c.t * 3) * 0.04, 0.05]; if (n === "rHand") return [0.46, 0.55 - Math.sin(c.t * 3) * 0.04, -0.05];
     if (n === "head" || n === "chest") oy -= 0.03;
   }
+  else if (c.slide) {
+    // スライディング：うしろにたおれて、足を前に
+    oy -= 0.28;
+    if (n.endsWith("Foot")) { oz += 0.4; oy += 0.12; } if (n.endsWith("Knee")) { oz += 0.26; oy += 0.06; }
+    if (n === "head" || n === "chest") oz -= 0.14;
+    if (n === "lHand") return [-0.42, 0.22, -0.2]; if (n === "rHand") return [0.42, 0.22, -0.2];
+  }
+  else if (c.climb) {
+    // かべのぼり：手を上にのばして、足でけりあがる
+    const k = Math.sin((c.t || 0) * 11);
+    if (n === "lHand") return [-0.24, 1.05 + k * 0.12, 0.26]; if (n === "rHand") return [0.24, 1.05 - k * 0.12, 0.26];
+    if (n === "lFoot") { oz += 0.16; oy += 0.12 + Math.max(0, -k) * 0.16; } if (n === "rFoot") { oz += 0.16; oy += 0.12 + Math.max(0, k) * 0.16; }
+  }
   else if (c.air) {
     if (n === "lHand") return [-0.36, 0.95, 0.05]; if (n === "rHand") return [0.36, 0.95, 0.05];
     if (n === "lElbow") return [-0.33, 0.72, 0]; if (n === "rElbow") return [0.33, 0.72, 0];
@@ -1189,7 +1204,7 @@ function makePlush(texture, limbColor, label) {
       const last = st.last || { x, y, z };
       const k = 1 / Math.max(dt, 1e-3);
       const c = { x, y, z, ry, vx: (x - last.x) * k, vy: (y - last.y) * k, vz: (z - last.z) * k, speed: s.speed || 0, air: s.air, limp: s.limp, punch: s.punch > 0, aim: s.aim, car: veh === "car" || (veh && VEHICLES[veh] && VEHICLES[veh].fly), big: s.big,
-        small: s.small, skate: s.skate || veh === "skate", bmx: veh === "bmx", ride: s.ride, balloon: s.balloon, emote: s.emote, t: s.t || 0, mountH, grab: s.grab, spin: s.spin };
+        small: s.small, skate: s.skate || veh === "skate", bmx: veh === "bmx", slide: s.slide, climb: s.climb, ride: s.ride, balloon: s.balloon, emote: s.emote, t: s.t || 0, mountH, grab: s.grab, spin: s.spin };
       if (Math.abs(c.vy) > 30) c.vy = 0;
       st.last = { x, y, z };
       // ほかの人・ボットが気絶したら、ここでふっとばす
@@ -1551,7 +1566,7 @@ function updateMe(dt) {
   p.model.g.rotation.y = p.ry;
   p.model.g.visible = !(p.invis > 0 && Math.floor(p.t * 10) % 2 === 0);
   p.model.animate(dt, { speed: p.skate || p.fly ? 0 : Math.hypot(p.vel.x, p.vel.z), air: !p.onGround && !p.car && !p.fly && p.float <= 0, limp: p.limp || p.ko > 0, punch: p.punch, stun: p.stun, t: p.t,
-    big: p.buffs.big > 0, small: p.buffs.small > 0, veh: p.veh, carColor: p.carColor, vc: p.vehColor, weapon, flat: p.flat > 0 ? 1 : p.ko > 0 ? 0.65 : p.squashT > 0 ? p.squashT * 1.6 : 0, grab: !!p.grab || p.grabMiss > 0, spin: p.spin > 0, balloon: p.float > 0, emote: p.emote, aim: p.aimT > 0 });
+    big: p.buffs.big > 0, small: p.buffs.small > 0, veh: p.veh, carColor: p.carColor, vc: p.vehColor, slide: p.slideT > 0, climb: p.climbT > 0, weapon, flat: p.flat > 0 ? 1 : p.ko > 0 ? 0.65 : p.squashT > 0 ? p.squashT * 1.6 : 0, grab: !!p.grab || p.grabMiss > 0, spin: p.spin > 0, balloon: p.float > 0, emote: p.emote, aim: p.aimT > 0 });
   // 体がくたっと倒れている間は、芯（ゲームの位置）が体についていく
   if (p.model.free()) {
     const pel = p.model.pelvis();
@@ -1565,7 +1580,7 @@ let respawnHere = () => {};
 
 function myState() {
   const p = me;
-  return { x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), ry: +p.ry.toFixed(2), sp: +Math.hypot(p.vel.x, p.vel.z).toFixed(1), air: !p.onGround, limp: p.limp || p.ko > 0 || !!p.wash || !!p.bowl || !!p.heldBy, mv: p.moving && !p.limp, pu: p.punch > 0, st: p.stun > 0, big: p.buffs.big > 0, sm: p.buffs.small > 0, car: p.car, sk: p.skate, vh: p.veh || null, gb: p.grab ? (p.grab.kind === "player" ? p.grab.id : 1) : 0, hl: p.heldBy ? 1 : 0, fz: p.flat > 0 ? 1 : 0, sn: p.spin > 0 ? 1 : 0, pol: mode === "town" ? policeState() : null, cc: p.carColor, vc: p.vehColor != null ? p.vehColor : null, wa: wantedStars(), hd: mode === "town" ? p.held : null, fl: p.float > 0, em: p.emote, rd: p.ride || null, inv: p.invis > 0, hat: myLook.hat, hc: myLook.hatColor, lc: myLook.limb, ey: myLook.eye, mo: myLook.mouth, tr: townSave.trailOn || null, gd: townSave.goldOn && townSave.goldBody ? 1 : 0, tt: townSave.title || 0, so: mode === "town" ? soldierState() : null, ou: myOutfit() };
+  return { x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), ry: +p.ry.toFixed(2), sp: +Math.hypot(p.vel.x, p.vel.z).toFixed(1), air: !p.onGround, limp: p.limp || p.ko > 0 || !!p.wash || !!p.bowl || !!p.heldBy, mv: p.moving && !p.limp, pu: p.punch > 0, st: p.stun > 0, big: p.buffs.big > 0, sm: p.buffs.small > 0, car: p.car, sk: p.skate, vh: p.veh || null, gb: p.grab ? (p.grab.kind === "player" ? p.grab.id : 1) : 0, hl: p.heldBy ? 1 : 0, fz: p.flat > 0 ? 1 : 0, sn: p.spin > 0 ? 1 : 0, pol: mode === "town" ? policeState() : null, cc: p.carColor, vc: p.vehColor != null ? p.vehColor : null, sl: p.slideT > 0 ? 1 : 0, cl: p.climbT > 0 ? 1 : 0, wa: wantedStars(), hd: mode === "town" ? p.held : null, fl: p.float > 0, em: p.emote, rd: p.ride || null, inv: p.invis > 0, hat: myLook.hat, hc: myLook.hatColor, lc: myLook.limb, ey: myLook.eye, mo: myLook.mouth, tr: townSave.trailOn || null, gd: townSave.goldOn && townSave.goldBody ? 1 : 0, tt: townSave.title || 0, so: mode === "town" ? soldierState() : null, ou: myOutfit() };
 }
 
 function updateCamera(dt) {
@@ -1922,7 +1937,7 @@ function updateRemotes(dt) {
     let rideH = 0;
     if (s.rd) { const dv = s.rd === net.myId ? me.veh : net.players[s.rd] && net.players[s.rd].state && net.players[s.rd].state.vh; rideH = dv && VEHICLES[dv] ? VEHICLES[dv].h || 0 : 0; }
     const flying = s.vh && VEHICLES[s.vh] && VEHICLES[s.vh].fly;
-    r.model.animate(dt, { speed: s.sk || flying ? 0 : s.sp, air: s.air && !s.car && !s.fl && !flying, limp: s.limp, punch: s.pu ? 1 : 0, stun: s.st ? 1 : 0, t: r.t, big: s.big, small: s.sm, veh: s.vh || (s.car ? "car" : s.sk ? "skate" : null), vc: s.vc,
+    r.model.animate(dt, { speed: s.sk || flying ? 0 : s.sp, air: s.air && !s.car && !s.fl && !flying, limp: s.limp, punch: s.pu ? 1 : 0, stun: s.st ? 1 : 0, t: r.t, big: s.big, small: s.sm, veh: s.vh || (s.car ? "car" : s.sk ? "skate" : null), vc: s.vc, slide: !!s.sl, climb: !!s.cl,
       weapon: s.hd && WEAPONS[s.hd] && s.hd !== "hand" ? s.hd : null, carColor: s.cc, grab: !!s.gb, spin: !!s.sn, flat: s.fz ? 1 : 0, hold: s.hl ? new V3(r.pos.x, r.pos.y + 0.45, r.pos.z) : null, balloon: s.fl, emote: s.em, ride: !!s.rd, mountH: s.rd ? rideH : undefined, aim: s.pu && GUNS.includes(s.hd) });
     if (mode === "town") updateRemotePolice(r, s.pol, dt);
   }
@@ -2762,6 +2777,7 @@ const SHOPS = [
 function shopItemName(it) { return it.name || HAT_NAMES[it.id] || it.id; }
 function openShop(s) {
   const rows = s.items.map((it) => {
+    if (it.kind === "food") return { html: `<div style="display:flex;align-items:center;gap:8px;width:100%;flex-wrap:wrap"><div style="flex:1;min-width:140px;text-align:left"><b>${ITEM_ICON[it.id] || ""} ${shopItemName(it)}</b><br><span class="small">${it.desc}</span></div><button class="fbuy" data-id="${it.id}" data-act="eat">${it.price}🪙 食べる</button><button class="fbuy sub" data-id="${it.id}" data-act="stock">📦 ストック</button></div>` };
     let state = "";
     if (it.kind === "own" && townSave.owned[it.id]) state = "持っている";
     if (it.kind === "hat" && townSave.hats.includes(it.id)) state = myLook.hat === it.id ? "かぶっている" : "持っている（タダでかぶれる）";
@@ -2771,7 +2787,9 @@ function openShop(s) {
     const owned = it.kind === "own" && townSave.owned[it.id];
     return { name: `${ITEM_ICON[it.id] || ""} ${shopItemName(it)}`, desc: it.desc + (state ? "　/　" + state : ""), btn: owned ? "買った" : free ? (it.kind === "hat" ? "かぶる" : it.kind === "cloth" ? "着る" : "えらぶ") : `${it.price}🪙で買う`, disabled: owned, fn: () => { if (it.kind === "vcolor") { openVehColor(); return false; } return buyItem(s, it); } };
   });
-  openPanel(s.name, `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい`, rows, () => openShop(s));
+  const hasFood = s.items.some((it) => it.kind === "food");
+  openPanel(s.name, `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい${hasFood ? `　📦 ストック ${foodBag().length}/${FOOD_BAG_MAX}（${touchMode ? "🍙ボタン" : "Q"}で食べる）` : ""}`, rows, () => openShop(s));
+  if (hasFood) wireFoodButtons(s);
 }
 function buyItem(s, it) {
   const owned = (it.kind === "hat" && townSave.hats.includes(it.id)) || (it.kind === "cloth" && (townSave.clothes || []).includes(it.id));
@@ -2879,7 +2897,7 @@ function building(x, z, fx, fz, name, color, opt = {}) {
   else { addBox(x - W / 2 + t / 2, 0, z, t, H, D, wall); addBox(x + W / 2 - t / 2, 0, z, t, H, D, wall); }
   addBox(x, H, z, wx + 0.6, 0.5, wz + 0.6, color); // 屋根
   // 入口の上の看板
-  const l = makeLabel(name, "#fff", 2.1, { bg: "#" + new THREE.Color(color).multiplyScalar(0.8).getHexString() }); l.position.set(x + fx * (D / 2 + 0.3), H + 1.7, z + fz * (D / 2 + 0.3)); world.add(l);
+  const l = makeLabel(name, "#fff", 2.1, { bg: "#" + new THREE.Color(color).multiplyScalar(0.8).getHexString() }); l.position.set(x + fx * (D / 2 + 1.4), H + 1.3, z + fz * (D / 2 + 1.4)); world.add(l);
   town.mapRects.push({ x, z, w: wx, d: wz, color, label: opt.short || name, icon: opt.look && SHOP_LOOK[opt.look] ? SHOP_LOOK[opt.look].icon : null });
   if (opt.look) decorateBuilding(x, z, fx, fz, W, D, H, color, opt.look);
   // 中のカウンターと店員さん
@@ -4269,6 +4287,7 @@ function hungerUpdate(dt) {
 }
 function eatIngredient() {
   if (me.hunger >= 99) { toast("おなかいっぱい！", 900); return; }
+  if (foodBag().length) { const id = foodBag().shift(); eatFood(id); play("item"); saveTown(true); toast(`📦 ストックの${foodName(id)}を食べた（のこり ${foodBag().length}こ）`, 1600); return; }
   if (townSave.veg > 0) { townSave.veg--; ateShow(); me.hunger = Math.min(100, me.hunger + 12); toast("🥕 野菜を食べた（おなか +12）", 1200); }
   else if (townSave.meat > 0) { townSave.meat--; ateShow(); me.hunger = Math.min(100, me.hunger + 18); toast("🍖 お肉を食べた（おなか +18）", 1200); }
   else { toast("食べ物を持っていない（ご飯屋さんで買うか、食料士で集めよう）", 1800); return; }
@@ -4333,10 +4352,10 @@ function buildCity() {
   // ---- 角：スケートパーク・展望タワー・リゾート・駐車場 ----
   // 北東：スケートパーク
   addBox(60, -0.47, -60, 34, 0.5, 34, 0x9a9aa8, { collide: false });                  // コンクリートの床
-  slope(49, -70, 1, 0, 5, 1.5, 5, 0x8ab0d8); slope(71, -50, -1, 0, 5, 1.5, 5, 0x8ab0d8);   // ジャンプ台
-  slope(47, -49, 0, -1, 5, 1.5, 5, 0xd8a0c8); slope(73, -71, 0, 1, 5, 1.5, 5, 0xd8a0c8);
+  slope(49, -70, 1, 0, 6, 2.7, 5, 0xe07a7a); slope(71, -50, -1, 0, 5, 1.5, 5, 0x8ab0d8);   // ジャンプ台（高い・ふつう）
+  slope(47, -49, 0, -1, 3.5, 0.7, 4, 0x9ad0a0); slope(73, -71, 0, 1, 4, 1.0, 4, 0x9ad0a0);  // 小さいジャンプ台
   slope(54, -60, 1, 0, 5, 1.2, 7, 0xb8b8c8); addBox(60, 0, -60, 7, 1.2, 7, 0xc8c8d4); slope(66, -60, -1, 0, 5, 1.2, 7, 0xb8b8c8); // まん中の台（のぼって・くだる）
-  slope(60, -75, 0, -1, 4, 1.8, 10, 0x9ad0a0); slope(60, -45, 0, 1, 4, 1.8, 10, 0x9ad0a0);   // はしの大きい坂
+  slope(60, -75, 0, -1, 6, 3.2, 10, 0xe07a7a); slope(60, -45, 0, 1, 3.5, 0.9, 10, 0x9ad0a0);   // はしの坂（とても高い・小さい）
   addBox(60, 0, -69, 7, 0.4, 0.6, 0xffd84a); addBox(60, 0, -51, 7, 0.4, 0.6, 0xffd84a);       // 低い台（とびこえる）
   { const sl = makeLabel("🛹 スケートパーク", "#fff", 2.4, { bg: "#6a7ab8" }); sl.position.set(60, 6, -60); world.add(sl); }
   town.mapRects.push({ x: 60, z: -60, w: 34, d: 34, color: 0x9a9aa8, label: "スケート", flat: true });
@@ -7322,6 +7341,7 @@ function badUpdate(dt) {
 // =====================================================================
 function funTownUpdate(dt) {
   trailsUpdate(dt);
+  parkourUpdate(dt);
   skUpdate(dt);
   tutUpdate(dt);
   safeHint();
@@ -9814,7 +9834,7 @@ function skTrick() {
   const LIST = me.veh === "bmx" ? BMX_TRICKS : SK_TRICKS;
   let i; do { i = Math.floor(Math.random() * LIST.length); } while (i === sk.last && LIST.length > 1);
   sk.last = i; const T = LIST[i];
-  sk.trick = { T, t: 0, dur: 0.42 + (T.spin || 0) * 0.16 + Math.abs(T.bz || 0) * 0.06, ry0: me.ry };
+  sk.trick = { T, t: 0, dur: (0.42 + (T.spin || 0) * 0.16 + Math.abs(T.bz || 0) * 0.06) * 0.8, ry0: me.ry };
   popText(me.pos.x, me.pos.y + 2.4, me.pos.z, T.n, "#7cf0ff"); play("jump");
   return true;
 }
@@ -9852,6 +9872,7 @@ function skUpdate(dt) {
   // 着地
   if (sk.air && me.onGround) {
     sk.air = false;
+    if (sk.trick && sk.trick.t >= sk.trick.dur * 0.4) { sk.combo.push(sk.trick.T); sk.trick = null; } // ほとんどできていれば成功
     if (sk.trick) {
       // 技のとちゅうで着地 → ずてーん！
       sk.trick = null; sk.combo = [];
@@ -9910,6 +9931,96 @@ function openVehColor() {
   document.querySelectorAll(".vcol").forEach((b) => b.onclick = () => {
     townSave.vehColor = townSave.vehColor || {}; townSave.vehColor[b.dataset.k] = Number(b.dataset.c); saveTown(true);
     applyVehColor(); play("item"); openVehColor();
+  });
+}
+
+// =====================================================================
+//  28. パルクール（スライディング・かべのぼり・かべジャンプ・のりこえ）
+// =====================================================================
+const pk = { slideT: 0, slideSp: 0, dx: 0, dz: 0, hit: new Set(), climbT: 0, stam: 4, stall: 0, lastY: 0, cd: 0, spaceWas: false };
+function pkCan() {
+  return mode === "town" && controls && !me.veh && !me.limp && me.ko <= 0 && !me.jail && !me.heldBy && me.stun <= 0 && !me.ride && !me.launch && !me.wash && !me.bowl && !me.ufo && !(me.float > 0) && !me.fly && me.pos.y > -0.3;
+}
+function startSlide() {
+  if (!pkCan() || !me.onGround || pk.slideT > 0) return;
+  const sp = Math.hypot(me.vel.x, me.vel.z);
+  if (sp < 2.5) { toast("走りながら B（🛝）でスライディング！", 1200); return; }
+  pk.slideT = 0.75; pk.slideSp = Math.max(sp * 1.4, 9.5); pk.dx = me.vel.x / sp; pk.dz = me.vel.z / sp; pk.hit.clear();
+  play("whoosh");
+}
+function pkWall(h, dist = 0.5) { return pointBlocked(me.pos.x + Math.sin(me.ry) * dist, me.pos.y + h, me.pos.z + Math.cos(me.ry) * dist); }
+// かべの上にのぼれる場所があれば、そこへ上がる
+function pkMantle() {
+  const fx = me.pos.x + Math.sin(me.ry) * 0.85, fz = me.pos.z + Math.cos(me.ry) * 0.85;
+  for (let h = 0.2; h <= 2.2; h += 0.1) {
+    if (!pointBlocked(fx, me.pos.y + h, fz) && !pointBlocked(fx, me.pos.y + h + 0.8, fz)) {
+      const g = groundAt({ x: fx, y: me.pos.y + h + 0.05, z: fz }, 0.2);
+      if (g < me.pos.y - 0.2) continue;
+      me.pos.set(fx, g + 0.02, fz); me.vel.set(Math.sin(me.ry) * 1.5, 0, Math.cos(me.ry) * 1.5); me.onGround = true;
+      pk.climbT = 0; play("jump"); popText(me.pos.x, me.pos.y + 1.8, me.pos.z, "よいしょ！", "#7cf0ff");
+      return true;
+    }
+  }
+  return false;
+}
+function parkourUpdate(dt) {
+  pk.cd -= dt;
+  const space = !!keys.Space, spacePressed = space && !pk.spaceWas; pk.spaceWas = space;
+  if (!pkCan()) { pk.slideT = 0; pk.climbT = 0; me.slideT = 0; me.climbT = 0; return; }
+  if (me.onGround) pk.stam = Math.min(4, pk.stam + dt * 2);
+  // ---- スライディング ----
+  if (pk.slideT > 0) {
+    pk.slideT -= dt;
+    const sp = pk.slideSp * (0.35 + 0.65 * Math.max(0, pk.slideT) / 0.75);
+    me.vel.x = pk.dx * sp; me.vel.z = pk.dz * sp; me.ry = Math.atan2(pk.dx, pk.dz);
+    // すべりこみキック
+    town.bots.forEach((b, i) => { if (!pk.hit.has(i) && b.ko <= 0 && Math.hypot(b.pos.x - me.pos.x, b.pos.z - me.pos.z) < 1.1) { pk.hit.add(i); doHitBot(i, pk.dx, pk.dz, 12, 1.5, true); play("punch"); } });
+  }
+  me.slideT = Math.max(0, pk.slideT);
+  // ---- かべのぼり ----
+  const hv = me.vel.x * Math.sin(me.ry) + me.vel.z * Math.cos(me.ry);
+  const climbing = pk.climbT > 0, inp = keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD;
+  if (climbing) {
+    // かべジャンプ（スペース）
+    if (spacePressed) {
+      me.vel.set(-Math.sin(me.ry) * 7, 8.5, -Math.cos(me.ry) * 7); me.ry += Math.PI; pk.climbT = 0; pk.cd = 0.35; me.onGround = false;
+      play("jump"); popText(me.pos.x, me.pos.y + 1.8, me.pos.z, "かべジャンプ！", "#ffd84a");
+    } else if (!pkWall(0.6) && !pkWall(1.0)) { pkMantle() || (pk.climbT = 0); }
+    else if (!pkWall(1.25) || pk.stall > 0.18) { if (!pkMantle()) { pk.stall += dt; me.vel.y = Math.min(me.vel.y, 0); if (pk.stall > 0.5 || !pkWall(1.25)) { pk.climbT = 0; pk.cd = 0.5; } } }
+    else if (pk.stam <= 0 || !inp) { pk.climbT = 0; }
+    else {
+      pk.stam -= dt; me.vel.y = 4.2; me.vel.x = Math.sin(me.ry) * 1.2; me.vel.z = Math.cos(me.ry) * 1.2; pk.climbT = 0.2;
+      pk.stall = Math.abs(me.pos.y - pk.lastY) < 0.01 ? pk.stall + dt : 0; pk.lastY = me.pos.y;
+    }
+  } else if (pk.cd <= 0 && pk.slideT <= 0 && hv > 2.2 && inp) {
+    const low = pkWall(0.35), mid = pkWall(1.3), high = pkWall(1.9);
+    if (low && !mid && !high && me.onGround) {
+      // 低いものは、ひょいっとのりこえる
+      me.vel.y = 6.8; me.vel.x += Math.sin(me.ry) * 1.5; me.vel.z += Math.cos(me.ry) * 1.5; me.onGround = false; pk.cd = 0.6;
+      play("jump"); popText(me.pos.x, me.pos.y + 1.8, me.pos.z, "ひょいっ", "#7cf0ff");
+    } else if (pkWall(0.9) && mid && pk.stam > 0.3) {
+      pk.climbT = 0.2; pk.stall = 0; pk.lastY = me.pos.y; me.onGround = false;
+    }
+  }
+  me.climbT = pk.climbT;
+}
+SFX.whoosh = (t) => { noise(t, 0.35, 0.18, sfxBus, "bandpass", 900); };
+
+// =====================================================================
+//  28-2. ご飯のストック（お店で「📦ストック」→ Q／🍙 で食べる）
+// =====================================================================
+const FOOD_BAG_MAX = 10;
+function foodBag() { return (townSave.foodBag = townSave.foodBag || []); }
+function foodName(id) { for (const s of SHOPS) for (const it of s.items || []) if (it.id === id) return shopItemName(it); return id; }
+function wireFoodButtons(s) {
+  document.querySelectorAll("#shopP .fbuy").forEach((b) => b.onclick = () => {
+    const it = s.items.find((x) => x.id === b.dataset.id); if (!it) return;
+    if (b.dataset.act === "stock" && foodBag().length >= FOOD_BAG_MAX) { toast(`ストックは${FOOD_BAG_MAX}こまで`, 1200); return; }
+    if (!pay(it.price)) return;
+    play("item");
+    if (b.dataset.act === "stock") { foodBag().push(it.id); toast(`📦 ${shopItemName(it)}をストックした！（${touchMode ? "🍙ボタン" : "Q キー"}で食べる）`, 1600); }
+    else eatFood(it.id);
+    saveTown(true); openShop(s);
   });
 }
 
@@ -9979,7 +10090,7 @@ function updateHud() {
     ? "<kbd>WASD</kbd> 移動　<kbd>スペース</kbd> ジャンプ　<kbd>Shift</kbd> 力をぬく（ただのぬいぐるみのふり）　マウス：視点（画面クリック）　<kbd>Esc</kbd> マウスを自由にする（右下の「タイトルへ」が押せる）　<kbd>P</kbd> 写真　<kbd>V</kbd> 一人称　ホイール：ズーム　<kbd>M</kbd> 音"
     : me.car ? "🚗 <kbd>W</kbd> アクセル　<kbd>S</kbd> ブレーキ・バック　<kbd>A</kbd><kbd>D</kbd> ハンドル　<kbd>スペース</kbd> ジャンプ　<kbd>F</kbd> 乗りかえ・おりる　<kbd>Tab</kbd> 地図　<kbd>P</kbd> 写真"
     : me.fly ? "🕊️ <kbd>WASD</kbd> 移動　<kbd>スペース</kbd> 上がる　<kbd>Shift</kbd> 下がる　クリック：銃を撃てる　<kbd>F</kbd> 乗りかえ・おりる　<kbd>Tab</kbd> 地図　<kbd>P</kbd> 写真"
-    : "<kbd>WASD</kbd> 移動　<kbd>スペース</kbd> ジャンプ　クリック：使う（すでで長押し＝ぐるぐるパンチ）　<b>右クリック：つかむ→はなして投げる</b>　<kbd>1</kbd>〜<kbd>5</kbd> 持ちかえ　<kbd>E</kbd> 調べる・入る　<kbd>F</kbd> 乗り物・車をぬすむ　<kbd>Q</kbd> 食べる（自分の島では島の管理）　<kbd>R</kbd> わたす・フレンド　<kbd>C</kbd> けいさつを呼ぶ　<kbd>H</kbd> あそびかた　<kbd>T</kbd> チャット　<kbd>Tab</kbd> 地図　<kbd>P</kbd> 写真　<kbd>Z</kbd><kbd>X</kbd> エモート　<kbd>V</kbd> 一人称　ホイール：ズーム　<kbd>Shift</kbd> 力をぬく");
+    : "<kbd>WASD</kbd> 移動　<kbd>スペース</kbd> ジャンプ　クリック：使う（すでで長押し＝ぐるぐるパンチ）　<b>右クリック：つかむ→はなして投げる</b>　<kbd>1</kbd>〜<kbd>5</kbd> 持ちかえ　<kbd>E</kbd> 調べる・入る　<kbd>F</kbd> 乗り物・車をぬすむ　<kbd>Q</kbd> 食べる（自分の島では島の管理）　<kbd>R</kbd> わたす・フレンド　<kbd>C</kbd> けいさつを呼ぶ　<kbd>H</kbd> あそびかた　<kbd>T</kbd> チャット　<kbd>Tab</kbd> 地図　<kbd>P</kbd> 写真　<kbd>Z</kbd><kbd>X</kbd> エモート　<kbd>V</kbd> 一人称　ホイール：ズーム　<kbd>Shift</kbd> 力をぬく　<kbd>B</kbd> スライディング　かべに向かって走る：かべのぼり（スペースでかべジャンプ）");
   // 持ち物（町だけ）
   updateTouchUI();
   const hb = $("hotbar");
@@ -10005,7 +10116,7 @@ function updateHud() {
       if (townSave.job === "chef") r += me.cooking ? `（料理中 ${Math.ceil(me.cooking.t)}）` : me.dish ? `（🍽️${DISHES[me.dish].name}）` : `（お客さん ${town.customers.filter((c) => c.state === "wait").length}人）`;
       if (townSave.job === "weather") r += wx.told ? "（発表ずみ）" : wx.left <= 300 ? "（放送所へ！）" : "（予報を待っている）";
     }
-    r += `<br>🍖 ${townSave.meat}　🥕 ${townSave.veg}`;
+    r += `<br>🍖 ${townSave.meat}　🥕 ${townSave.veg}${foodBag().length ? `　🍱 ${foodBag().length}` : ""}`;
     const mv = monView(); if (mv && mv.hp > 0) r += `<br><span style="color:#ff8a8a">${MON_TIER[mv.tier || 1].name}出現中！ ${mv.hp}/${mv.max}</span>`;
     if (townSave.island) r += `<br>🏝️ ${townSave.island.name}：${townSave.island.funds}🪙`;
     if (townSave.residentOf) r += `<br>🏠 ${townSave.residentOf.island}の住民`;
@@ -10164,6 +10275,8 @@ function updateTouchUI() {
   const lt = me.fly ? "🔽" : "🧸";
   const ab = $("tbAtk"), at = me.skate && !me.onGround ? "🤸" : "👊";
   if (ab && ab.dataset.t !== at) { ab.dataset.t = at; ab.textContent = at; }
+  const eb = $("tbE");
+  if (eb && mode === "town") { const sp = nearSpot(); const et = sp && /買う|話す|注文|たのむ|受付|相談|聞く|やとう|店|とまる|ガチャ/.test(sp.label) ? "🗣️" : "🔍"; if (eb.dataset.t !== et) { eb.dataset.t = et; eb.textContent = et; } }
   if (jb.dataset.t !== jt) { jb.dataset.t = jt; jb.textContent = jt; }
   if (lb.dataset.t !== lt) { lb.dataset.t = lt; lb.textContent = lt; }
 }
@@ -10205,6 +10318,7 @@ addEventListener("keydown", (e) => {
     }
     if (e.code === "KeyR") openGive();
     if (e.code === "KeyG") { if (me.grab) grabRelease(false); else grabStart(); }
+    if (e.code === "KeyB") startSlide();
     if (e.code === "KeyF" && !me.ride) cycleVehicle();
     if (e.code === "KeyQ") { const isl = town.islands.get(myName); if (isl && Math.abs(me.pos.x - isl.X) < isl.S + 1 && Math.abs(me.pos.z - isl.Z) < isl.S + 1) openIslandMgmt(); else eatIngredient(); }
     const tool = { Digit1: "hand", Digit2: "melee", Digit3: "guns", Digit4: "peel", Digit5: "balloon" }[e.code];
