@@ -2,7 +2,7 @@
 
 ふにゃふにゃのぬいぐるみになって遊ぶ、おバカな3Dゲームです。
 
-**▶ 遊ぶ：https://ikuto1021taka-crypto.github.io/funyaland/**
+**▶ 遊ぶ：https://hunyaneki.github.io/funyaland/**
 
 アカウント登録なし・無料。パソコンでもスマホでも、ブラウザで開くだけで遊べます。
 

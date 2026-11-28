@@ -5891,7 +5891,7 @@ function openSync() {
 // ---- 引っこしコード（データを文字にして、ほかの場所へ持っていく） ----
 //  短いコード：データをぎゅっと小さくして、キャラの絵は小さい写真にして入れる
 //  QRコードにもなるので、スマホのカメラで画面をうつすだけで引っこしできる
-const GAME_URL = "https://ikuto1021taka-crypto.github.io/funyaland/";
+const GAME_URL = "https://hunyaneki.github.io/funyaland/";
 const CAN_ZIP = typeof CompressionStream === "function";
 function b64u(u8) { let s = ""; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode.apply(null, u8.subarray(i, i + 8192)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
 function unb64(t) { const s = atob(t.replace(/-/g, "+").replace(/_/g, "/")); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
