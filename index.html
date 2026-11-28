@@ -352,6 +352,32 @@
   #mbLog { position: absolute; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(560px, 90vw); background: rgba(255,255,255,.92); color: #222; border: 3px solid #6a4ac0; border-radius: 14px; padding: 10px 16px; font-size: 18px; text-align: center; }
   #mbBtns { position: absolute; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 8px; pointer-events: auto; }
   body.touch .mbN { font-size: 11px; } body.touch #mbLog { font-size: 14px; bottom: calc(64px + env(safe-area-inset-bottom)); }
+  /* フィギュア対戦 */
+  #fgP { position: fixed; inset: 0; z-index: 12; background: rgba(20, 12, 40, .94); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); box-sizing: border-box; }
+  #fgP[hidden] { display: none; }
+  #fgBoard { position: relative; width: min(94vw, 64vh); aspect-ratio: 1; flex: none; }
+  #fgGrid { display: grid; grid-template-columns: repeat(10, 1fr); grid-template-rows: repeat(10, 1fr); width: 100%; height: 100%; border: 3px solid #ffd84a; border-radius: 8px; overflow: hidden; box-sizing: border-box; }
+  #fgFx { position: absolute; inset: 0; pointer-events: none; }
+  .fgC { background: #4a7a44; position: relative; display: flex; align-items: center; justify-content: center; font-size: min(4.2vmin, 26px); cursor: pointer; }
+  .fgC.d { background: #3f6c3a; }
+  .fgC.rch { box-shadow: inset 0 0 0 99px rgba(80, 160, 255, .5); } .fgC.tg { box-shadow: inset 0 0 0 99px rgba(255, 70, 70, .55); animation: fgBlink .5s infinite alternate; }
+  @keyframes fgBlink { to { filter: brightness(1.3); } }
+  .fgU { width: 84%; height: 84%; border-radius: 50%; border: 3px solid var(--c); box-sizing: border-box; display: flex; align-items: center; justify-content: center; position: relative; background: rgba(70, 130, 255, .75); }
+  .fgU.op { background: rgba(230, 70, 80, .75); } .fgU.done { filter: grayscale(.6) brightness(.7); } .fgU.sel { outline: 3px solid #fff; transform: scale(1.12); }
+  .fgU i, .fgTot i { position: absolute; left: 4%; bottom: -5px; height: 4px; background: #4ad86a; border-radius: 2px; } .fgU em { position: absolute; left: 4%; bottom: -9px; height: 3px; background: #ffb040; border-radius: 2px; }
+  .fgSt { position: absolute; top: -9px; right: -9px; font-size: 55%; } .fgEvo { position: absolute; top: -11px; left: -6px; font-size: 60%; }
+  .fgTot { width: 90%; height: 90%; border-radius: 8px; display: flex; align-items: center; justify-content: center; position: relative; background: rgba(70, 130, 255, .5); border: 3px solid #fff; box-sizing: border-box; } .fgTot.op { background: rgba(230, 70, 80, .5); }
+  .fgGem { animation: fgGem 1s infinite alternate; } @keyframes fgGem { to { transform: translateY(-3px) scale(1.15); } }
+  .fgPop { position: absolute; transform: translateX(-50%); font-weight: bold; font-size: 15px; white-space: nowrap; text-shadow: 0 0 3px #000, 0 0 3px #000; animation: fgPop 1.1s forwards; }
+  @keyframes fgPop { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -30px; } }
+  #fgSide { display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: 94vw; }
+  #fgHead { text-align: center; font-size: 15px; } #fgInfo { text-align: center; font-size: 13px; min-height: 3em; max-width: 520px; }
+  #fgBtns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; } #fgBtns button { font-size: 14px; padding: 6px 12px; } #fgUlt.on { outline: 3px solid #fff; }
+  @media (orientation: landscape) and (max-height: 600px) { #fgP { flex-direction: row; } #fgBoard { width: auto; height: 92vh; } #fgSide { max-width: 40vw; } }
+  .fgCards { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; } .fgCard { width: 108px; padding: 10px 6px; border-radius: 12px; border: 3px solid var(--c); background: rgba(255,255,255,.08); animation: fgFlip .6s both; text-align: center; font-size: 13px; }
+  .fgCard.t9, .fgCard.t10, .fgCard.t11, .fgCard.t12 { box-shadow: 0 0 18px var(--c); } .fgE { font-size: 40px; } .fgNew { color: #ffd84a; font-weight: bold; }
+  @keyframes fgFlip { from { transform: rotateY(90deg) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+  #pubList { display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto; } .pubRoom { font-size: 15px; }
 </style>
 <!-- 3D 表示の部品（Three.js）と、部屋コードで遊ぶための部品（PeerJS）。インターネットから読み込む -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -425,6 +451,7 @@
 <div id="tutBox" hidden><div id="tutStep"></div><div id="tutText"></div><button id="tutSkip" class="sub">スキップ</button></div>
 <div id="ateP" hidden></div>
 <div id="skHud" hidden></div>
+<div id="fgP" hidden><div id="fgBoard"><div id="fgGrid"></div><div id="fgFx"></div></div><div id="fgSide"><div id="fgHead"></div><div id="fgInfo"></div><div id="fgBtns"><button id="fgUlt" class="pink">🔥 必殺技</button><button id="fgWait" class="sub">待機</button><button id="fgEnd">ターン終了</button><button id="fgMode" class="sub">🎮 手動</button><button id="fgQuit" class="pink">やめる</button></div></div></div>
 <div id="mbP" hidden><div id="mbL" class="mbBar"><div class="mbN"></div><div class="mbH"><div></div></div><div class="mbHt"></div></div><div id="mbR" class="mbBar"><div class="mbN"></div><div class="mbH"><div></div></div><div class="mbHt"></div></div><div id="mbLog"></div><div id="mbBtns"><button id="mbFast" class="sub">⏩ はやく</button><button id="mbSkip" class="sub">⏭ けっかまで</button><button id="mbClose">おわる</button></div></div>
 <div id="catchBar" hidden><div class="cbT"></div><div class="cbB"><div class="cbZ"></div><div class="cbP"></div><div class="cbM"></div></div></div>
 <div id="chatLog"></div>
@@ -464,6 +491,7 @@
 <div class="panel" id="modeP" hidden>
   <h2 id="modeTitle">モードをえらぼう</h2>
   <p id="roomInfo"></p>
+  <button id="bPub" class="sub" hidden>🌍 この部屋を公開する</button>
   <div class="btns">
     <button id="bStory">ストーリーモード<br><span class="small" style="color:#333">家族にバレずに家から脱出！</span></button>
     <button id="bTown" class="sub">町モード<br><span class="small" style="color:#333">コインで買い物・なぐり合い！</span></button>
@@ -478,7 +506,9 @@
   <p>友だちに教えてもらった5けたのコードを入れてね</p>
   <input type="text" id="codeIn" maxlength="5" placeholder="12345">
   <div class="btns"><button id="bJoinGo">入る</button><button id="bJoinBack" class="pink">もどる</button></div>
+  <button id="bPubSearch" class="sub">🌍 公開の部屋をさがす</button>
   <p class="small" id="joinMsg"></p>
+  <div id="pubList"></div>
 </div>
 
 <!-- お知らせ（ゲームオーバーなど） -->
@@ -2966,7 +2996,7 @@ const SHOPS = [
     { id: "skate", name: "スケボー", price: 20, kind: "own", desc: "スイスイ速い（F で乗る）" },
     { id: "car", name: "おもちゃの車", price: 50, kind: "own", desc: "W/S で進む・A/D でハンドル。2人乗り" },
     { id: "bmx", name: "BMX", price: 40, kind: "own", desc: "スケボーより速い自転車。空中でクリック（🤸）で技！" },
-    { id: "proskate", name: "プロスケボー（むずかしい）", price: 120, kind: "own", desc: "とても速いけど、すべってまがりにくい。技のあとに「キャッチ」が必要！ レールでは「グラッ」とする。点は2倍・プロだけの大技もある！" },
+    { id: "proskate", name: "プロスケボー（むずかしい）", price: 120, kind: "own", desc: "とても速いけど、すべってまがりにくい。技を最後までやりきらないと失敗！ レールでは「グラッ」とする。点は2倍・プロだけの大技もある！" },
     { id: "sports", name: "スポーツカー", price: 600, kind: "own", desc: "ものすごく速い車！ 2人乗り" },
     { id: "monster", name: "モンスタートラック", price: 900, kind: "own", desc: "でっかいタイヤの大きい車。ぶつかると強い！ 2人乗り" },
     { id: "garage", name: "車の改造ガレージ", price: 0, kind: "garage", desc: "エンジン・タイヤ・ニトロで車をパワーアップ" },
@@ -4574,7 +4604,7 @@ function buildCity() {
   slope(60, -75, 0, -1, 6, 3.2, 10, 0xe07a7a); slope(60, -45, 0, 1, 3.5, 0.9, 10, 0x9ad0a0);   // はしの坂（とても高い・小さい）
   addBox(60, 0, -69, 7, 0.4, 0.6, 0xffd84a); addBox(60, 0, -51, 7, 0.4, 0.6, 0xffd84a);       // 低い台（とびこえる）
   { const sl = makeLabel("🛹 スケートパーク", "#fff", 2.4, { bg: "#6a7ab8" }); sl.position.set(60, 6, -60); world.add(sl); }
-  buildRails(); buildCarRace(); buildMonIsland();
+  buildRails(); buildCarRace(); buildMonIsland(); buildFigShop();
   town.mapRects.push({ x: 60, z: -60, w: 34, d: 34, color: 0x9a9aa8, label: "スケート", flat: true });
   // 北西：展望タワー（階段でぐるぐるのぼる）
   addBox(-57, 0, -57, 4, 30, 4, 0xd85a5a);
@@ -7565,6 +7595,7 @@ function badUpdate(dt) {
 // =====================================================================
 function funTownUpdate(dt) {
   trailsUpdate(dt);
+  fgUpdate(dt);
   mcUpdate(dt);
   carRaceUpdate(dt);
   parkourUpdate(dt);
@@ -7588,6 +7619,7 @@ function funTownUpdate(dt) {
 function onNetFun(d, conn) {
   if (onNetBoard(d, conn)) return true;
   if (onNetMon(d, conn)) return true;
+  if (onNetFig(d, conn)) return true;
   if (onNetArmy(d, conn)) return true;
   if (onNetCards(d, conn)) return true;
   if (onNetTag(d, conn)) return true;
@@ -7684,6 +7716,8 @@ function openBoard() {
     { name: "🏹 怪獣ハンターをよぶ", desc: "コインでハンターをやとうと、モンスターとたたかってくれる（J キーでも呼べる）", btn: "えらぶ", fn: () => { openHunters(); return false; } },
     { name: "🗺️ 宝の地図", desc: townSave.treasure ? "持っている！ 右上のヒントをたよりにさがそう" : "町のどこかにうまっている宝箱の場所がわかる（コイン・ガチャ券・レアなぼうしなど）", btn: townSave.treasure ? "持っている" : "50🪙で買う", disabled: !!townSave.treasure, fn: () => { buyTreasureMap(); } },
     { name: "👫 フレンド・プロフィール・称号", desc: "", btn: "ひらく", fn: () => { openFriends(); return false; } },
+    { name: "🌍 部屋の公開", desc: "公開すると、コードを知らない人も「公開の部屋をさがす」から入れる（ホストだけ）", btn: "切りかえ", fn: () => { pubToggle(); return false; } },
+    { name: "🧸 フィギュア", desc: "パック・コレクション・フィギュア対戦", btn: "ひらく", fn: () => { openFigShop(); return false; } },
     { name: "🐾 モンスター BOX", desc: "つかまえたモンスターを見る・育てる（N キー／🐾 ボタンでも）", btn: "ひらく", fn: () => { openMonBox(); return false; } },
     { name: "🔀 ボタン配置を切りかえ", desc: "いまの配置 ⇄ 前の配置（タイトル画面でも切りかえられる）", btn: "切りかえ", fn: () => { toggleUiLayout(); return false; } },
     { name: "🎓 チュートリアルをもう一度", desc: "あそびかたを1つずつやってみる", btn: "やる", fn: () => { closeShop(); startTutorial(); return false; } },
@@ -8030,7 +8064,7 @@ function digTreasure() {
 // ---- 部屋のかぎ（バージョンがちがうと、うまく遊べないので教える） ----
 function oldVerMsg() { net.full = true; net.online = false; showMsg("バージョンがちがうよ", "部屋を作った人と、ゲームのバージョンがちがうみたい。<br>2人とも同じアドレス（GitHub のページなど）で開いて、ページを<b>読みこみ直して</b>からためしてね。", [{ label: "タイトルへ", fn: () => location.reload() }]); }
 // ---- メニューが出ている間は、マウスをゲームの画面からはなす（ボタンがおせなくなるのをふせぐ） ----
-function anyUiOpen() { return !mode || !$("titleP").hidden || !$("modeP").hidden || !$("joinP").hidden || !$("msgP").hidden || !$("shopP").hidden || !$("rvP").hidden || !$("cardP").hidden || !$("armyMap").hidden || chat.open || paintMode || movie.on || paused || mbt.on; }
+function anyUiOpen() { return !mode || !$("titleP").hidden || !$("modeP").hidden || !$("joinP").hidden || !$("msgP").hidden || !$("shopP").hidden || !$("rvP").hidden || !$("cardP").hidden || !$("armyMap").hidden || chat.open || paintMode || movie.on || paused || mbt.on || !$("fgP").hidden; }
 setInterval(() => { if (document.pointerLockElement && anyUiOpen() && document.exitPointerLock) document.exitPointerLock(); }, 200);
 
 // =====================================================================
@@ -10118,7 +10152,7 @@ function skUpdate(dt) {
     return;
   }
   const park = skInPark();
-  if (park && !sk.session) { sk.session = true; sk.pts = 0; sk.tricks = 0; toast(me.veh === "proskate" ? `🛹 プロモード！ 技のあと、バーが<b>緑</b>のときにもう一回おして<b>キャッチ</b>！<br><span class="small">レールでは「グラッ！」としたらすぐおす</span>` : `🛹 ジャンプ中に ${touchMode ? "🤸" : "クリック"}で技！<br><span class="small">つなげるとコンボで点が倍！</span>`, 3200); }
+  if (park && !sk.session) { sk.session = true; sk.pts = 0; sk.tricks = 0; toast(me.veh === "proskate" ? `🛹 プロモード！ 技が<b>最後まで終わってから</b>着地しないと失敗！<br><span class="small">レールでは「グラッ！」としたらすぐおす</span>` : `🛹 ジャンプ中に ${touchMode ? "🤸" : "クリック"}で技！<br><span class="small">つなげるとコンボで点が倍！</span>`, 3200); }
   if (!park && sk.session && me.onGround && !sk.trick) skEndSession();
   // 空中
   if (!me.onGround) sk.air = true;
@@ -10130,8 +10164,7 @@ function skUpdate(dt) {
     if (board) { board.rotation.order = "YXZ"; board.rotation.set((T.bx || 0) * Math.PI * 2 * e, me.ry + (T.by || 0) * Math.PI * 2 * e, (T.bz || 0) * Math.PI * 2 * e); if (T.grab) board.position.y += Math.sin(k * Math.PI) * 0.25; }
     if (T.spin) me.ry = K.ry0 + T.spin * Math.PI * 2 * e;
     if (k >= 1) {
-      if (me.veh === "proskate") sk.catchOn = { T, t: 0, c: rand(0.22, 0.78), w: Math.max(0.09, 0.24 - sk.combo.length * 0.04), sp: 4.2 + sk.combo.length * 1.4 };
-      else sk.combo.push(T);
+      sk.combo.push(T);
       sk.trick = null;
     }
   }
@@ -10811,8 +10844,10 @@ function mcSpawn() {
     const mut = Math.random() < (1 / 800) * (mcLuck() > 1 ? 1.5 : 1) ? 1 + Math.floor(Math.random() * 5) : 0;
     const lv = Math.max(1, Math.round(3 + Math.min(S.tier, 11) * 3 + rand(-2, 3)));
     const w = { mon: mcNewMon(sp, lv, mut), pos: new V3(x, y, z), ry: rand(0, 6), goal: null, wait: rand(0, 3), fail: 0, spotted: false };
+    if (Math.random() < 0.08) for (const k of ["hp", "atk", "def", "spd"]) w.mon.iv[k] = 24 + Math.floor(Math.random() * 8);
+    w.strong = mcIvSum(w.mon) >= 100;
     w.m = mcMakeMesh(sp, mut); w.m.position.copy(w.pos); world.add(w.m);
-    if (S.tier >= MC_RARE) { const lab = makeLabel(`[${MC_TIERS[S.tier].k}] ${S.name}`, MC_TIERS[S.tier].col, 0.9); lab.position.y = 1.6; w.m.add(lab); }
+    if (S.tier >= MC_RARE || w.strong) { const lab = makeLabel(`${w.strong ? "💪 " : ""}[${MC_TIERS[S.tier].k}] ${S.name}`, w.strong ? "#ffb040" : MC_TIERS[S.tier].col, 0.9); lab.position.y = 1.6; w.m.add(lab); }
     mc.wild.push(w);
     if (S.tier >= MC_RARE) mcAnnounce(w);
     return;
@@ -10880,9 +10915,14 @@ function mcTravel(go) {
 
 // ---- つかまえる ----
 function mcNearWild() { let best = null, bd = 2.8; for (const w of mc.wild) { const d = Math.hypot(w.pos.x - me.pos.x, w.pos.z - me.pos.z); if (d < bd && Math.abs(w.pos.y - me.pos.y) < 2.5) { bd = d; best = w; } } return best; }
-function mcPrompt() { const w = mcNearWild(); const S = MC_SPECIES[w.mon.sp]; return `[E] つかまえる（70%）　[${MC_TIERS[S.tier].k}] ${S.name} Lv.${w.mon.lv}${w.mon.mut ? "　✨突然変異" : ""}`; }
+function mcPrompt() { const w = mcNearWild(); const S = MC_SPECIES[w.mon.sp]; if (w.strong) return `[E] ⚔️ バトルでつかまえる（勝つと70%）　💪つよい個体 [${MC_TIERS[S.tier].k}] ${S.name} Lv.${w.mon.lv}`; return `[E] つかまえる（70%）　[${MC_TIERS[S.tier].k}] ${S.name} Lv.${w.mon.lv}${w.mon.mut ? "　✨突然変異" : ""}`; }
 function mcCatch(w) {
   if (mcBox().length >= 60) { toast("BOX がいっぱい（60ぴきまで）。にがしてね", 1800); return; }
+  if (w.strong) {
+    const my = mcPickMyMon();
+    if (!my) { toast("💪 つよい個体は、自分のモンスターで戦って勝たないとつかまえられない！", 2400); return; }
+    mbStart(my, w.mon, Math.floor(Math.random() * 1e9), "A", "wild"); mbt.wild = w; return;
+  }
   const S = MC_SPECIES[w.mon.sp];
   if (Math.random() < 0.7) {
     mcBox().push(w.mon); mcEnsureIds(); saveTown(true); mcRemoveWild(w);
@@ -11125,6 +11165,11 @@ function mbFinish() {
   const real = mcBox().find((m) => m.id === my.mon.id);
   let txt = iWin ? `🏆 ${mcName(my.mon)} の勝ち！` : `😢 ${mcName(my.mon)} は負けちゃった…`;
   if (real) { const xp = iWin ? 10 + op.mon.lv * 4 : 4 + op.mon.lv; mcGainXp(real, xp); txt += `<br>けいけん +${xp}`; }
+  if (mbt.kind === "wild" && mbt.wild) {
+    const w = mbt.wild; mbt.wild = null;
+    if (iWin && Math.random() < 0.7) { mcBox().push({ ...w.mon, iv: { ...w.mon.iv } }); mcEnsureIds(); if (mc.wild.includes(w)) mcRemoveWild(w); txt += `<br>🎉 ${MC_SPECIES[w.mon.sp].name} をつかまえた！（つよい個体）`; }
+    else if (iWin) { if (mc.wild.includes(w)) mcRemoveWild(w); txt += "<br>…でも、にげられちゃった"; }
+  }
   if (iWin) { const c = mbt.kind === "online" ? 50 : 15 + op.mon.lv * 2; setTimeout(() => gotCoins(c, "⚔️ バトルに勝った！"), 600); play("clear"); } else play("hmm");
   saveTown(true);
   $("mbLog").innerHTML = txt; $("mbClose").hidden = false; $("mbFast").hidden = true; $("mbSkip").hidden = true;
@@ -11152,10 +11197,7 @@ function openBattleMenu() {
   const my = mcPickMyMon();
   const rows = [
     { html: `<div style="width:100%;text-align:left">戦うモンスター：${mcTierBadge(MC_SPECIES[my.sp].tier)} <b>${mcName(my)}</b> Lv.${my.lv}<br><span class="small">（BOX で「いっしょに歩く」にした子が戦うよ）</span></div>` },
-    { name: "🤖 コンピュータと戦う", desc: "同じくらいの強さのモンスターと戦う", btn: "戦う", fn: () => {
-      const tier = Math.min(11, MC_SPECIES[my.sp].tier + (Math.random() < 0.3 ? 1 : 0)), pool = MC_SPECIES.filter((s) => s.tier <= tier && s.tier >= Math.max(0, tier - 2));
-      const opp = mcNewMon(pick(pool).id, Math.max(1, my.lv + Math.round(rand(-2, 2))), Math.random() < 0.02 ? 1 + Math.floor(Math.random() * 5) : 0); opp.name = "CPU の " + MC_SPECIES[opp.sp].name;
-      mbStart(my, opp, Math.floor(Math.random() * 1e9), "A", "cpu"); return false; } },
+    ...[["easy", "🟢 よわい", "レベルが少しひくい・個体値もひくい"], ["normal", "🟡 ふつう", "同じくらいか、少し強い"], ["hard", "🔴 つよい", "レベルが高くて個体値も高い！ 勝つとごほうびも多い"]].map(([d, n, desc]) => ({ name: `🤖 CPU：${n}`, desc, btn: "戦う", fn: () => { mbStart(my, mcCpuOpp(my, d), Math.floor(Math.random() * 1e9), "A", "cpu"); return false; } })),
   ];
   if (net.online) {
     const others = Object.entries(net.players);
@@ -11183,6 +11225,463 @@ function onNetMon(d, conn) {
 $("mbClose").onclick = mbClose;
 $("mbSkip").onclick = mbSkip;
 $("mbFast").onclick = () => { mbt.speed = mbt.speed === 1 ? 2.5 : 1; $("mbFast").textContent = mbt.speed === 1 ? "⏩ はやく" : "▶ ふつう"; };
+
+// =====================================================================
+//  34. フィギュア屋さん・フィギュア対戦（10×10のマスで戦う）
+// =====================================================================
+const FG_RATES = [18.92, 16.22, 13.51, 12.43, 10.81, 8.11, 6.49, 5.41, 3.78, 2.70, 0.81, 0.54, 0.27];
+const FG_COST = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 7, 8], FG_COST_MAX = 20, FG_N = 10;
+const FG_CLASSES = {
+  sword: { n: "剣士", e: "⚔️", hp: 100, atk: 28, mv: 2, rng: "adj4", rd: "となり（上下左右）" },
+  spear: { n: "やり使い", e: "🔱", hp: 95, atk: 26, mv: 2, rng: "line2", rd: "まっすぐ2マス" },
+  bow: { n: "弓使い", e: "🏹", hp: 75, atk: 22, mv: 2, rng: "far", rd: "2〜4マスはなれたところ" },
+  mage: { n: "まほう使い", e: "🔮", hp: 70, atk: 24, mv: 2, rng: "m2", splash: true, rd: "2マスまで（まわりにも当たる）" },
+  shield: { n: "たて持ち", e: "🛡️", hp: 150, atk: 16, mv: 1, rng: "adj8", rd: "まわり8マス" },
+  ninja: { n: "にんじゃ", e: "🌀", hp: 80, atk: 25, mv: 4, rng: "adj8", rd: "まわり8マス" },
+  heal: { n: "ヒーラー", e: "💚", hp: 80, atk: 12, mv: 2, rng: "m2", heal: true, rd: "2マスまで（なかまを回復）" },
+};
+const FG_SKILLS = {
+  poison: { n: "どく", p: 0.6, d: "こうげきで どくにする" }, para: { n: "まひ", p: 0.4, d: "こうげきで まひさせる" },
+  sleep: { n: "ねむり", p: 0.35, d: "こうげきで ねむらせる" }, double: { n: "2回こうげき", p: 0.3, d: "もう一回こうげき" },
+  crit: { n: "かいしん", p: 0.3, d: "ダメージ2倍" }, guard: { n: "ガード", p: 0.4, d: "うけるダメージ半分" },
+  counter: { n: "はんげき", p: 0.4, d: "こうげきされたら やりかえす" }, drain: { n: "きゅうしゅう", p: 0.5, d: "あたえたダメージの半分回復" },
+  regen: { n: "さいせい", p: 0.5, d: "ターンのはじめに15%回復" }, dash: { n: "ダッシュ", p: 0.5, d: "いどう+2" },
+  dark: { n: "やみのしんぞう", p: 0.85, d: "こうげきで どく＋まひ", strong: true }, phantom: { n: "きえかけのはね", p: 0.6, d: "こうげきを よける", strong: true },
+  melt: { n: "とけるて", p: 0.8, d: "ダメージ1.8倍＋どく", strong: true },
+};
+const FG_NORMAL_SK = ["poison", "para", "sleep", "double", "crit", "guard", "counter", "drain", "regen", "dash"];
+const FIGS = (() => {
+  const adj = ["ふわふわ", "もこもこ", "ぷにぷに", "きらきら", "ぴかぴか", "ほかほか", "ひえひえ", "ごろごろ", "どきどき", "ぎらぎら"];
+  const cls = Object.keys(FG_CLASSES), r = mulberry(4242), combos = [];
+  for (const a of adj) for (const c of cls) combos.push([a, c]);
+  for (let i = combos.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [combos[i], combos[j]] = [combos[j], combos[i]]; }
+  const counts = [10, 9, 8, 8, 7, 6, 5, 5, 4, 3, 2, 2, 1], list = [];
+  let k = 0;
+  counts.forEach((n, tier) => { for (let i = 0; i < n; i++) {
+    const [a, c] = combos[k++], C = FG_CLASSES[c];
+    const f = { id: list.length, tier, cls: c, name: tier === 12 ? "やみのネキラク" : a + C.n, evo: tier < 12 && r() < 0.5 };
+    const nsk = tier === 12 ? 0 : tier >= 11 ? 3 : tier >= 9 ? 2 : tier >= 5 ? 1 : 0, pool = FG_NORMAL_SK.slice();
+    f.skills = tier === 12 ? ["dark", "phantom", "melt"] : Array.from({ length: nsk }, () => pool.splice(Math.floor(r() * pool.length), 1)[0]);
+    const m = 1 + tier * 0.12 + (tier === 12 ? 0.4 : 0);
+    f.hp = Math.round(C.hp * m * (0.92 + r() * 0.16)); f.atk = Math.round(C.atk * m * (0.92 + r() * 0.16)); f.mv = C.mv;
+    list.push(f);
+  } });
+  return list;
+})();
+function fgOwned() { return (townSave.figs = townSave.figs || {}); }
+function fgParty() { return (townSave.figParty = (townSave.figParty || []).filter((id) => fgOwned()[id])); }
+function fgCost(ids) { return ids.reduce((a, id) => a + FG_COST[FIGS[id].tier], 0); }
+function fgBadge(t) { return mcTierBadge(t); }
+function fgRoll() { let x = Math.random() * 100; for (let i = 0; i < FG_RATES.length; i++) { x -= FG_RATES[i]; if (x <= 0) { const pool = FIGS.filter((f) => f.tier === i); return pick(pool).id; } } return 0; }
+
+// ---- お店 ----
+function buildFigShop() {
+  const cands = [[6, -9], [-6, 9], [12, -12], [-12, 12], [20, -6], [-20, 6], [26, 26], [-26, -26]];
+  let at = cands[0];
+  for (const [x, z] of cands) { if (!colliders.some((c) => !c.sl && c.maxY > 0.3 && c.maxX > x - 2.5 && c.minX < x + 2.5 && c.maxZ > z - 2.5 && c.minZ < z + 2.5) && !(town.spots || []).some((s) => Math.hypot(s.x - x, s.z - z) < 3)) { at = [x, z]; break; } }
+  const [x, z] = at;
+  addBox(x, 0, z, 3, 1.1, 1.2, 0xff8ac0); addBox(x, 2.6, z, 3.6, 0.25, 2, 0xffd84a, { collide: false });
+  for (const sx of [-1.6, 1.6]) addBox(x + sx, 0, z, 0.15, 2.6, 0.15, 0xffffff, { collide: false });
+  const l = makeLabel("🧸 フィギュア屋さん", "#fff", 1.6, { bg: "#d0408a" }); l.position.set(x, 3.6, z); world.add(l);
+  addSpot(x, z + 1.6, () => "[E] 🧸 フィギュア屋さん（パック・対戦）", openFigShop);
+  town.mapRects.push({ x, z, w: 3, d: 2, color: 0xff8ac0, label: "フィギュア" });
+}
+function openFigShop() {
+  const n = Object.values(fgOwned()).filter((v) => v > 0).length, party = fgParty();
+  openPanel("🧸 フィギュア屋さん", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい　｜　集めたフィギュア ${n}/${FIGS.length}`, [
+    { name: "🎁 フィギュアパック", desc: "3体入り！ C〜SUN、シークレット(SUNR)もあるかも…", btn: "50🪙", fn: () => { if (!pay(50)) return; fgOpenPack(); return false; } },
+    { name: "📚 コレクション・パーティー", desc: `パーティー ${party.length}/5　コスト ${fgCost(party)}/${FG_COST_MAX}`, btn: "ひらく", fn: () => { fgCollection(); return false; } },
+    { name: "⚔️ CPU と対戦", desc: "10×10のマスで戦う！ トーテムをこわすか、全員たおすと勝ち", btn: "えらぶ", fn: () => { fgBattleMenu(); return false; } },
+    { name: "📖 ルール", desc: "あそびかたを見る", btn: "見る", fn: () => { fgRules(); return false; } },
+  ], openFigShop);
+}
+function fgRules() {
+  showMsg("📖 フィギュア対戦のルール", `<div style="text-align:left;font-size:14px;line-height:1.6">・10×10のマスで、5体のパーティーで戦う（コストは合計${FG_COST_MAX}まで）<br>・自分の番に、1体ずつ「うごく → こうげき」できる<br>・<b>あいてのトーテム🗿をこわす</b>か、<b>全員たおす</b>と勝ち。自分のトーテムがこわされるか全員たおされると負け<br>・ときどき<b>💎進化の宝石</b>が出る。とると60%で進化（つよくなってスキルもふえる）<br>・SSS からスキル1つ、UR から2つ、SUN は3つ。スキルは決まった確率で発動<br>・どく☠️・まひ⚡・ねむり💤 の状態異常がある<br>・こうげきしたり、こうげきされると<b>必殺ゲージ</b>がたまる。満タンで<b>必殺技</b>！<br>・<b>宝石争奪戦</b>：宝石を5こ先にとったら勝ち<br>・<b>オート</b>：ぜんぶ自動　<b>半オート</b>：いどうは自動、ねらう相手と必殺技は自分</div>`, [{ label: "OK", fn: () => openFigShop() }]);
+}
+function fgOpenPack() {
+  const got = [fgRoll(), fgRoll(), fgRoll()], O = fgOwned();
+  const html = got.map((id, i) => { const f = FIGS[id], isNew = !O[id]; O[id] = (O[id] || 0) + 1; return `<div class="fgCard t${f.tier}" style="animation-delay:${i * 0.35}s;--c:${MC_TIERS[f.tier].col}"><div class="fgE">${FG_CLASSES[f.cls].e}</div><div>${fgBadge(f.tier)}</div><b>${f.name}</b>${isNew ? `<div class="fgNew">NEW!</div>` : ""}</div>`; }).join("");
+  saveTown(true);
+  const best = Math.max(...got.map((id) => FIGS[id].tier));
+  play(best >= 9 ? "clear" : "item"); if (best >= 9) setTimeout(() => play("mutant"), 900);
+  showMsg("🎁 フィギュアパック", `<div class="fgCards">${html}</div>`, [{ label: "もう1パック（50🪙）", fn: () => { if (pay(50)) fgOpenPack(); else openFigShop(); } }, { label: "もどる", fn: () => openFigShop() }]);
+  if (best >= 11 && net.online) netSend({ t: "chat", text: `🧸 ${myName} がフィギュアパックで【${MC_TIERS[best].k}】をひいた！！` });
+}
+function fgCollection() {
+  const O = fgOwned(), party = fgParty();
+  const ids = FIGS.filter((f) => O[f.id]).sort((a, b) => b.tier - a.tier).map((f) => f.id);
+  const rows = [{ html: `<div style="width:100%;text-align:left">パーティー：${party.length ? party.map((id) => `${FG_CLASSES[FIGS[id].cls].e}${FIGS[id].name}`).join("・") : "（まだいない）"}<br>コスト <b>${fgCost(party)}</b>/${FG_COST_MAX}　<span class="small">（5体まで。強いフィギュアほどコストが高い）</span></div>` }];
+  for (const id of ids) {
+    const f = FIGS[id], C = FG_CLASSES[f.cls], inP = party.includes(id);
+    rows.push({ name: `${inP ? "✅ " : ""}${C.e} ${fgBadge(f.tier)} ${f.name} ×${O[id]}${f.evo ? "　🌟進化できる" : ""}`, desc: `${C.n}　HP ${f.hp}・こうげき ${f.atk}・いどう ${f.mv}・はんい：${C.rd}　コスト ${FG_COST[f.tier]}${f.skills.length ? `<br>スキル：${f.skills.map((s) => `${FG_SKILLS[s].n}(${Math.round(FG_SKILLS[s].p * 100)}%)`).join("・")}` : ""}`, btn: inP ? "はずす" : "入れる",
+      fn: () => { const P = fgParty(); if (inP) townSave.figParty = P.filter((q) => q !== id); else { if (P.length >= 5) { toast("パーティーは5体まで", 1200); return false; } if (fgCost(P) + FG_COST[f.tier] > FG_COST_MAX) { toast(`コストオーバー！（${FG_COST_MAX}まで）`, 1400); return false; } P.push(id); townSave.figParty = P; } saveTown(true); fgCollection(); return false; } });
+  }
+  if (!ids.length) rows.push({ html: "<span class='small'>まだフィギュアがないよ。パックを買おう！</span>" });
+  rows.push({ name: "⬅️ もどる", desc: "", btn: "もどる", fn: () => { openFigShop(); return false; } });
+  openPanel("📚 コレクション", `${ids.length}/${FIGS.length} しゅるい`, rows, fgCollection);
+}
+function fgBattleMenu() {
+  const party = fgParty();
+  if (party.length < 1) { toast("まずはパーティーにフィギュアを入れよう（コレクションから）", 2000); fgCollection(); return; }
+  const rows = [];
+  for (const mode of ["normal", "gem"]) for (const [d, dn] of [["easy", "よわい"], ["normal", "ふつう"], ["hard", "つよい"]])
+    rows.push({ name: `${mode === "gem" ? "💎 宝石争奪戦" : "⚔️ ふつうの対戦"}（CPU：${dn}）`, desc: mode === "gem" ? "宝石を5こ先にとるか、トーテムをこわすか、全員たおすと勝ち" : "トーテムをこわすか、全員たおすと勝ち", btn: "戦う", fn: () => { closeShop(); fgStart({ mode, diff: d, p0: party, p1: fgCpuParty(d), online: false }); return false; } });
+  if (net.online) for (const [id, r] of Object.entries(net.players)) rows.push({ name: `🌐 ${r.name} とオンライン対戦`, desc: "ふつうの対戦をもうしこむ", btn: "もうしこむ", fn: () => { fg.inv = { id, mode: "normal" }; sendTo(id, { t: "fgInv", from: myName, mode: "normal", party, fromId: net.myId }); toast(`📨 ${r.name} にフィギュア対戦をもうしこんだ！`, 2200); return false; } });
+  else rows.push({ html: "<span class='small'>🌐 オンライン対戦は、部屋を作るか入ると できるよ</span>" });
+  rows.push({ name: "⬅️ もどる", desc: "", btn: "もどる", fn: () => { openFigShop(); return false; } });
+  openPanel("⚔️ フィギュア対戦", `パーティー ${party.length}体・コスト ${fgCost(party)}/${FG_COST_MAX}`, rows, fgBattleMenu);
+}
+function fgCpuParty(diff) {
+  const [lo, hi] = diff === "easy" ? [0, 4] : diff === "normal" ? [1, 8] : [4, 11];
+  const out = []; let tries = 0;
+  while (out.length < 5 && tries++ < 200) { const f = pick(FIGS.filter((q) => q.tier >= lo && q.tier <= hi)); if (out.includes(f.id) || fgCost(out) + FG_COST[f.tier] > FG_COST_MAX) continue; out.push(f.id); }
+  return out;
+}
+
+// ---- 対戦のしくみ ----
+const fg = { B: null, sel: null, phase: "", ctrl: "manual", busy: false, inv: null, aiT: 0, myTeam: 0 };
+const FG_P0 = [[8, 1], [8, 3], [8, 4], [8, 6], [8, 8]], FG_P1 = [[1, 8], [1, 6], [1, 5], [1, 3], [1, 1]];
+function fgMakeUnit(fid, team, r, c, uid, boost) {
+  const f = FIGS[fid], C = FG_CLASSES[f.cls], m = boost || 1;
+  return { uid, fid, team, r, c, hp: Math.round(f.hp * m), max: Math.round(f.hp * m), atk: Math.round(f.atk * m), mv: f.mv, rng: C.rng, cls: f.cls, skills: f.skills.slice(), st: { poison: 0, para: 0, sleep: 0 }, gauge: 0, acted: false, evo: false, stun: false };
+}
+function fgStart(o) {
+  const B = { mode: o.mode, diff: o.diff || "normal", units: [], totems: [{ team: 0, r: 9, c: 4, hp: 260, max: 260 }, { team: 1, r: 0, c: 5, hp: 260, max: 260 }], gems: [], turn: 0, round: 1, gemsGot: [0, 0], over: null, log: "⚔️ バトルスタート！", online: !!o.online, names: o.names || [myName, o.online ? "あいて" : "CPU"] };
+  let uid = 1;
+  o.p0.slice(0, 5).forEach((fid, i) => B.units.push(fgMakeUnit(fid, 0, FG_P0[i][0], FG_P0[i][1], uid++)));
+  const boost = !o.online && o.diff === "hard" ? 1.15 : !o.online && o.diff === "easy" ? 0.9 : 1;
+  o.p1.slice(0, 5).forEach((fid, i) => B.units.push(fgMakeUnit(fid, 1, FG_P1[i][0], FG_P1[i][1], uid++, boost)));
+  fg.B = B; fg.overShown = false; fg.sel = null; fg.phase = ""; fg.myTeam = o.myTeam || 0; fg.host = !o.guest; fg.opp = o.opp || null; fg.aiT = 0.8;
+  controls = false; $("fgP").hidden = false; fgTurnStart(); fgRender();
+}
+const fgAlive = (B, team) => B.units.filter((u) => u.hp > 0 && (team == null || u.team === team));
+const fgUnitAt = (B, r, c) => B.units.find((u) => u.hp > 0 && u.r === r && u.c === c);
+const fgTotemAt = (B, r, c) => B.totems.find((t) => t.hp > 0 && t.r === r && t.c === c);
+function fgInRange(u, r, c, from) {
+  const ur = from ? from[0] : u.r, uc = from ? from[1] : u.c, dr = Math.abs(r - ur), dc = Math.abs(c - uc), man = dr + dc, ch = Math.max(dr, dc);
+  if (u.rng === "adj4") return man === 1;
+  if (u.rng === "adj8") return ch === 1;
+  if (u.rng === "line2") return (dr === 0 || dc === 0) && man >= 1 && man <= 2;
+  if (u.rng === "far") return man >= 2 && man <= 4;
+  return man >= 1 && man <= 2;
+}
+function fgReach(B, u) {
+  const mv = u.mv + (u.dashOn ? 2 : 0), seen = new Map([[u.r * 10 + u.c, 0]]), q = [[u.r, u.c]];
+  while (q.length) { const [r, c] = q.shift(), d = seen.get(r * 10 + c); if (d >= mv) continue;
+    for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nr = r + dr, nc = c + dc; if (nr < 0 || nc < 0 || nr >= FG_N || nc >= FG_N || seen.has(nr * 10 + nc)) continue; if (fgUnitAt(B, nr, nc) || fgTotemAt(B, nr, nc)) continue; seen.set(nr * 10 + nc, d + 1); q.push([nr, nc]); } }
+  return [...seen.keys()].map((k) => [Math.floor(k / 10), k % 10]);
+}
+function fgTargets(B, u, from) {
+  const out = [];
+  if (FG_CLASSES[u.cls].heal) for (const a of fgAlive(B, u.team)) if (a !== u && a.hp < a.max && fgInRange(u, a.r, a.c, from)) out.push({ r: a.r, c: a.c, ally: true });
+  for (const e of fgAlive(B, 1 - u.team)) if (fgInRange(u, e.r, e.c, from)) out.push({ r: e.r, c: e.c });
+  const t = B.totems[1 - u.team]; if (t.hp > 0 && fgInRange(u, t.r, t.c, from)) out.push({ r: t.r, c: t.c, totem: true });
+  return out;
+}
+const fgSk = (u, k) => u.skills.includes(k) && Math.random() < FG_SKILLS[k].p;
+function fgSay(t) { fg.B.log = t; }
+function fgTurnStart() {
+  const B = fg.B, team = B.turn;
+  if (team === 0) {
+    const every = B.mode === "gem" ? 1 : 3, cap = B.mode === "gem" ? 3 : 2;
+    if (B.round % every === 0 && B.gems.length < cap) {
+      for (let k = 0; k < 30; k++) { const r = 2 + Math.floor(Math.random() * 6), c = Math.floor(Math.random() * 10); if (!fgUnitAt(B, r, c) && !fgTotemAt(B, r, c) && !B.gems.some((g) => g.r === r && g.c === c)) { B.gems.push({ r, c }); fgSay("💎 進化の宝石があらわれた！"); break; } }
+    }
+  }
+  for (const u of fgAlive(B, team)) {
+    u.acted = false; u.stun = false; u.dashOn = fgSk(u, "dash");
+    if (u.st.poison > 0) { const d = Math.max(3, Math.round(u.max * 0.08)); u.hp = Math.max(0, u.hp - d); u.st.poison--; fgPop(u.r, u.c, `☠️-${d}`, "#b06aff"); }
+    if (u.hp > 0 && fgSk(u, "regen")) { const h = Math.round(u.max * 0.15); u.hp = Math.min(u.max, u.hp + h); fgPop(u.r, u.c, `+${h}`, "#6bd66b"); }
+    if (u.st.sleep > 0) { u.stun = true; u.st.sleep--; }
+    else if (u.st.para > 0) { u.st.para--; if (Math.random() < 0.5) { u.stun = true; fgPop(u.r, u.c, "⚡しびれ", "#ffd84a"); } }
+    if (u.stun || u.hp <= 0) u.acted = true;
+  }
+  fgCheckEnd();
+  if (!B.over && fgAlive(B, team).every((u) => u.acted)) setTimeout(() => fgEndTurn(), 600);
+}
+function fgDamage(att, tgt, mult, isTotem) {
+  const B = fg.B;
+  let d = att.atk * (0.9 + Math.random() * 0.2) * mult;
+  if (fgSk(att, "crit")) { d *= 2; fgPop(tgt.r, tgt.c, "かいしん！", "#ffd84a"); }
+  if (fgSk(att, "melt")) d *= 1.8;
+  if (!isTotem) {
+    if (fgSk(tgt, "phantom")) { fgPop(tgt.r, tgt.c, "よけた！", "#cfe8ff"); return 0; }
+    if (fgSk(tgt, "guard")) d *= 0.5;
+  }
+  d = Math.max(1, Math.round(d));
+  tgt.hp = Math.max(0, tgt.hp - d); fgPop(tgt.r, tgt.c, `-${d}`, "#ff5a5a");
+  if (!isTotem) {
+    tgt.gauge = Math.min(100, tgt.gauge + 15); if (tgt.st.sleep) tgt.st.sleep = 0;
+    if (tgt.hp > 0) {
+      if (fgSk(att, "poison") || att.skills.includes("melt") && Math.random() < 0.8 || fgSk(att, "dark")) tgt.st.poison = 3;
+      if (fgSk(att, "para") || att.skills.includes("dark") && Math.random() < 0.6) tgt.st.para = 2;
+      if (fgSk(att, "sleep")) tgt.st.sleep = 2;
+    }
+    if (fgSk(att, "drain")) { att.hp = Math.min(att.max, att.hp + Math.round(d / 2)); }
+  }
+  return d;
+}
+function fgAttack(u, r, c, ult) {
+  const B = fg.B, C = FG_CLASSES[u.cls], tgtU = fgUnitAt(B, r, c), tgtT = fgTotemAt(B, r, c);
+  if (C.heal && tgtU && tgtU.team === u.team) {
+    if (ult) { for (const a of fgAlive(B, u.team)) { a.hp = Math.min(a.max, a.hp + Math.round(a.max * 0.4)); a.st = { poison: 0, para: 0, sleep: 0 }; fgPop(a.r, a.c, "+40%", "#6bd66b"); } fgSay(`✨ ${FIGS[u.fid].name} の必殺技「みんな元気になあれ」！`); }
+    else { const h = Math.round(u.atk * 1.6); tgtU.hp = Math.min(tgtU.max, tgtU.hp + h); fgPop(r, c, `+${h}`, "#6bd66b"); fgSay(`💚 ${FIGS[u.fid].name} が回復した`); }
+  } else if (tgtU || tgtT) {
+    const mult = (ult ? 2.5 : 1) * (tgtT ? (ult ? 0.4 : 0.6) : 1), tgt = tgtU || tgtT; // トーテムはかたい
+    fgDamage(u, tgt, mult, !tgtU);
+    fgSay(ult ? `💥 ${FIGS[u.fid].name} の必殺技！！` : `${C.e} ${FIGS[u.fid].name} のこうげき！`);
+    if (C.splash || ult) for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const s = fgUnitAt(B, r + dr, c + dc); if (s && s.team !== u.team) fgDamage(u, s, (ult ? 1.2 : 0.5), false); }
+    if (tgtU && tgtU.hp > 0 && !ult && fgSk(u, "double")) { fgPop(r, c, "2回め！", "#ffb070"); fgDamage(u, tgtU, 1, false); }
+    if (tgtU && tgtU.hp > 0 && fgInRange(tgtU, u.r, u.c) && fgSk(tgtU, "counter")) { fgPop(u.r, u.c, "はんげき！", "#ff8a8a"); fgDamage(tgtU, u, 0.7, false); }
+  }
+  if (ult) { u.gauge = 0; flashScreen && flashScreen(); play("boom"); } else { u.gauge = Math.min(100, u.gauge + 25); play("punch"); }
+}
+function fgPickGem(u) {
+  const B = fg.B, i = B.gems.findIndex((g) => g.r === u.r && g.c === u.c);
+  if (i < 0) return;
+  B.gems.splice(i, 1); B.gemsGot[u.team]++;
+  const f = FIGS[u.fid];
+  if (f.evo && !u.evo && Math.random() < 0.6) {
+    u.evo = true; u.max = Math.round(u.max * 1.3); u.hp = Math.min(u.max, u.hp + Math.round(u.max * 0.3)); u.atk = Math.round(u.atk * 1.3); u.mv += 1;
+    const add = FG_NORMAL_SK.filter((s) => !u.skills.includes(s)); if (add.length) u.skills.push(pick(add));
+    fgPop(u.r, u.c, "🌟進化！", "#ffd84a"); fgSay(`🌟 ${f.name} が進化した！！ つよくなってスキルもふえた！`); play("clear");
+  } else { u.hp = Math.min(u.max, u.hp + Math.round(u.max * 0.3)); fgPop(u.r, u.c, f.evo && !u.evo ? "進化しっぱい…" : "💎回復", "#9ad8ff"); fgSay(`💎 ${f.name} が宝石をとった`); play("item"); }
+}
+// 1体の行動（うごく → こうげき）。オンラインではこの形で送る
+function fgDoAct(a) {
+  const B = fg.B; if (!B || B.over) return false;
+  const u = B.units.find((q) => q.uid === a.uid);
+  if (!u || u.hp <= 0 || u.acted || u.team !== B.turn) return false;
+  if (a.to && (a.to[0] !== u.r || a.to[1] !== u.c)) {
+    if (!fgReach(B, u).some(([r, c]) => r === a.to[0] && c === a.to[1])) return false;
+    u.r = a.to[0]; u.c = a.to[1]; fgPickGem(u);
+  }
+  if (a.target && fgTargets(B, u).some((t) => t.r === a.target[0] && t.c === a.target[1])) fgAttack(u, a.target[0], a.target[1], !!a.ult && u.gauge >= 100);
+  u.acted = true;
+  fgCheckEnd();
+  if (!B.over && fgAlive(B, B.turn).every((q) => q.acted)) setTimeout(() => fgEndTurn(), 500);
+  fgSync();
+  return true;
+}
+function fgEndTurn() {
+  const B = fg.B; if (!B || B.over) return;
+  if (fg.host === false) { sendTo(fg.opp, { t: "fgAct", end: true, fromId: net.myId }); return; }
+  for (const u of fgAlive(B, B.turn)) u.acted = true;
+  B.turn = 1 - B.turn; if (B.turn === 0) B.round++;
+  fg.sel = null; fg.phase = ""; fg.aiT = 0.7;
+  fgTurnStart(); fgSync(); fgRender();
+}
+function fgCheckEnd() {
+  const B = fg.B; if (B.over) return;
+  let win = null;
+  for (const t of [0, 1]) { if (B.totems[t].hp <= 0) win = 1 - t; else if (!fgAlive(B, t).length) win = 1 - t; }
+  if (B.mode === "gem") for (const t of [0, 1]) if (B.gemsGot[t] >= 5) win = t;
+  if (win != null) { B.over = { win }; fgFinish(); }
+}
+function fgFinish() {
+  if (fg.overShown) return; fg.overShown = true;
+  const B = fg.B, iWin = B.over.win === fg.myTeam;
+  fgRender();
+  if (iWin) { const c = B.online ? 80 : { easy: 20, normal: 50, hard: 120 }[B.diff] * (B.mode === "gem" ? 1.2 : 1); setTimeout(() => gotCoins(Math.round(c), "🧸 フィギュア対戦に勝った！"), 500); play("clear"); } else play("hmm");
+  fgSay(iWin ? "🏆 勝った！！" : "😢 負けちゃった…");
+  fgRender();
+}
+// ---- AI（CPU・オート・半オートのいどう） ----
+function fgAiPlan(B, u, smart) {
+  const cells = fgReach(B, u), foes = fgAlive(B, 1 - u.team), tot = B.totems[1 - u.team];
+  let best = null;
+  for (const cell of cells) {
+    let s = 0, tg = null;
+    for (const t of fgTargets(B, u, cell)) {
+      let v;
+      if (t.ally) { const a = fgUnitAt(B, t.r, t.c); v = (a.max - a.hp) / a.max * 80; }
+      else if (t.totem) v = 70 + (1 - tot.hp / tot.max) * 60;
+      else { const e = fgUnitAt(B, t.r, t.c); v = 40 + (u.atk >= e.hp ? 60 : 0) + (1 - e.hp / e.max) * 30; }
+      if (v > s) { s = v; tg = t; }
+    }
+    if (B.gems.some((g) => g.r === cell[0] && g.c === cell[1])) s += B.mode === "gem" ? 90 : FIGS[u.fid].evo && !u.evo ? 45 : 15;
+    const near = Math.min(...foes.map((e) => Math.abs(e.r - cell[0]) + Math.abs(e.c - cell[1])), Math.abs(tot.r - cell[0]) + Math.abs(tot.c - cell[1]));
+    s -= near * (tg ? 0.5 : 3);
+    if (!smart) s += Math.random() * 40;
+    if (!best || s > best.s) best = { s, to: cell, target: tg ? [tg.r, tg.c] : null };
+  }
+  return { uid: u.uid, to: best.to, target: best.target, ult: !!best.target && u.gauge >= 100 };
+}
+function fgUpdate(dt) {
+  const B = fg.B; if (!B || $("fgP").hidden || B.over) return;
+  const team = B.turn, mine = team === fg.myTeam;
+  const autoSide = mine ? fg.ctrl === "auto" : !B.online;   // CPU は自動
+  const semi = mine && fg.ctrl === "semi";
+  if (!autoSide && !semi) return;
+  if (!fg.host && !mine) return;
+  if (fg.phase === "semiPick") return;
+  fg.aiT -= dt; if (fg.aiT > 0) return;
+  const u = fgAlive(B, team).find((q) => !q.acted); if (!u) return;
+  const plan = fgAiPlan(B, u, mine || B.diff !== "easy");
+  fg.aiT = 0.55;
+  if (semi) {
+    // 半オート：いどうは自動。ねらう相手と必殺技は自分でえらぶ
+    if (plan.to[0] !== u.r || plan.to[1] !== u.c) { if (fg.host) { u.r = plan.to[0]; u.c = plan.to[1]; fgPickGem(u); fgSync(); } else fg.pendMove = plan.to; }
+    const from = fg.host ? null : fg.pendMove;
+    const tg = fgTargets(B, u, from);
+    if (tg.length) { fg.sel = u.uid; fg.phase = "semiPick"; fg.semiFrom = from; fgSay(`👆 ${FIGS[u.fid].name}：ねらう相手をタップ（必殺技・待機もえらべる）`); fgRender(); return; }
+    fgSend({ uid: u.uid, to: from || [u.r, u.c], target: null }); fg.pendMove = null; fgRender(); return;
+  }
+  fgSend(plan); fgRender();
+}
+function fgSend(a) { if (fg.host) fgDoAct(a); else sendTo(fg.opp, { t: "fgAct", a, fromId: net.myId }); }
+function fgSync() { if (fg.B && fg.B.online && fg.host) sendTo(fg.opp, { t: "fgSt", B: fg.B, fromId: net.myId }); fgRender(); }
+
+// ---- 画面 ----
+function fgPop(r, c, text, color) {
+  const g = $("fgFx"); if (!g) return;
+  const view = fg.myTeam === 1 ? [9 - r, 9 - c] : [r, c];
+  const el = document.createElement("div"); el.className = "fgPop"; el.textContent = text; el.style.color = color;
+  el.style.left = (view[1] + 0.5) * 10 + "%"; el.style.top = (view[0] + 0.2) * 10 + "%"; g.appendChild(el); setTimeout(() => el.remove(), 1100);
+}
+function fgRender() {
+  const B = fg.B; if (!B) return;
+  const flip = fg.myTeam === 1, mine = B.turn === fg.myTeam;
+  const sel = fg.sel != null ? B.units.find((u) => u.uid === fg.sel) : null;
+  let reach = [], targs = [];
+  if (sel && fg.phase === "move") reach = fgReach(B, sel);
+  if (sel && (fg.phase === "attack" || fg.phase === "semiPick")) targs = fgTargets(B, sel, fg.phase === "semiPick" ? fg.semiFrom : null);
+  let html = "";
+  for (let vr = 0; vr < FG_N; vr++) for (let vc = 0; vc < FG_N; vc++) {
+    const r = flip ? 9 - vr : vr, c = flip ? 9 - vc : vc, u = fgUnitAt(B, r, c), t = fgTotemAt(B, r, c), gm = B.gems.some((g) => g.r === r && g.c === c);
+    const isR = reach.some(([a, b]) => a === r && b === c), isT = targs.some((q) => q.r === r && q.c === c);
+    let inner = gm ? `<span class="fgGem">💎</span>` : "";
+    if (t) inner = `<div class="fgTot ${t.team === fg.myTeam ? "me" : "op"}">🗿<i style="width:${t.hp / t.max * 100}%"></i></div>`;
+    if (u) { const f = FIGS[u.fid]; inner = `<div class="fgU ${u.team === fg.myTeam ? "me" : "op"} ${u.acted && u.team === B.turn ? "done" : ""} ${u.uid === fg.sel ? "sel" : ""}" style="--c:${MC_TIERS[f.tier].col}">${FG_CLASSES[u.cls].e}${u.evo ? "<b class='fgEvo'>👑</b>" : ""}<i style="width:${u.hp / u.max * 100}%"></i><em style="width:${u.gauge}%"></em><span class="fgSt">${u.st.poison ? "☠️" : ""}${u.st.para ? "⚡" : ""}${u.st.sleep ? "💤" : ""}${u.gauge >= 100 ? "🔥" : ""}</span></div>`; }
+    html += `<div class="fgC ${(vr + vc) % 2 ? "d" : ""} ${isR ? "rch" : ""} ${isT ? "tg" : ""}" data-r="${r}" data-c="${c}">${inner}</div>`;
+  }
+  $("fgGrid").innerHTML = html;
+  const myLeft = fgAlive(B, fg.myTeam).length, opLeft = fgAlive(B, 1 - fg.myTeam).length;
+  $("fgHead").innerHTML = `${B.mode === "gem" ? "💎 宝石争奪戦" : "⚔️ フィギュア対戦"}　ラウンド ${B.round}　<b style="color:${mine ? "#7cf0ff" : "#ff8a8a"}">${B.over ? "おわり" : mine ? "あなたの番" : "あいての番"}</b><br><span class="small">🔵 ${B.names[fg.myTeam]} ${myLeft}体${B.mode === "gem" ? `・💎${B.gemsGot[fg.myTeam]}` : ""}　VS　🔴 ${B.names[1 - fg.myTeam]} ${opLeft}体${B.mode === "gem" ? `・💎${B.gemsGot[1 - fg.myTeam]}` : ""}</span>`;
+  let info = B.log;
+  if (sel) { const f = FIGS[sel.fid]; info = `${FG_CLASSES[sel.cls].e} <b>${f.name}</b>${sel.evo ? "（進化）" : ""} HP ${sel.hp}/${sel.max} こうげき ${sel.atk} いどう ${sel.mv}${sel.dashOn ? "+2" : ""}　必殺 ${sel.gauge}%${sel.skills.length ? `<br><span class="small">スキル：${sel.skills.map((s) => FG_SKILLS[s].n + Math.round(FG_SKILLS[s].p * 100) + "%").join("・")}</span>` : ""}<br>${B.log}`; }
+  $("fgInfo").innerHTML = info;
+  const canUlt = sel && sel.gauge >= 100 && (fg.phase === "attack" || fg.phase === "semiPick") && targs.length;
+  $("fgUlt").hidden = !canUlt; $("fgUlt").classList.toggle("on", !!fg.ultArm);
+  $("fgWait").hidden = !(sel && (fg.phase === "attack" || fg.phase === "semiPick" || fg.phase === "move"));
+  $("fgEnd").hidden = !(mine && fg.ctrl === "manual" && !B.over);
+  $("fgMode").textContent = { manual: "🎮 手動", semi: "🤝 半オート", auto: "🤖 オート" }[fg.ctrl];
+  $("fgQuit").textContent = B.over ? "おわる" : "やめる";
+}
+function fgTap(r, c) {
+  const B = fg.B; if (!B || B.over || B.turn !== fg.myTeam) return;
+  const u = fgUnitAt(B, r, c);
+  if (fg.phase === "semiPick" || fg.phase === "attack") {
+    const sel = B.units.find((q) => q.uid === fg.sel);
+    const from = fg.phase === "semiPick" ? fg.semiFrom : null;
+    if (sel && fgTargets(B, sel, from).some((t) => t.r === r && t.c === c)) { fgSend({ uid: sel.uid, to: from || fg.moveTo || [sel.r, sel.c], target: [r, c], ult: !!fg.ultArm }); fgClearSel(); return; }
+    if (fg.phase === "attack") return;
+    return;
+  }
+  if (fg.ctrl !== "manual") return;
+  if (fg.phase === "move") {
+    const sel = B.units.find((q) => q.uid === fg.sel);
+    if (u && u.team === fg.myTeam && !u.acted && u !== sel) { fgSelect(u); return; }
+    if (sel && fgReach(B, sel).some(([a, b]) => a === r && b === c)) {
+      // いどうして、こうげきをえらぶ（オンラインのときは、いどう先をおぼえておく）
+      if (fg.host) { if (r !== sel.r || c !== sel.c) { sel.r = r; sel.c = c; fgPickGem(sel); } fg.moveTo = null; } else fg.moveTo = [r, c];
+      const tg = fgTargets(B, sel, fg.host ? null : fg.moveTo);
+      if (!tg.length) { fgSend({ uid: sel.uid, to: fg.moveTo || [sel.r, sel.c], target: null }); fgClearSel(); return; }
+      fg.phase = "attack"; if (!fg.host) { fg.phase = "semiPick"; fg.semiFrom = fg.moveTo; }
+      fgSay("👆 こうげきする相手をタップ（待機もできる）"); fgRender(); return;
+    }
+    return;
+  }
+  if (u && u.team === fg.myTeam && !u.acted) fgSelect(u);
+}
+function fgSelect(u) { fg.sel = u.uid; fg.phase = "move"; fg.ultArm = false; fg.moveTo = null; fgSay("👆 うごくマス（青）をタップ。そのままなら自分のマス"); fgRender(); }
+function fgClearSel() { fg.sel = null; fg.phase = ""; fg.ultArm = false; fg.moveTo = null; fg.semiFrom = null; fg.pendMove = null; fgRender(); }
+function fgClose() {
+  const B = fg.B;
+  if (B && B.online && !B.over && fg.opp) sendTo(fg.opp, { t: "fgQuit", fromId: net.myId });
+  fg.B = null; $("fgP").hidden = true; controls = true;
+}
+$("fgGrid").addEventListener("click", (e) => { const el = e.target.closest(".fgC"); if (el) fgTap(+el.dataset.r, +el.dataset.c); });
+$("fgWait").onclick = () => { const B = fg.B, sel = B && B.units.find((q) => q.uid === fg.sel); if (!sel) return; fgSend({ uid: sel.uid, to: fg.semiFrom || fg.moveTo || [sel.r, sel.c], target: null }); fgClearSel(); };
+$("fgUlt").onclick = () => { fg.ultArm = !fg.ultArm; fgSay(fg.ultArm ? "🔥 必殺技！ 相手をタップ" : "👆 こうげきする相手をタップ"); fgRender(); };
+$("fgEnd").onclick = () => { fgClearSel(); fgEndTurn(); };
+$("fgMode").onclick = () => { fg.ctrl = fg.ctrl === "manual" ? "semi" : fg.ctrl === "semi" ? "auto" : "manual"; fgClearSel(); fg.aiT = 0.3; };
+$("fgQuit").onclick = () => { if (fg.B && !fg.B.over) showMsg("やめる？", "対戦をやめると負けになるよ", [{ label: "やめる", fn: () => fgClose() }, { label: "つづける", fn: () => { controls = false; } }]); else fgClose(); };
+// ---- オンライン ----
+function onNetFig(d, conn) {
+  const from = typeof d.fromId === "string" ? d.fromId : conn && conn.peer;
+  if (d.t === "fgInv") {
+    const name = (net.players[from] && net.players[from].name) || cleanName(d.from) || "だれか", party = fgParty();
+    if (fg.B || !party.length || !mode || !Array.isArray(d.party)) { sendTo(from, { t: "fgNo", fromId: net.myId }); return true; }
+    showMsg("🧸 フィギュア対戦のもうしこみ", `${name} がフィギュア対戦をもうしこんできた！`, [
+      { label: "⚔️ 戦う！", fn: () => { sendTo(from, { t: "fgAcc", party, fromId: net.myId }); fg.myTeam = 1; fg.host = false; fg.opp = from; fg.B = null; controls = false; $("fgP").hidden = false; $("fgGrid").innerHTML = ""; $("fgInfo").textContent = "じゅんびちゅう…"; } },
+      { label: "ことわる", fn: () => { sendTo(from, { t: "fgNo", fromId: net.myId }); controls = true; } },
+    ]);
+    return true;
+  }
+  if (d.t === "fgAcc") { if (fg.inv && fg.inv.id === from && Array.isArray(d.party)) { const name = (net.players[from] && net.players[from].name) || "あいて"; fg.inv = null; fgStart({ mode: "normal", p0: fgParty(), p1: d.party.filter((id) => FIGS[id]).slice(0, 5), online: true, opp: from, names: [myName, name] }); fgSync(); } return true; }
+  if (d.t === "fgNo") { if (fg.inv && fg.inv.id === from) { fg.inv = null; toast("フィギュア対戦はことわられちゃった", 1600); } return true; }
+  if (d.t === "fgSt") { if (!fg.host && from === fg.opp && d.B) { const first = !fg.B; fg.B = d.B; if (first) { controls = false; $("fgP").hidden = false; } if (first) fg.overShown = false; if (fg.phase !== "semiPick" && fg.phase !== "move") fg.sel = null; fgRender(); if (fg.B.over) fgFinish(); } return true; }
+  if (d.t === "fgAct") { if (fg.host && fg.B && from === fg.opp && fg.B.turn === 1) { if (d.end) fgEndTurn(); else if (d.a) fgDoAct(d.a); } return true; }
+  if (d.t === "fgQuit") { if (fg.B && from === fg.opp && !fg.B.over) { fg.B.over = { win: fg.myTeam }; fgFinish(); toast("あいてがやめたので、あなたの勝ち！", 2000); } return true; }
+  return false;
+}
+
+// =====================================================================
+//  35. モンスターのCPUのつよさ・つよい個体・公開の部屋
+// =====================================================================
+function mcCpuOpp(my, diff) {
+  const mt = Math.min(11, MC_SPECIES[my.sp].tier);
+  const [lo, hi] = diff === "easy" ? [0, Math.max(0, mt - 1)] : diff === "normal" ? [Math.max(0, mt - 1), Math.min(11, mt + 1)] : [mt, Math.min(11, mt + 2)];
+  const pool = MC_SPECIES.filter((s) => s.tier >= lo && s.tier <= hi && s.tier <= 11);
+  const lv = diff === "easy" ? Math.max(1, my.lv - 3) : diff === "normal" ? my.lv + Math.floor(rand(0, 3)) : my.lv + Math.floor(rand(4, 8));
+  const opp = mcNewMon(pick(pool).id, Math.min(100, lv), Math.random() < 0.02 ? 1 + Math.floor(Math.random() * 5) : 0);
+  const iv = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  for (const k of ["hp", "atk", "def", "spd"]) opp.iv[k] = diff === "easy" ? iv(0, 12) : diff === "hard" ? iv(20, 31) : iv(5, 31);
+  opp.name = `CPU（${{ easy: "よわい", normal: "ふつう", hard: "つよい" }[diff]}）の ${MC_SPECIES[opp.sp].name}`;
+  return opp;
+}
+// ---- 公開の部屋（だれでも見つけて入れる） ----
+const PUB_SLOTS = 12;
+const pub = { peer: null, on: false };
+function pubStart(n = 0) {
+  if (pub.peer || !hasPeer || ONLINE || !(net.online && net.isHost)) return;
+  const p = new Peer("funyapub-" + n); pub.peer = p;
+  p.on("open", () => { pub.on = true; toast("🌍 部屋を公開した！ だれでも「公開の部屋をさがす」から入れるよ", 2600); play("item"); });
+  p.on("connection", (c) => c.on("data", (d) => { if (d && d.t === "pubInfo") { try { c.send({ t: "pubHere", code: net.code, name: myName, n: roomCount(), max: MAX_PLAYERS, v: GAME_VER }); } catch (e) {} } }));
+  p.on("disconnected", () => { try { if (!p.destroyed) p.reconnect(); } catch (e) {} });
+  p.on("error", (e) => { if (e.type === "unavailable-id") { try { p.destroy(); } catch (x) {} pub.peer = null; if (n + 1 < PUB_SLOTS) pubStart(n + 1); else toast("公開できる部屋がいっぱい…あとでためしてね", 2000); } });
+}
+function pubStop() { if (pub.peer) { try { pub.peer.destroy(); } catch (e) {} } pub.peer = null; pub.on = false; }
+function pubToggle() {
+  if (!(net.online && net.isHost)) { toast("部屋を作った人（ホスト）だけが公開できるよ", 1800); return; }
+  if (pub.peer) { pubStop(); toast("🔒 公開をやめた（コードを知っている人だけ入れる）", 1800); } else pubStart(0);
+}
+function pubSearch() {
+  if (!hasPeer) { $("joinMsg").textContent = "マルチの部品が読み込めていません"; return; }
+  const found = [], P = new Peer(); let done = false;
+  $("joinMsg").textContent = "🌍 公開の部屋をさがしています…"; $("pubList").innerHTML = "";
+  const finish = () => {
+    if (done) return; done = true; try { P.destroy(); } catch (e) {}
+    if (!found.length) { $("joinMsg").textContent = "いま公開されている部屋はないみたい。自分で部屋を作って公開してみよう！"; return; }
+    $("joinMsg").textContent = "入りたい部屋をえらんでね";
+    $("pubList").innerHTML = found.map((f) => `<button class="pubRoom ${f.n >= f.max ? "sub" : ""}" data-code="${f.code}" ${f.n >= f.max ? "disabled" : ""}>🏠 ${cleanName(f.name) || "だれか"} の部屋　${f.n}/${f.max}人${f.n >= f.max ? "（まんいん）" : ""}${f.v !== GAME_VER ? "（バージョンちがい）" : ""}</button>`).join("");
+    document.querySelectorAll(".pubRoom").forEach((b) => b.onclick = () => { $("codeIn").value = b.dataset.code; joinRoom(b.dataset.code); });
+  };
+  P.on("open", () => {
+    for (let n = 0; n < PUB_SLOTS; n++) {
+      const c = P.connect("funyapub-" + n, { reliable: true });
+      c.on("open", () => { try { c.send({ t: "pubInfo" }); } catch (e) {} });
+      c.on("data", (d) => { if (d && d.t === "pubHere" && /^\d{5}$/.test(String(d.code)) && !found.some((f) => f.code === d.code)) found.push(d); try { c.close(); } catch (e) {} });
+    }
+    setTimeout(finish, 4500);
+  });
+  P.on("error", () => {});
+  setTimeout(finish, 9000);
+}
+setInterval(() => { const b = $("bPub"); if (!b) return; const show = net.online && net.isHost && !ONLINE; if (b.hidden === show) b.hidden = !show; const t = pub.peer ? "🔒 公開をやめる" : "🌍 この部屋を公開する"; if (b.textContent !== t) b.textContent = t; }, 1000);
+$("bPub").onclick = pubToggle;
+$("bPubSearch").onclick = pubSearch;
 
 // 町モードで届いたメッセージ（onNet から呼ばれる）
 function onNetTown(d, conn) {
