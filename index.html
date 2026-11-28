@@ -342,6 +342,16 @@
   #catchBar.alert .cbB { background: #ff4a4a; animation: cbBlink .15s infinite alternate; } #catchBar.alert .cbT { color: #ffd84a; font-size: 22px; }
   @keyframes cbBlink { from { opacity: 1; } to { opacity: .5; } }
   body.touch #catchBar { top: 52%; } body.touch #catchBar .cbT { font-size: 13px; }
+  #mbP { position: fixed; inset: 0; z-index: 9; pointer-events: none; }
+  body.mbOn #hud, body.mbOn #hudR, body.mbOn #hpbar, body.mbOn #foodbar, body.mbOn #minimap, body.mbOn #hotbar, body.mbOn #help, body.mbOn #touchUI, body.mbOn #bTitle, body.mbOn #bPause, body.mbOn #prompt, body.mbOn #wanted { display: none !important; }
+  #mbP[hidden] { display: none; }
+  .mbBar { position: absolute; top: calc(14px + env(safe-area-inset-top)); width: min(300px, 40vw); background: rgba(30,20,60,.8); border: 3px solid #fff; border-radius: 14px; padding: 6px 10px; font-weight: bold; }
+  #mbL { left: calc(14px + env(safe-area-inset-left)); } #mbR { right: calc(14px + env(safe-area-inset-right)); text-align: right; }
+  .mbH { height: 14px; background: #0008; border-radius: 7px; overflow: hidden; margin: 4px 0 2px; } .mbH div { height: 100%; width: 100%; background: #4ad86a; transition: width .35s; }
+  .mbHt { font-size: 12px; } .mbN { font-size: 14px; }
+  #mbLog { position: absolute; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(560px, 90vw); background: rgba(255,255,255,.92); color: #222; border: 3px solid #6a4ac0; border-radius: 14px; padding: 10px 16px; font-size: 18px; text-align: center; }
+  #mbBtns { position: absolute; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 8px; pointer-events: auto; }
+  body.touch .mbN { font-size: 11px; } body.touch #mbLog { font-size: 14px; bottom: calc(64px + env(safe-area-inset-bottom)); }
 </style>
 <!-- 3D 表示の部品（Three.js）と、部屋コードで遊ぶための部品（PeerJS）。インターネットから読み込む -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -384,7 +394,7 @@
     <button id="tbJump" class="big ico" data-k="Space" title="ジャンプ">⬆️</button>
   </div>
   <div id="tTop" class="town">
-    <button data-k="KeyV">👁</button><button data-k="Tab">🗺️</button><button data-k="KeyP">📸</button><button data-k="KeyQ">🍙</button><button data-k="KeyZ">👋</button><button data-k="KeyX">💃</button><button data-k="KeyB" title="スライディング">🛝</button><button data-k="KeyR">🤝</button><button data-k="KeyC">📞</button><button data-k="KeyH">📖</button><button data-k="KeyT">💬</button><button data-k="KeyJ" id="tbHunt" style="display:none">🏹</button>
+    <button data-k="KeyV">👁</button><button data-k="Tab">🗺️</button><button data-k="KeyP">📸</button><button data-k="KeyQ">🍙</button><button data-k="KeyZ">👋</button><button data-k="KeyX">💃</button><button data-k="KeyB" title="スライディング">🛝</button><button data-k="KeyR">🤝</button><button data-k="KeyC">📞</button><button data-k="KeyH">📖</button><button data-k="KeyT">💬</button><button data-k="KeyN" title="モンスターBOX">🐾</button><button data-k="KeyJ" id="tbHunt" style="display:none">🏹</button>
   </div>
   <div id="tItems" class="story">
     <button data-k="Digit1">1</button><button data-k="Digit2">2</button><button data-k="Digit3">3</button><button data-k="Digit4">4</button><button data-k="KeyV">👁</button><button data-k="KeyP">📸</button><button data-k="KeyT">💬</button>
@@ -415,6 +425,7 @@
 <div id="tutBox" hidden><div id="tutStep"></div><div id="tutText"></div><button id="tutSkip" class="sub">スキップ</button></div>
 <div id="ateP" hidden></div>
 <div id="skHud" hidden></div>
+<div id="mbP" hidden><div id="mbL" class="mbBar"><div class="mbN"></div><div class="mbH"><div></div></div><div class="mbHt"></div></div><div id="mbR" class="mbBar"><div class="mbN"></div><div class="mbH"><div></div></div><div class="mbHt"></div></div><div id="mbLog"></div><div id="mbBtns"><button id="mbFast" class="sub">⏩ はやく</button><button id="mbSkip" class="sub">⏭ けっかまで</button><button id="mbClose">おわる</button></div></div>
 <div id="catchBar" hidden><div class="cbT"></div><div class="cbB"><div class="cbZ"></div><div class="cbP"></div><div class="cbM"></div></div></div>
 <div id="chatLog"></div>
 <div id="chatBox" hidden><input id="chatIn" type="text" maxlength="60" placeholder="メッセージ（Enter で送る）" autocomplete="off"><button id="chatSend">送る</button><button id="chatClose" class="pink">とじる</button><div id="chatQuick"></div></div>
@@ -1775,7 +1786,7 @@ let respawnHere = () => {};
 
 function myState() {
   const p = me;
-  return { x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), ry: +p.ry.toFixed(2), sp: +Math.hypot(p.vel.x, p.vel.z).toFixed(1), air: !p.onGround, limp: p.limp || p.ko > 0 || !!p.wash || !!p.bowl || !!p.heldBy, mv: p.moving && !p.limp, pu: p.punch > 0, st: p.stun > 0, big: p.buffs.big > 0, sm: p.buffs.small > 0, car: p.car, sk: p.skate, vh: p.veh || null, gb: p.grab ? (p.grab.kind === "player" ? p.grab.id : 1) : 0, hl: p.heldBy ? 1 : 0, fz: p.flat > 0 ? 1 : 0, sn: p.spin > 0 ? 1 : 0, pol: mode === "town" ? policeState() : null, cc: p.carColor, stk: p.car && !p.stolen ? stickerKey() : "", vc: p.vehColor != null ? p.vehColor : null, sl: p.slideT > 0 ? 1 : 0, cl: p.climbT > 0 ? 1 : 0, wa: wantedStars(), hd: mode === "town" ? p.held : null, fl: p.float > 0, em: p.emote, rd: p.ride || null, inv: p.invis > 0, hat: myLook.hat, hc: myLook.hatColor, lc: myLook.limb, ey: myLook.eye, mo: myLook.mouth, pt: [myLook.tail || "", myLook.hair || "", myLook.hairColor || "", myLook.head || "", myLook.horn || "", myLook.brow || "", myLook.cheek || "", myLook.whisker || "", myLook.wing || ""], tr: townSave.trailOn || null, gd: townSave.goldOn && townSave.goldBody ? 1 : 0, tt: townSave.title || 0, so: mode === "town" ? soldierState() : null, ou: myOutfit() };
+  return { x: +p.pos.x.toFixed(2), y: +p.pos.y.toFixed(2), z: +p.pos.z.toFixed(2), ry: +p.ry.toFixed(2), sp: +Math.hypot(p.vel.x, p.vel.z).toFixed(1), air: !p.onGround, limp: p.limp || p.ko > 0 || !!p.wash || !!p.bowl || !!p.heldBy, mv: p.moving && !p.limp, pu: p.punch > 0, st: p.stun > 0, big: p.buffs.big > 0, sm: p.buffs.small > 0, car: p.car, sk: p.skate, vh: p.veh || null, gb: p.grab ? (p.grab.kind === "player" ? p.grab.id : 1) : 0, hl: p.heldBy ? 1 : 0, fz: p.flat > 0 ? 1 : 0, sn: p.spin > 0 ? 1 : 0, pol: mode === "town" ? policeState() : null, cc: p.carColor, stk: p.car && !p.stolen ? stickerKey() : "", vc: p.vehColor != null ? p.vehColor : null, sl: p.slideT > 0 ? 1 : 0, cl: p.climbT > 0 ? 1 : 0, wa: wantedStars(), hd: mode === "town" ? p.held : null, fl: p.float > 0, em: p.emote, rd: p.ride || null, inv: p.invis > 0, hat: myLook.hat, hc: myLook.hatColor, lc: myLook.limb, ey: myLook.eye, mo: myLook.mouth, pt: [myLook.tail || "", myLook.hair || "", myLook.hairColor || "", myLook.head || "", myLook.horn || "", myLook.brow || "", myLook.cheek || "", myLook.whisker || "", myLook.wing || ""], tr: townSave.trailOn || null, gd: townSave.goldOn && townSave.goldBody ? 1 : 0, tt: townSave.title || 0, so: mode === "town" ? soldierState() : null, fm: mode === "town" ? mcFollowState() : null, ou: myOutfit() };
 }
 
 function updateCamera(dt) {
@@ -3649,6 +3660,7 @@ function weatherUpdate(dt) {
   }
   // 空の色・明るさ
   const sky = new THREE.Color(W.sky).lerp(NIGHT_SKY, 1 - dayF).lerp(DUSK_SKY, Math.min(1, duskF) * 0.4);
+  if (mc.skyT > 0) sky.lerp(mc.skyCol, 0.55 * Math.min(1, mc.skyT / 5));
   scene.background.lerp(sky, Math.min(1, dt * 0.8));
   if (scene.fog) scene.fog.color.copy(scene.background);
   hemi.intensity += (W.light * 0.9 * (0.72 + 0.28 * dayF) - hemi.intensity) * Math.min(1, dt);
@@ -3933,6 +3945,7 @@ function monView() {
 function monState() { const M = town.mon; return M ? { x: +M.pos.x.toFixed(2), y: +M.pos.y.toFixed(2), z: +M.pos.z.toFixed(2), ry: +M.ry.toFixed(2), hp: Math.max(0, Math.round(M.hp)), max: M.max, w: M.wind > 0, tr: M.tier || 1 } : null; }
 function onLand(x, z) {
   if (Math.abs(x) < CITY + 6 && Math.abs(z) < CITY + 6) return true;
+  if (Math.abs(x - MI.x) < MI.h + 1 && Math.abs(z - MI.z) < MI.h + 1) return true;
   for (const it of ISLETS) if (Math.abs(x - it.x) < 15 && Math.abs(z - it.z) < 15) return true;
   for (const isl of town.islands.values()) if (Math.abs(x - isl.X) < isl.S + 2 && Math.abs(z - isl.Z) < isl.S + 2) return true;
   return false;
@@ -4561,7 +4574,7 @@ function buildCity() {
   slope(60, -75, 0, -1, 6, 3.2, 10, 0xe07a7a); slope(60, -45, 0, 1, 3.5, 0.9, 10, 0x9ad0a0);   // はしの坂（とても高い・小さい）
   addBox(60, 0, -69, 7, 0.4, 0.6, 0xffd84a); addBox(60, 0, -51, 7, 0.4, 0.6, 0xffd84a);       // 低い台（とびこえる）
   { const sl = makeLabel("🛹 スケートパーク", "#fff", 2.4, { bg: "#6a7ab8" }); sl.position.set(60, 6, -60); world.add(sl); }
-  buildRails(); buildCarRace();
+  buildRails(); buildCarRace(); buildMonIsland();
   town.mapRects.push({ x: 60, z: -60, w: 34, d: 34, color: 0x9a9aa8, label: "スケート", flat: true });
   // 北西：展望タワー（階段でぐるぐるのぼる）
   addBox(-57, 0, -57, 4, 30, 4, 0xd85a5a);
@@ -7552,6 +7565,7 @@ function badUpdate(dt) {
 // =====================================================================
 function funTownUpdate(dt) {
   trailsUpdate(dt);
+  mcUpdate(dt);
   carRaceUpdate(dt);
   parkourUpdate(dt);
   skUpdate(dt);
@@ -7573,6 +7587,7 @@ function funTownUpdate(dt) {
 }
 function onNetFun(d, conn) {
   if (onNetBoard(d, conn)) return true;
+  if (onNetMon(d, conn)) return true;
   if (onNetArmy(d, conn)) return true;
   if (onNetCards(d, conn)) return true;
   if (onNetTag(d, conn)) return true;
@@ -7669,6 +7684,7 @@ function openBoard() {
     { name: "🏹 怪獣ハンターをよぶ", desc: "コインでハンターをやとうと、モンスターとたたかってくれる（J キーでも呼べる）", btn: "えらぶ", fn: () => { openHunters(); return false; } },
     { name: "🗺️ 宝の地図", desc: townSave.treasure ? "持っている！ 右上のヒントをたよりにさがそう" : "町のどこかにうまっている宝箱の場所がわかる（コイン・ガチャ券・レアなぼうしなど）", btn: townSave.treasure ? "持っている" : "50🪙で買う", disabled: !!townSave.treasure, fn: () => { buyTreasureMap(); } },
     { name: "👫 フレンド・プロフィール・称号", desc: "", btn: "ひらく", fn: () => { openFriends(); return false; } },
+    { name: "🐾 モンスター BOX", desc: "つかまえたモンスターを見る・育てる（N キー／🐾 ボタンでも）", btn: "ひらく", fn: () => { openMonBox(); return false; } },
     { name: "🔀 ボタン配置を切りかえ", desc: "いまの配置 ⇄ 前の配置（タイトル画面でも切りかえられる）", btn: "切りかえ", fn: () => { toggleUiLayout(); return false; } },
     { name: "🎓 チュートリアルをもう一度", desc: "あそびかたを1つずつやってみる", btn: "やる", fn: () => { closeShop(); startTutorial(); return false; } },
     { name: "📖 あそびかた", desc: "そうさ・町の場所・お金・イベント…", btn: "ひらく", fn: () => { closeShop(); openGuide(0); return false; } },
@@ -8014,7 +8030,7 @@ function digTreasure() {
 // ---- 部屋のかぎ（バージョンがちがうと、うまく遊べないので教える） ----
 function oldVerMsg() { net.full = true; net.online = false; showMsg("バージョンがちがうよ", "部屋を作った人と、ゲームのバージョンがちがうみたい。<br>2人とも同じアドレス（GitHub のページなど）で開いて、ページを<b>読みこみ直して</b>からためしてね。", [{ label: "タイトルへ", fn: () => location.reload() }]); }
 // ---- メニューが出ている間は、マウスをゲームの画面からはなす（ボタンがおせなくなるのをふせぐ） ----
-function anyUiOpen() { return !mode || !$("titleP").hidden || !$("modeP").hidden || !$("joinP").hidden || !$("msgP").hidden || !$("shopP").hidden || !$("rvP").hidden || !$("cardP").hidden || !$("armyMap").hidden || chat.open || paintMode || movie.on || paused; }
+function anyUiOpen() { return !mode || !$("titleP").hidden || !$("modeP").hidden || !$("joinP").hidden || !$("msgP").hidden || !$("shopP").hidden || !$("rvP").hidden || !$("cardP").hidden || !$("armyMap").hidden || chat.open || paintMode || movie.on || paused || mbt.on; }
 setInterval(() => { if (document.pointerLockElement && anyUiOpen() && document.exitPointerLock) document.exitPointerLock(); }, 200);
 
 // =====================================================================
@@ -10407,7 +10423,7 @@ function carRaceUpdate(dt) {
   if (ring) { const [nx, nz] = CR_PTS[R.cp], pv = CR_PTS[(R.cp + 7) % 8]; ring.visible = true; ring.position.set(nx, 2.2, nz); ring.rotation.set(0, Math.atan2(nx - pv[0], nz - pv[1]), gameTime * 2); }
   if (R.t > 240) crEnd("🏎️ 時間切れ…");
 }
-function crHud() { const R = carRace; return R.cd > 0 ? "🏎️ もうすぐスタート…" : `🏎️ カーレース　ラップ ${Math.min(R.lap + 1, CR_LAPS)}/${CR_LAPS}　${R.t.toFixed(1)}秒　いま <b>${crPlace()}位</b>${townSave.carRaceBest ? "　記録 " + townSave.carRaceBest + "秒" : ""}`; }
+function crHud() { const R = carRace; return R.cd > 0 ? "🏎️ もうすぐスタート…" : `🏎️ カーレース　ラップ ${Math.min(R.lap + 1, CR_LAPS)}/${CR_LAPS}　${R.t.toFixed(1)}秒　いま ${crPlace()}位${townSave.carRaceBest ? "　記録 " + townSave.carRaceBest + "秒" : ""}`; }
 
 // ---- 🎨 ステッカー ----
 const STICKERS = { none: ["なし", 0], flame: ["🔥 ほのお", 40], star: ["⭐ 星", 40], num: ["🔢 数字", 40], stripe: ["🏁 ライン", 40], heart: ["💗 ハート", 40], bolt: ["⚡ いなずま", 40] };
@@ -10531,6 +10547,643 @@ function grindUpdate(dt, board) {
   }
 }
 
+// =====================================================================
+//  32. モンスター島（つかまえる・育てる・バトル・レア演出）
+// =====================================================================
+const MI = { x: 0, z: -230, h: 55 };                    // モンスター島（まん中と半分の大きさ）
+const MC_TIERS = [
+  { k: "C", w: 30, col: "#b8b8b8" }, { k: "B", w: 25, col: "#6bd66b" }, { k: "A", w: 20, col: "#4ac0f0" }, { k: "S", w: 10, col: "#a78bfa" },
+  { k: "SS", w: 5, col: "#ff8ac0" }, { k: "SSS", w: 3, col: "#ffd84a" }, { k: "Z", w: 2, col: "#ff8a3a" }, { k: "ZZ", w: 1, col: "#ff4a4a" },
+  { k: "ZZZ", w: 0.85, col: "#e02a6a" }, { k: "UR", w: 0.8, col: "#40e0d0" }, { k: "NR", w: 0.3, col: "#ffffff" }, { k: "SUN", w: 0.001, col: "#ffb000" },
+  { k: "SUNR", w: 0, col: "#7cffb8" },
+];
+const MC_RARE = 6; // Z 以上は「ヤバいやつ」
+const MC_BIOMES = { desert: "🏜️ 砂漠", forest: "🌳 森", mountain: "⛰️ 山", snow: "🏔️ 雪山" };
+const MB_MOVES = {
+  tackle: { n: "たいあたり", kind: "dash", pow: 40, acc: 0.95 }, jump: { n: "ジャンプアタック", kind: "jump", pow: 55, acc: 0.85 },
+  beam: { n: "ふにゃビーム", kind: "beam", pow: 50, acc: 0.9, col: 0xff8ae0 }, spin: { n: "ぐるぐるアタック", kind: "spin", pow: 45, acc: 0.92 },
+  roar: { n: "おたけび", kind: "buff", pow: 0, acc: 1 }, ice: { n: "こおりのいき", kind: "beam", pow: 55, acc: 0.88, col: 0x9ad8ff },
+  fire: { n: "ほのおのたま", kind: "beam", pow: 58, acc: 0.85, col: 0xff7a3a }, leaf: { n: "はっぱカッター", kind: "beam", pow: 52, acc: 0.92, col: 0x6bd66b },
+  sand: { n: "すなあらし", kind: "spin", pow: 50, acc: 0.9 }, rock: { n: "いわおとし", kind: "jump", pow: 60, acc: 0.8 },
+  ult: { n: "ひっさつ・ふにゃバースト", kind: "ult", pow: 95, acc: 0.9, col: 0xffe040 },
+};
+// ---- 種類（有名な4ひき＋ネキラク＋ほかに50しゅるい） ----
+const MC_SPECIES = (() => {
+  const names = ["もふすら", "ぷにまる", "わたこ", "ふわりん", "もこぐま", "ころん", "ぴよぬい", "すなもぐ", // C
+    "さぼにゃん", "かぜうさ", "こけだま", "きのぴょん", "もりりす", "はっぱっぱ", "いわごろ", "やまわた", // B
+    "がけもぐ", "ゆきぬい", "こおりん", "しろもふ", "ゆきだるん", "つららっこ", "あわぽこ", // A
+    "ほしわた", "つきうさ", "みずぷに", "かげぬい", "ひかりん", "おばけわた", // S
+    "にじすら", "かみなりん", "ほのおぬい", "ドラぷに", "ぬいコング", // SS
+    "きんぴか", "ぎんもふ", "くものすけ", "ほうせきん", // SSS
+    "まほうわた", "ぬいフェニ", "ぬいゴースト", // Z
+    "ぬいリュウ", "ぬいメカ", "スターぬい", // ZZ
+    "こうていぬい", "ぬいキング", // ZZZ
+    "ギャラぬい", "カオスぬい", // UR
+    "ぬいオメガ", // NR
+    "たいようぬい"]; // SUN
+  const tierOf = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 9, 9, 10, 11];
+  const BI = ["desert", "forest", "mountain", "snow"], WX = ["clear", "rain", "thunder", "snow", "money", "magma"];
+  const PAL = { desert: [0xf0c070, 0xe89a50, 0xd8b080, 0xffd890], forest: [0x6bd66b, 0x8ac050, 0xa07050, 0x50b090], mountain: [0x9a8a7a, 0x8a7aa8, 0xb08a60, 0x707888], snow: [0xf4f8ff, 0xbfe4ff, 0xd8e8ff, 0xe0f0f0] };
+  const MV = { desert: "sand", forest: "leaf", mountain: "rock", snow: "ice" };
+  const list = names.map((n, i) => {
+    const b = BI[i % 4], r = mulberry(i * 7919 + 13);
+    const moves = ["tackle", MV[b], ["jump", "beam", "spin", "roar"][i % 4]];
+    if (tierOf[i] >= MC_RARE) moves.push("ult");
+    return { name: n, tier: tierOf[i], biome: b, wx: WX[i % 6], col: PAL[b][Math.floor(r() * 4)], shape: ["round", "tall", "flat", "blob"][Math.floor(r() * 4)],
+      ears: ["none", "cat", "bunny", "round"][Math.floor(r() * 4)], horn: r() < 0.25 + tierOf[i] * 0.05 ? (r() < 0.5 ? 1 : 2) : 0, wing: r() < 0.15 + tierOf[i] * 0.06,
+      tail: ["none", "ball", "cone", "long"][Math.floor(r() * 4)], motion: ["bounce", "hop", "float", "waddle"][Math.floor(r() * 4)],
+      base: { hp: 40 + Math.floor(r() * 30), atk: 40 + Math.floor(r() * 30), def: 40 + Math.floor(r() * 30), spd: 40 + Math.floor(r() * 30) }, moves };
+  });
+  list.unshift(
+    { name: "ぬいすら", tier: 0, biome: "any", wx: "rain", col: 0xff9ac8, shape: "blob", ears: "none", horn: 0, wing: false, tail: "none", motion: "bounce", special: "slime", base: { hp: 55, atk: 45, def: 45, spd: 50 }, moves: ["tackle", "beam", "jump"] },
+    { name: "ぬいねき", tier: 9, biome: "forest", wx: "clear", col: 0xffe0b0, shape: "round", ears: "cat", horn: 0, wing: false, tail: "long", motion: "hop", special: "neki", base: { hp: 65, atk: 75, def: 60, spd: 85 }, moves: ["tackle", "spin", "leaf", "ult"] },
+    { name: "いるかすら", tier: 10, biome: "snow", wx: "rain", col: 0x5ab0f0, shape: "blob", ears: "none", horn: 0, wing: false, tail: "none", motion: "float", special: "dolphin", base: { hp: 80, atk: 70, def: 75, spd: 80 }, moves: ["tackle", "ice", "beam", "ult"] },
+    { name: "ヌイドラ", tier: 11, biome: "mountain", wx: "thunder", col: 0x6ac08a, shape: "round", ears: "none", horn: 2, wing: true, tail: "cone", motion: "float", special: "dragon", base: { hp: 95, atk: 95, def: 85, spd: 80 }, moves: ["fire", "jump", "roar", "ult"] },
+    { name: "ネキラク", tier: 12, biome: "any", wx: "thunder", col: 0x50e0b0, shape: "tall", ears: "none", horn: 0, wing: true, tail: "none", motion: "waddle", special: "nekiraku", base: { hp: 110, atk: 110, def: 100, spd: 105 }, moves: ["beam", "spin", "roar", "ult"] },
+  );
+  list.forEach((s, i) => (s.id = i));
+  return list;
+})();
+function mulberry(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const MUTS = ["", "金色", "まっくろ", "クリスタル", "天使の輪", "ふたまたツノ"];
+
+// ---- ネキラクの見た目（絵のとおり：ふくろのかぶり物・オパールの宝石・ガラスの手・すきとおったはね） ----
+let nekiTex = null;
+function nekiTextures() {
+  if (nekiTex) return nekiTex;
+  const mk = (draw) => { const cv = document.createElement("canvas"); cv.width = cv.height = 256; const c = cv.getContext("2d"); draw(c); return new THREE.CanvasTexture(cv); };
+  const cloth = (c, stain) => {
+    c.fillStyle = "#e6dcc4"; c.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 500; i++) { c.fillStyle = `rgba(${Math.random() < 0.5 ? "120,110,90" : "255,250,235"},${Math.random() * 0.12})`; c.fillRect(Math.random() * 256, Math.random() * 256, 3, 3); }
+    if (stain) { const g = c.createRadialGradient(stain[0], stain[1], 10, stain[0], stain[1], stain[2]); g.addColorStop(0, "rgba(150,100,80,.85)"); g.addColorStop(0.7, "rgba(160,110,90,.6)"); g.addColorStop(1, "rgba(160,110,90,0)"); c.fillStyle = g; c.fillRect(0, 0, 256, 256); }
+    c.fillStyle = "rgba(110,120,90,.12)"; c.beginPath(); c.ellipse(60, 200, 50, 30, 0.3, 0, 7); c.fill();
+  };
+  const front = mk((c) => {
+    cloth(c, [230, 10, 60]);
+    c.fillStyle = "#141414";
+    // 左の目（スペードみたい）
+    c.beginPath(); c.moveTo(70, 85); c.quadraticCurveTo(40, 120, 72, 140); c.quadraticCurveTo(95, 145, 105, 120); c.quadraticCurveTo(100, 92, 70, 85); c.fill();
+    // 右の目（大きいかたまり）
+    c.beginPath(); c.moveTo(140, 92); c.quadraticCurveTo(185, 70, 200, 110); c.quadraticCurveTo(208, 160, 168, 165); c.quadraticCurveTo(130, 160, 138, 130); c.quadraticCurveTo(122, 112, 140, 92); c.fill();
+    c.fillStyle = "#fff"; c.fillRect(84, 112, 6, 5); c.fillRect(178, 98, 8, 6); c.fillRect(150, 150, 4, 4);
+    c.fillStyle = "#141414"; c.beginPath(); c.ellipse(118, 168, 9, 7, 0, 0, 7); c.fill();
+    c.fillRect(103, 186, 4, 4); c.fillRect(140, 184, 4, 4);
+    // 赤い口
+    c.strokeStyle = "#d02a2a"; c.lineWidth = 4; c.lineCap = "round"; c.beginPath(); c.moveTo(78, 205); c.quadraticCurveTo(130, 228, 190, 196); c.stroke();
+  });
+  const top = mk((c) => cloth(c, [170, 120, 140]));
+  const side = mk((c) => cloth(c, [240, 20, 80]));
+  const plain = mk((c) => cloth(c, null));
+  return (nekiTex = { front, top, side, plain });
+}
+function mcMakeNekiraku(spId, mut, sc) {
+  const S = MC_SPECIES[spId], g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const add = (geo, m, x, y, z, p = body) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); p.add(o); return o; };
+  const fur = new THREE.MeshToonMaterial({ color: 0x9a96b4 }), fur2 = new THREE.MeshToonMaterial({ color: 0xb4b0cc });
+  // 体・足
+  const b = add(new THREE.SphereGeometry(0.3, 16, 12), fur, 0, 0.46, 0); b.scale.set(0.95, 1.15, 0.8);
+  for (const sx of [-1, 1]) { add(new THREE.CylinderGeometry(0.09, 0.1, 0.18, 10), fur, sx * 0.12, 0.09, 0); add(new THREE.SphereGeometry(0.1, 10, 8), fur, sx * 0.12, 0.03, 0.03).scale.set(1, 0.6, 1.2); }
+  // えりまき（花びらみたい）
+  for (let k = 0; k < 9; k++) { const a = k / 9 * Math.PI * 2; const p = add(new THREE.SphereGeometry(0.1, 8, 6), fur2, Math.sin(a) * 0.2, 0.8, Math.cos(a) * 0.17); p.scale.set(1.2, 0.45, 1.2); p.rotation.y = a; }
+  // オパールの宝石（胸）
+  const gem = add(new THREE.OctahedronGeometry(0.075), new THREE.MeshBasicMaterial({ color: 0x8a6ad0 }), 0, 0.6, 0.235); gem.scale.set(0.7, 1.25, 0.35); gem.userData.gem = true;
+  // ガラスの手（中にいろいろな色のかけら）
+  for (const sx of [-1, 1]) {
+    const hand = add(new THREE.SphereGeometry(0.13, 16, 12), new THREE.MeshToonMaterial({ color: 0x2a9a6a, transparent: true, opacity: 0.6 }), sx * 0.34, 0.42, 0.1);
+    for (let k = 0; k < 7; k++) add(new THREE.OctahedronGeometry(0.03), new THREE.MeshBasicMaterial({ color: [0xff5a3a, 0xffd040, 0x3a8aff, 0x50ff90, 0xff4aa0][k % 5] }), sx * 0.34 + rand(-0.07, 0.07), 0.42 + rand(-0.07, 0.07), 0.1 + rand(-0.06, 0.06));
+    const hl = add(new THREE.SphereGeometry(0.03, 6, 5), new THREE.MeshBasicMaterial({ color: 0xffffff }), sx * 0.34 + 0.05, 0.5, 0.2); hl.scale.set(1, 0.6, 0.4);
+    const d = add(new THREE.SphereGeometry(0.03, 6, 5), new THREE.MeshToonMaterial({ color: 0x50ff90, transparent: true, opacity: 0.8 }), sx * 0.34, 0.28, 0.1); d.userData.drip = sx;
+  }
+  // うしろからのぞく、ふわふわの頭
+  for (const sx of [-1, 1]) add(new THREE.SphereGeometry(0.16, 10, 8), fur2, sx * 0.3, 1.0, -0.12).scale.set(0.7, 1, 0.9);
+  // ふくろのかぶり物（顔の絵つき）
+  const T = nekiTextures(), clothM = (tex) => new THREE.MeshToonMaterial({ map: tex });
+  const hood = add(new THREE.BoxGeometry(0.72, 0.62, 0.6, 5, 5, 5), [clothM(T.side), clothM(T.plain), clothM(T.top), clothM(T.plain), clothM(T.front), clothM(T.plain)], 0, 1.13, 0.03);
+  hood.rotation.set(0.05, 0.12, -0.08);
+  const pos = hood.geometry.attributes.position, vv = new V3();
+  for (let i = 0; i < pos.count; i++) {
+    vv.set(pos.getX(i), pos.getY(i), pos.getZ(i)); const L = vv.length(), sph = vv.clone().normalize().multiplyScalar(0.36);
+    vv.lerp(sph.set(sph.x * 1.05, sph.y * 0.95, sph.z * 0.92), 0.4);                          // 角を丸く（ふくろっぽく）
+    const n = Math.sin(vv.x * 9 + vv.z * 5) * 0.018 + Math.cos(vv.y * 8 - vv.x * 6) * 0.015;  // でこぼこ
+    vv.multiplyScalar(1 + n / Math.max(0.1, L)); if (vv.y > 0.15) vv.x += (vv.y - 0.15) * 0.25;  // 上が少しかたむく
+    pos.setXYZ(i, vv.x, vv.y, vv.z);
+  }
+  hood.geometry.computeVertexNormals();
+  outline(hood, 1.03);
+  // ひも（しばってあって、2本たれている）
+  const rope = new THREE.MeshToonMaterial({ color: 0xf0ead8 });
+  const r1 = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.012, 5, 28), rope); r1.rotation.x = Math.PI / 2; r1.scale.set(1.12, 0.95, 1); r1.position.y = -0.12; hood.add(r1);
+  for (const sx of [-1, 1]) { const s2 = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.32, 5), rope); s2.position.set(sx * 0.13, -0.28, 0.31); s2.rotation.z = sx * 0.12; hood.add(s2); s2.userData.str = sx; }
+  // すきとおった、消えかけのはね
+  for (const sx of [-1, 1]) {
+    const piv = new THREE.Group(); piv.position.set(sx * 0.12, 0.72, -0.18); body.add(piv); piv.userData.wing = sx;
+    for (const [w, h, y, c] of [[0.4, 0.22, 0.16, 0xc8d8ff], [0.34, 0.18, -0.1, 0xd8c8f0]]) {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.42, depthWrite: false, side: THREE.DoubleSide }));
+      m.scale.set(w, h, 0.02); m.position.set(sx * (w * 0.95), y, 0); m.rotation.z = sx * (y > 0 ? 0.35 : -0.15); piv.add(m);
+      const shine = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshBasicMaterial({ color: 0x9af0e0, transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending }));
+      shine.scale.set(w * 0.5, h * 0.5, 0.025); shine.position.copy(m.position); piv.add(shine);
+    }
+  }
+  // しっぽ：むりやりつけられた、ほかのモンスターのはね
+  const tail = new THREE.Group(); tail.position.set(0.15, 0.22, -0.22); body.add(tail); tail.userData.feather = true;
+  for (let k = 0; k < 3; k++) { const f = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshBasicMaterial({ color: [0xe0e8ff, 0xd0f0f0, 0xf0d8f0][k], transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide })); f.scale.set(0.2, 0.06, 0.02); f.position.set(0.18 + k * 0.04, -0.03 + k * 0.05, -0.02); f.rotation.z = 0.3 + k * 0.3; tail.add(f); }
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: new THREE.Color("#b0ffd8"), transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending })); glow.scale.set(2.4, 2.4, 1); glow.position.y = 0.7; g.add(glow);
+  g.scale.setScalar(sc * 1.15);
+  g.userData.S = S; g.userData.body = body; g.userData.t = Math.random() * 6; g.userData.glow = glow;
+  toonify(g);
+  return g;
+}
+
+// ---- 見た目（モンスターの模型） ----
+function mcMakeMesh(spId, mut, sc = 1) {
+  if (MC_SPECIES[spId].special === "nekiraku") return mcMakeNekiraku(spId, mut, sc);
+  const S = MC_SPECIES[spId], g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  let col = S.col;
+  if (mut === 1) col = 0xffd040; else if (mut === 2) col = 0x2a2a34;
+  else if (mut === 3) col = new THREE.Color(col).offsetHSL(0.5, 0.2, 0).getHex();
+  const T = (c, o = {}) => new THREE.MeshToonMaterial({ color: c, ...o });
+  const M = T(col, S.special === "slime" || S.special === "nekiraku" ? { transparent: true, opacity: S.special === "nekiraku" ? 0.55 : 0.82 } : {});
+  const add = (geo, m, x, y, z, p = body) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); p.add(o); return o; };
+  const SH = { round: [1, 0.92, 1], tall: [0.82, 1.2, 0.82], flat: [1.22, 0.72, 1.1], blob: [1.12, 0.8, 1.12] }[S.shape];
+  const b = add(new THREE.SphereGeometry(0.42, 16, 12), M, 0, 0.42 * SH[1], 0); b.scale.set(SH[0], SH[1], SH[2]);
+  const top = 0.84 * SH[1], fz = 0.4 * SH[2];
+  const white = T(0xffffff), black = T(0x111111), gold = T(0xffd84a);
+  for (const sx of [-1, 1]) { add(new THREE.SphereGeometry(0.085, 10, 8), white, sx * 0.14, top * 0.6, fz * 0.9); add(new THREE.SphereGeometry(0.045, 8, 6), black, sx * 0.14, top * 0.6, fz * 0.9 + 0.06); }
+  if (S.ears === "cat") for (const sx of [-1, 1]) { const e = add(new THREE.ConeGeometry(0.1, 0.2, 4), M, sx * 0.2, top * 0.95, 0); e.rotation.z = -sx * 0.3; }
+  if (S.ears === "bunny") for (const sx of [-1, 1]) { const e = add(new THREE.SphereGeometry(0.06, 8, 6), M, sx * 0.12, top + 0.15, 0); e.scale.set(1, 3, 0.7); }
+  if (S.ears === "round") for (const sx of [-1, 1]) add(new THREE.SphereGeometry(0.09, 8, 6), M, sx * 0.25, top * 0.92, 0);
+  const hornN = S.horn + (mut === 5 ? 2 : 0);
+  for (let k = 0; k < hornN; k++) { const sx = hornN === 1 ? 0 : (k / (hornN - 1)) * 2 - 1; const h = add(new THREE.ConeGeometry(0.05, 0.22, 8), mut === 5 ? T(0xff4a8a) : gold, sx * 0.16, top + 0.06, 0.05); h.rotation.z = -sx * 0.35; }
+  if (S.wing) for (const sx of [-1, 1]) { const w = add(new THREE.SphereGeometry(0.16, 10, 8), S.special === "nekiraku" ? T(0xffffff, { transparent: true, opacity: 0.22 }) : S.special === "dragon" ? T(0x3a8a5a) : white, sx * 0.42, top * 0.6, -0.12); w.scale.set(1.5, 0.9, 0.2); w.rotation.z = sx * 0.4; w.userData.wing = sx; }
+  if (S.tail === "ball") add(new THREE.SphereGeometry(0.1, 8, 6), M, 0, 0.25, -fz);
+  if (S.tail === "cone") { const t = add(new THREE.ConeGeometry(0.09, 0.35, 6), M, 0, 0.28, -fz - 0.1); t.rotation.x = -1.2; }
+  if (S.tail === "long") for (let k = 0; k < 4; k++) add(new THREE.SphereGeometry(0.06 - k * 0.008, 6, 5), M, 0, 0.22 + k * k * 0.03, -fz - k * 0.08);
+  // 有名なモンスターの特別な形
+  if (S.special === "dolphin") { const f = add(new THREE.ConeGeometry(0.1, 0.3, 4), M, 0, top + 0.05, -0.05); f.rotation.x = -0.5; add(new THREE.SphereGeometry(0.25, 10, 8), white, 0, 0.3, 0.12).scale.set(1, 0.8, 0.6); const tf = add(new THREE.ConeGeometry(0.14, 0.18, 4), M, 0, 0.3, -0.5); tf.rotation.x = -Math.PI / 2; }
+  if (S.special === "neki") for (const sx of [-1, 1]) for (const k of [-1, 1]) { const w = add(new THREE.CylinderGeometry(0.006, 0.006, 0.25, 4), black, sx * 0.25, top * 0.45 + k * 0.03, fz * 0.85); w.rotation.z = Math.PI / 2; }
+  if (S.special === "dragon") { for (let k = 0; k < 4; k++) add(new THREE.ConeGeometry(0.04, 0.12, 4), gold, 0, top * (0.95 - k * 0.18), -fz * (0.4 + k * 0.17)); }
+  if (S.special === "nekiraku") {
+    // （この見た目の理由は、ゲームの中では明かされない）
+    const gem = add(new THREE.OctahedronGeometry(0.11), new THREE.MeshBasicMaterial({ color: 0x8a8a9a }), 0, 0.45, 0.05); gem.userData.gem = true;
+    const hood = add(new THREE.SphereGeometry(0.34, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.6), T(0x2a3a3a), 0, top * 0.72, -0.02); hood.scale.set(1.05, 1.1, 1.05);
+    for (const sx of [-1, 1]) { add(new THREE.SphereGeometry(0.08, 8, 6), M, sx * 0.38, 0.35, 0.1); const d = add(new THREE.SphereGeometry(0.035, 6, 5), T(0x50ff90, { transparent: true, opacity: 0.8 }), sx * 0.38, 0.2, 0.1); d.userData.drip = sx; }
+    const fe = add(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfff0a0 }), 0, 0.3, -0.55); fe.scale.set(0.6, 0.6, 3); fe.rotation.x = 0.4; fe.userData.feather = true;
+  }
+  if (mut === 4) { const h = add(new THREE.TorusGeometry(0.16, 0.025, 6, 20), new THREE.MeshBasicMaterial({ color: 0xfff08a }), 0, top + 0.22, 0); h.rotation.x = Math.PI / 2; }
+  if (mut === 3) for (let k = 0; k < 3; k++) { const c = add(new THREE.OctahedronGeometry(0.08), new THREE.MeshBasicMaterial({ color: 0x9af0ff }), (k - 1) * 0.16, top * 0.8, -fz * 0.8); c.scale.y = 2; }
+  // レアな子はまわりが光る
+  if (S.tier >= MC_RARE || mut) { const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: new THREE.Color(mut ? "#fff6a0" : MC_TIERS[S.tier].col), transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })); glow.scale.set(2, 2, 1); glow.position.y = 0.45; g.add(glow); g.userData.glow = glow; }
+  g.scale.setScalar(sc * (0.75 + Math.min(S.tier, 11) * 0.04));
+  g.userData.S = S; g.userData.body = body; g.userData.t = Math.random() * 6;
+  toonify(g);
+  return g;
+}
+function mcAnimate(g, dt, moving) {
+  const u = g.userData, S = u.S; u.t += dt;
+  const t = u.t, b = u.body;
+  if (S.motion === "bounce") b.position.y = Math.abs(Math.sin(t * (moving ? 7 : 3))) * 0.18;
+  else if (S.motion === "hop") b.position.y = moving ? Math.max(0, Math.sin(t * 8)) * 0.3 : Math.abs(Math.sin(t * 2)) * 0.05;
+  else if (S.motion === "float") b.position.y = 0.35 + Math.sin(t * 2.2) * 0.12;
+  else { b.rotation.z = Math.sin(t * (moving ? 9 : 3)) * 0.15; b.position.y = 0; }
+  b.scale.y = 1 + Math.sin(t * 6) * 0.04;
+  b.children.forEach((c) => {
+    if (c.userData.wing) c.rotation.y = Math.sin(t * 10) * 0.4 * c.userData.wing;
+    if (c.userData.drip) { const k = (t * 0.8 + (c.userData.drip > 0 ? 0.5 : 0)) % 1; c.position.y = 0.3 - k * 0.35; c.material.opacity = 0.8 * (1 - k); }
+    if (c.userData.gem) c.material.color.setHSL((t * 0.12) % 1, 0.55, 0.42); // オパールのような虹色（でも少しくすんでいる）
+    if (c.userData.feather) c.rotation.z = Math.sin(t * 7) * 0.35;
+  });
+  if (u.glow) u.glow.material.opacity = 0.4 + Math.sin(t * 4) * 0.15;
+}
+
+// ---- データ ----
+const mc = { wild: [], spawnT: 1, fol: null, rfol: new Map(), beacons: [], event: { on: 0, t: rand(500, 800) }, buff: { bait: 0, baitT: 0, luckT: 0, dblT: 0, dblRoll: 0 }, skyT: 0, skyCol: new THREE.Color(), was: false, eventWarn: false };
+function mcBox() { return (townSave.mons = townSave.mons || []); }
+function mcOnIsland(p = me.pos) { return Math.abs(p.x - MI.x) < MI.h + 2 && Math.abs(p.z - MI.z) < MI.h + 2; }
+function mcBiomeAt(x, z) { return x < MI.x ? (z > MI.z ? "desert" : "mountain") : (z > MI.z ? "forest" : "snow"); }
+function mcStats(m) {
+  const S = MC_SPECIES[m.sp], tm = 1 + Math.min(S.tier, 12) * 0.12, mm = m.mut ? 1.1 : 1, lv = m.lv;
+  const st = (k) => Math.floor(((S.base[k] * tm * mm) * 2 + m.iv[k]) * lv / 50) + 5;
+  return { hp: Math.floor(((S.base.hp * tm * mm) * 2 + m.iv.hp) * lv / 50) + lv + 10, atk: st("atk"), def: st("def"), spd: st("spd") };
+}
+function mcIvSum(m) { return m.iv.hp + m.iv.atk + m.iv.def + m.iv.spd; }
+function mcTierBadge(t) { const T = MC_TIERS[t]; return `<b style="color:${T.col};text-shadow:0 0 3px #000">[${T.k}]</b>`; }
+function mcName(m) { return m.name || MC_SPECIES[m.sp].name; }
+function mcNewMon(sp, lv, mut) { const r = () => Math.floor(Math.random() * 32); return { sp, lv, xp: 0, iv: { hp: r(), atk: r(), def: r(), spd: r() }, mut: mut || 0, name: "" }; }
+
+// ---- 出てくる確率（エサ・薬・天気・イベント） ----
+function mcLuck() {
+  const B = mc.buff; let L = 1;
+  if (B.baitT > 0) L *= [1, 1.2, 1.5, 2][B.bait];
+  if (B.luckT > 0) L *= 1.5;
+  if (B.dblT > 0) L *= [2, 3, 5][B.dblRoll];
+  if (mc.event.on > 0) L *= 1.5;
+  return L;
+}
+function mcNekiMult() {
+  const B = mc.buff;
+  const full = B.baitT > 0 && wx.cur !== "clear" && mc.event.on > 0;
+  if (!full) return B.dblT > 0 ? 2 : 1;
+  if (!(B.luckT > 0)) return 3;           // 5,000万分の1
+  if (!(B.dblT > 0)) return 5;            // 3,000万分の1
+  return [15, 30, 150][B.dblRoll];        // 1,000万分の1 ／ 500万分の1 ／ 100万分の1
+}
+function mcPickSpawn(biome) {
+  if (Math.random() < mcNekiMult() / 150000000) return MC_SPECIES.findIndex((s) => s.tier === 12);
+  const L = mcLuck(), wet = wx.cur !== "clear";
+  const ws = MC_TIERS.slice(0, 12).map((T, i) => T.w * (i >= 3 ? L : 1) * (i >= MC_RARE && wet ? 1.2 : 1));
+  let r = Math.random() * ws.reduce((a, b) => a + b, 0), tier = 0;
+  for (let i = 0; i < ws.length; i++) { r -= ws[i]; if (r <= 0) { tier = i; break; } }
+  let pool = MC_SPECIES.filter((s) => s.tier === tier && (s.biome === biome || s.biome === "any"));
+  if (!pool.length) pool = MC_SPECIES.filter((s) => s.tier === tier);
+  // 天気が好きな子は出やすい
+  const pw = pool.map((s) => (s.wx === wx.cur ? 3 : 1));
+  let q = Math.random() * pw.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < pool.length; i++) { q -= pw[i]; if (q <= 0) return pool[i].id; }
+  return pool[0].id;
+}
+function mcSpawn() {
+  for (let tries = 0; tries < 8; tries++) {
+    const x = MI.x + rand(-MI.h + 4, MI.h - 4), z = MI.z + rand(-MI.h + 4, MI.h - 4);
+    if (Math.abs(x - MI.x) < 22 && z > MI.z + MI.h - 26) continue;               // 船着き場・会場のまわりには出ない
+    if (Math.hypot(x - me.pos.x, z - me.pos.z) < 10) continue;
+    const y = groundAt({ x, y: 30, z }, 0.3); if (y < -0.5) continue;
+    const biome = mcBiomeAt(x, z), sp = mcPickSpawn(biome), S = MC_SPECIES[sp];
+    const mut = Math.random() < (1 / 800) * (mcLuck() > 1 ? 1.5 : 1) ? 1 + Math.floor(Math.random() * 5) : 0;
+    const lv = Math.max(1, Math.round(3 + Math.min(S.tier, 11) * 3 + rand(-2, 3)));
+    const w = { mon: mcNewMon(sp, lv, mut), pos: new V3(x, y, z), ry: rand(0, 6), goal: null, wait: rand(0, 3), fail: 0, spotted: false };
+    w.m = mcMakeMesh(sp, mut); w.m.position.copy(w.pos); world.add(w.m);
+    if (S.tier >= MC_RARE) { const lab = makeLabel(`[${MC_TIERS[S.tier].k}] ${S.name}`, MC_TIERS[S.tier].col, 0.9); lab.position.y = 1.6; w.m.add(lab); }
+    mc.wild.push(w);
+    if (S.tier >= MC_RARE) mcAnnounce(w);
+    return;
+  }
+}
+function mcRemoveWild(w) { world.remove(w.m); mc.wild = mc.wild.filter((q) => q !== w); }
+// ---- 超激レア：光の柱・空の色・みんなにお知らせ ----
+function mcBeacon(x, z, col, life = 60) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.6, 80, 16, 1, true), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  m.position.set(x, 40, z); world.add(m); mc.beacons.push({ m, t: life });
+}
+function mcSkyFlash(col) { mc.skyT = 30; mc.skyCol.set(col); }
+function mcAnnounce(w) {
+  const S = MC_SPECIES[w.mon.sp], T = MC_TIERS[S.tier];
+  w.beacon = true; mcBeacon(w.pos.x, w.pos.z, T.col); mcSkyFlash(T.col);
+  const text = `⚠️ モンスター島に【${T.k}】${S.name} があらわれた！！ 光の柱をさがせ！`;
+  toast(text, 4000); play("clear"); setTimeout(() => play("mutant"), 400);
+  if (net.online) { netSend({ t: "chat", text }); netSend({ t: "mcRare", x: +w.pos.x.toFixed(1), z: +w.pos.z.toFixed(1), col: T.col, fromId: net.myId }); }
+}
+SFX.mutant = (t) => { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(t + i * 0.09, f, 0.35, "triangle", 0.08, sfxBus)); tone(t + 0.6, 2093, 0.8, "sine", 0.06, sfxBus, 1047); };
+
+// ---- 島をつくる ----
+function buildMonIsland() {
+  mc.wild = []; mc.fol = null; mc.rfol = new Map(); mc.beacons = []; mbt.on = false;
+  const { x: X, z: Z, h: H } = MI;
+  addBox(X, -0.48, Z, H * 2, 0.5, H * 2, 0x8ac060);                                   // 島の地面
+  const plate = (cx, cz, w, d, c) => addBox(cx, -0.45, cz, w, 0.5, d, c, { collide: false });
+  plate(X - H / 2, Z + H / 2, H, H, 0xf0d890); plate(X + H / 2, Z + H / 2, H, H, 0x5aa850);
+  plate(X - H / 2, Z - H / 2, H, H, 0x9a8a78); plate(X + H / 2, Z - H / 2, H, H, 0xf4f8ff);
+  // 砂漠：サボテンと砂の丘
+  for (let i = 0; i < 9; i++) { const cx = X - rand(8, H - 6), cz = Z + rand(6, H - 26); addBox(cx, 0, cz, 0.5, 2.2, 0.5, 0x4a9a4a); addBox(cx + 0.45, 0.9, cz, 0.6, 0.35, 0.35, 0x4a9a4a, { collide: false }); addBox(cx + 0.6, 0.9, cz, 0.3, 0.9, 0.3, 0x4a9a4a, { collide: false }); }
+  slope(X - 30, Z + 14, 1, 0, 6, 1.2, 8, 0xe8c880); slope(X - 18, Z + 14, -1, 0, 6, 1.2, 8, 0xe8c880);
+  // 森：木
+  for (let i = 0; i < 14; i++) { const tx = X + rand(6, H - 4), tz = Z + rand(6, H - 4); if (Math.hypot(tx - (X + 16), tz - (Z + 32)) < 11) continue; tree(tx, tz, rand(0.8, 1.2)); }
+  // 山と雪山（坂でのぼれる）
+  const hill = (cx, cz, top, h, len, col, topCol) => { addBox(cx, 0, cz, top, h, top, topCol); for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) slope(cx - dx * (top / 2 + len / 2), cz - dz * (top / 2 + len / 2), dx, dz, len, h, top, col); };
+  hill(X - 28, Z - 28, 10, 4, 9, 0x8a7a6a, 0x9a8a7a);
+  hill(X + 28, Z - 28, 9, 6.5, 12, 0xe8f0ff, 0xffffff);
+  for (let i = 0; i < 6; i++) { const rx = X - rand(6, H - 6), rz = Z - rand(6, H - 6); if (Math.hypot(rx - (X - 28), rz - (Z - 28)) < 16) continue; addBox(rx, 0, rz, rand(1, 2.2), rand(0.8, 1.6), rand(1, 2.2), 0x7a6a5a); }
+  for (let i = 0; i < 6; i++) { const sx = X + rand(6, H - 6), sz = Z - rand(6, H - 6); if (Math.hypot(sx - (X + 28), sz - (Z - 28)) < 18) continue; const c = mesh(new THREE.ConeGeometry(1.2, 3.2, 8), 0xe0f0f4); c.position.set(sx, 1.6, sz); }
+  for (const [k, cx, cz] of [["desert", X - 28, Z + 26], ["forest", X + 34, Z + 20], ["mountain", X - 28, Z - 10], ["snow", X + 28, Z - 8]]) { const l = makeLabel(MC_BIOMES[k], "#fff", 2, { bg: "#3a3a5a" }); l.position.set(cx, 5, cz); world.add(l); }
+  const tl = makeLabel("🐾 モンスター島", "#fff", 3, { bg: "#c0408a" }); tl.position.set(X, 7, Z + H - 8); world.add(tl);
+  // 船着き場（町 ⇄ 島）
+  const boat = (bx, bz) => { addBox(bx, -0.5, bz, 2.4, 0.7, 4.6, 0xa06a3a, { collide: false }); addBox(bx, 0.2, bz - 0.8, 1.8, 0.9, 1.4, 0xf4f4f4, { collide: false }); };
+  boat(8, -86); boat(X, Z + H + 4);
+  addSpot(8, -78.5, () => "[E] ⛴️ モンスター島へ行く", () => mcTravel(true));
+  addSpot(X, Z + H - 3, () => "[E] ⛴️ 町へもどる", () => mcTravel(false));
+  const fl = makeLabel("⛴️ モンスター島行き", "#fff", 1.6, { bg: "#c0408a" }); fl.position.set(8, 4, -79); world.add(fl);
+  // ショップと会場
+  addBox(X - 12, 0, Z + H - 12, 4, 1, 1.4, 0xc0408a);
+  addSpot(X - 12, Z + H - 10.5, () => "[E] 🛒 モンスターショップ（エサ・薬）", openMonShop);
+  const sl = makeLabel("🛒 モンスターショップ", "#fff", 1.4, { bg: "#c0408a" }); sl.position.set(X - 12, 3, Z + H - 12); world.add(sl);
+  const ar = new THREE.Mesh(new THREE.CylinderGeometry(7, 7.4, 0.3, 32), new THREE.MeshToonMaterial({ color: 0xd8c8f0 })); ar.position.set(MB_STAGE.x, 0.15, MB_STAGE.z); world.add(ar);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(6.6, 0.15, 6, 40), new THREE.MeshBasicMaterial({ color: 0xffd84a })); ring.rotation.x = Math.PI / 2; ring.position.set(MB_STAGE.x, 0.32, MB_STAGE.z); world.add(ring);
+  addSpot(MB_STAGE.x, MB_STAGE.z + 8, () => "[E] ⚔️ バトル会場で戦う", openBattleMenu);
+  const al = makeLabel("⚔️ バトル会場", "#fff", 2, { bg: "#6a4ac0" }); al.position.set(MB_STAGE.x, 6, MB_STAGE.z - 9); world.add(al);
+  town.mapRects.push({ x: X, z: Z, w: H * 2, d: H * 2, color: 0x8ac060, label: "モンスター島", flat: true });
+}
+function mcTravel(go) {
+  if (me.veh && !me.fly) setVehicle(null);
+  if (go) { me.pos.set(MI.x, 0.1, MI.z + MI.h - 6); me.ry = Math.PI; toast(`🐾 モンスター島に着いた！<br><span class="small">近づいて ${touchMode ? "🔍" : "E"} でつかまえる（70%）・${touchMode ? "🐾" : "N キー"}で BOX</span>`, 3500); }
+  else { me.pos.set(8, 0.1, -76); me.ry = 0; toast("⛴️ 町にもどった", 1500); }
+  me.vel.set(0, 0, 0); camYaw = me.ry + Math.PI; play("car");
+}
+
+// ---- つかまえる ----
+function mcNearWild() { let best = null, bd = 2.8; for (const w of mc.wild) { const d = Math.hypot(w.pos.x - me.pos.x, w.pos.z - me.pos.z); if (d < bd && Math.abs(w.pos.y - me.pos.y) < 2.5) { bd = d; best = w; } } return best; }
+function mcPrompt() { const w = mcNearWild(); const S = MC_SPECIES[w.mon.sp]; return `[E] つかまえる（70%）　[${MC_TIERS[S.tier].k}] ${S.name} Lv.${w.mon.lv}${w.mon.mut ? "　✨突然変異" : ""}`; }
+function mcCatch(w) {
+  if (mcBox().length >= 60) { toast("BOX がいっぱい（60ぴきまで）。にがしてね", 1800); return; }
+  const S = MC_SPECIES[w.mon.sp];
+  if (Math.random() < 0.7) {
+    mcBox().push(w.mon); mcEnsureIds(); saveTown(true); mcRemoveWild(w);
+    explodeFx(w.pos.clone().add(new V3(0, 0.6, 0)), 1.5, 0xffd84a); play("clear");
+    toast(`🎉 ${S.name} をつかまえた！ ${mcTierBadge(S.tier)} Lv.${w.mon.lv}${w.mon.mut ? `<br>✨突然変異（${MUTS[w.mon.mut]}）！` : ""}<br><span class="small">${touchMode ? "🐾" : "N キー"}で BOX を見よう</span>`, 3000);
+    if (S.tier >= MC_RARE && net.online) netSend({ t: "chat", text: `🎉 ${myName} が【${MC_TIERS[S.tier].k}】${S.name} をつかまえた！！` });
+  } else {
+    w.fail++; play("hmm");
+    if (w.fail >= 2 && S.tier < MC_RARE) { popText(w.pos.x, w.pos.y + 1.5, w.pos.z, "にげられた…", "#ff8a8a"); mcRemoveWild(w); }
+    else { popText(w.pos.x, w.pos.y + 1.5, w.pos.z, "すりぬけた！ もう一回！", "#ffb070"); w.goal = new V3(w.pos.x + rand(-6, 6), 0, w.pos.z + rand(-6, 6)); }
+  }
+}
+
+// ---- 毎フレーム ----
+function mcUpdate(dt) {
+  const B = mc.buff;
+  B.baitT = Math.max(0, B.baitT - dt); B.luckT = Math.max(0, B.luckT - dt); B.dblT = Math.max(0, B.dblT - dt);
+  const ev = mc.event;
+  if (ev.on > 0) { ev.on -= dt; if (ev.on <= 0) { ev.t = rand(600, 900); if (mcOnIsland()) toast("🎉 モンスター大量発生イベントがおわった", 1800); } }
+  else { ev.t -= dt; if (ev.t <= 0) { ev.on = 180; if (mcOnIsland()) { toast("🎉🎉 モンスター大量発生イベント！ 3分間、モンスターがたくさん出てレアも出やすい！", 3500); play("clear"); } } }
+  const on = mcOnIsland();
+  if (on && !mc.was && ev.on > 0) toast("🎉 いま モンスター大量発生イベント中！", 2200);
+  mc.was = on;
+  // 野生のモンスター
+  if (on) {
+    const cap = 12 + (B.baitT > 0 ? 4 : 0) + (ev.on > 0 ? 6 : 0);
+    mc.spawnT -= dt;
+    if (mc.spawnT <= 0 && mc.wild.length < cap) { mc.spawnT = ev.on > 0 ? 1.5 : B.baitT > 0 ? 2 : 3; mcSpawn(); }
+  } else if (mc.wild.length && Math.hypot(me.pos.x - MI.x, me.pos.z - MI.z) > 140) { for (const w of mc.wild.slice()) mcRemoveWild(w); }
+  for (const w of mc.wild) {
+    w.wait -= dt;
+    if (!w.goal && w.wait <= 0) { w.goal = new V3(clamp(w.pos.x + rand(-7, 7), MI.x - MI.h + 3, MI.x + MI.h - 3), 0, clamp(w.pos.z + rand(-7, 7), MI.z - MI.h + 3, MI.z + MI.h - 3)); }
+    let moving = false;
+    if (w.goal) {
+      const dx = w.goal.x - w.pos.x, dz = w.goal.z - w.pos.z, d = Math.hypot(dx, dz);
+      if (d < 0.3) { w.goal = null; w.wait = rand(1, 4); }
+      else { const sp = 1.4 * dt; w.pos.x += dx / d * sp; w.pos.z += dz / d * sp; w.ry = lerpAngle(w.ry, Math.atan2(dx, dz), Math.min(1, dt * 5)); moving = true; }
+    }
+    w.pos.y += (Math.max(0, groundAt({ x: w.pos.x, y: w.pos.y + 1.5, z: w.pos.z }, 0.3)) - w.pos.y) * Math.min(1, dt * 8);
+    w.m.position.copy(w.pos); w.m.rotation.y = w.ry; mcAnimate(w.m, dt, moving);
+    w.m.visible = !mbt.on || Math.hypot(w.pos.x - MB_STAGE.x, w.pos.z - MB_STAGE.z) > 16;
+    // 突然変異：近づいたときだけ わかる
+    if (w.mon.mut && !w.spotted && Math.hypot(w.pos.x - me.pos.x, w.pos.z - me.pos.z) < 8) {
+      w.spotted = true; play("mutant"); explodeFx(w.pos.clone().add(new V3(0, 0.8, 0)), 2.5, 0xfff08a); mcSkyFlash("#fff6a0");
+      toast(`✨✨ 突然変異！ 激レア！ ✨✨<br>${MC_SPECIES[w.mon.sp].name}（${MUTS[w.mon.mut]}）`, 3500);
+    }
+  }
+  // 光の柱
+  for (const b of mc.beacons) { b.t -= dt; b.m.material.opacity = 0.25 + Math.sin(gameTime * 3) * 0.12; b.m.rotation.y += dt * 0.5; if (b.t <= 0) world.remove(b.m); }
+  mc.beacons = mc.beacons.filter((b) => b.t > 0);
+  mc.skyT = Math.max(0, mc.skyT - dt);
+  // つれて歩くモンスター
+  const fid = townSave.monFollow, fm = fid != null ? mcBox().find((m) => m.id === fid) : null;
+  if (fm && !mbt.on) {
+    if (!mc.fol || mc.fol.id !== fid || mc.fol.key !== fm.sp + ":" + fm.mut) { if (mc.fol) world.remove(mc.fol.m); mc.fol = { id: fid, key: fm.sp + ":" + fm.mut, m: mcMakeMesh(fm.sp, fm.mut, 0.8), pos: me.pos.clone() }; world.add(mc.fol.m); }
+    const F = mc.fol, tx = me.pos.x - Math.sin(me.ry) * 1.4 + Math.cos(me.ry) * 0.8, tz = me.pos.z - Math.cos(me.ry) * 1.4 - Math.sin(me.ry) * 0.8;
+    const d = Math.hypot(tx - F.pos.x, tz - F.pos.z);
+    if (d > 25) F.pos.set(tx, me.pos.y, tz);
+    else { F.pos.x += (tx - F.pos.x) * Math.min(1, dt * 3); F.pos.z += (tz - F.pos.z) * Math.min(1, dt * 3); }
+    F.pos.y += (Math.max(me.pos.y - 0.3, groundAt({ x: F.pos.x, y: me.pos.y + 1.5, z: F.pos.z }, 0.3)) - F.pos.y) * Math.min(1, dt * 8);
+    F.m.position.copy(F.pos); if (d > 0.2) F.m.rotation.y = lerpAngle(F.m.rotation.y, Math.atan2(tx - F.pos.x, tz - F.pos.z), Math.min(1, dt * 6));
+    mcAnimate(F.m, dt, d > 0.4);
+  } else if (mc.fol) { world.remove(mc.fol.m); mc.fol = null; }
+  // ほかの人のつれているモンスター
+  const seen = new Set();
+  for (const id in net.players) {
+    const r = net.players[id], s = r.state; if (!s || !s.fm) continue; seen.add(id);
+    const key = s.fm[0] + ":" + s.fm[1]; let R = mc.rfol.get(id);
+    if (!R || R.key !== key) { if (R) world.remove(R.m); R = { key, m: mcMakeMesh(s.fm[0], s.fm[1], 0.8), pos: r.pos.clone() }; world.add(R.m); mc.rfol.set(id, R); }
+    const tx = r.pos.x - Math.sin(r.ry) * 1.4, tz = r.pos.z - Math.cos(r.ry) * 1.4, d = Math.hypot(tx - R.pos.x, tz - R.pos.z);
+    if (d > 25) R.pos.set(tx, r.pos.y, tz); else { R.pos.x += (tx - R.pos.x) * Math.min(1, dt * 3); R.pos.z += (tz - R.pos.z) * Math.min(1, dt * 3); }
+    R.pos.y = r.pos.y; R.m.position.copy(R.pos); mcAnimate(R.m, dt, d > 0.4);
+  }
+  for (const [id, R] of mc.rfol) if (!seen.has(id)) { world.remove(R.m); mc.rfol.delete(id); }
+  mbUpdate(dt);
+}
+function mcFollowState() { const fid = townSave.monFollow, fm = fid != null ? mcBox().find((m) => m.id === fid) : null; return fm ? [fm.sp, fm.mut || 0] : null; }
+function mcHudLine() {
+  const B = mc.buff; let r = "";
+  if (mcOnIsland()) r += `<br>🐾 モンスター島：${MC_BIOMES[mcBiomeAt(me.pos.x, me.pos.z)]}`;
+  if (mc.event.on > 0) r += `<br>🎉 大量発生 あと${Math.ceil(mc.event.on)}秒`;
+  if (B.baitT > 0) r += `<br>🍖 エサ（${["", "ふつう", "いい", "すごい"][B.bait]}）${Math.ceil(B.baitT)}秒`;
+  if (B.luckT > 0) r += `<br>🍀 運が良くなる薬 ${Math.ceil(B.luckT)}秒`;
+  if (B.dblT > 0) r += `<br>💊 2倍薬${["", "（大成功）", "（超大成功）"][B.dblRoll]} ${Math.ceil(B.dblT)}秒`;
+  return r;
+}
+
+// ---- モンスターショップ ----
+function openMonShop() {
+  const B = mc.buff;
+  const rows = [
+    ...[["ふつうのエサ", 20, 1], ["いいエサ", 60, 2], ["すごいエサ", 150, 3]].map(([n, p, lv]) => ({ name: `🍖 ${n}`, desc: `3分間 モンスターがたくさん出て、レアも出やすくなる（×${[0, 1.2, 1.5, 2][lv]}）`, btn: `${p}🪙`,
+      fn: () => { if (!pay(p)) return; B.bait = Math.max(lv, B.baitT > 0 ? B.bait : 0); B.baitT = 180; play("item"); toast(`🍖 ${n}をまいた！`, 1500); } })),
+    { name: "🍀 運が良くなる薬", desc: "3分間 レアなモンスターが出やすくなる（×1.5）", btn: "200🪙", fn: () => { if (!pay(200)) return; B.luckT = 180; play("item"); toast("🍀 運が良くなった気がする…！", 1500); } },
+    { name: "💊 2倍薬", desc: "3分間 レアが出やすさ2倍！ 飲んだしゅんかんに効き目が決まる（大成功・超大成功もあるかも…！）", btn: "400🪙", fn: () => { if (!pay(400)) return; mcDrink(); } },
+  ];
+  openPanel("🛒 モンスターショップ", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい`, rows, openMonShop);
+}
+function mcDrink() {
+  // 効き目はランダム。ハズレはなし（ふつう・大成功・超大成功）
+  const r = Math.random(), roll = r < 0.02 ? 2 : r < 0.12 ? 1 : 0;
+  const B = mc.buff; B.dblT = 180; B.dblRoll = Math.max(roll, B.dblRoll && B.dblT > 0 ? B.dblRoll : 0); B.dblRoll = roll;
+  if (roll === 2) { play("clear"); setTimeout(() => play("mutant"), 300); explodeFx(me.pos.clone().add(new V3(0, 1, 0)), 3, 0xffd84a); toast("🌟🌟🌟 超大成功！！！ 🌟🌟🌟<br>レアが出やすさ ×5！", 3500); }
+  else if (roll === 1) { play("clear"); toast("✨✨ 大成功！ ✨✨<br>レアが出やすさ ×3！", 2800); }
+  else { play("item"); toast("💊 ちゃんと効いた！ レアが出やすさ ×2", 2000); }
+}
+
+// ---- モンスター BOX ----
+function mcEnsureIds() { let n = townSave.monNext || 1; for (const m of mcBox()) if (m.id == null) m.id = n++; townSave.monNext = n; }
+function openMonBox() {
+  mcEnsureIds();
+  const box = mcBox();
+  const rows = box.length ? box.slice().sort((a, b) => MC_SPECIES[b.sp].tier - MC_SPECIES[a.sp].tier || b.lv - a.lv).map((m) => {
+    const S = MC_SPECIES[m.sp], st = mcStats(m);
+    return { name: `${townSave.monFollow === m.id ? "🚶 " : ""}${mcTierBadge(S.tier)} ${mcName(m)}　Lv.${m.lv}${m.mut ? "　✨" + MUTS[m.mut] : ""}`, desc: `HP ${st.hp}・こうげき ${st.atk}・ぼうぎょ ${st.def}・すばやさ ${st.spd}　（個体値 ${mcIvSum(m)}/124）`, btn: "見る", fn: () => { openMonDetail(m); return false; } };
+  }) : [{ html: "<span class='small'>まだモンスターがいないよ。町の北の「⛴️ モンスター島行き」からモンスター島へ行こう！</span>" }];
+  openPanel("🐾 モンスター BOX", `${box.length}/60 ひき`, rows, openMonBox);
+}
+function openMonDetail(m) {
+  const S = MC_SPECIES[m.sp], st = mcStats(m), need = m.lv * 12;
+  const rows = [
+    { html: `<div style="width:100%;text-align:left">${mcTierBadge(S.tier)} <b>${mcName(m)}</b>（${S.name}）${m.mut ? `　✨突然変異：${MUTS[m.mut]}` : ""}<br>Lv.${m.lv}　けいけん ${m.xp}/${need}<br>HP ${st.hp}・こうげき ${st.atk}・ぼうぎょ ${st.def}・すばやさ ${st.spd}<br><span class="small">個体値：HP ${m.iv.hp}・こうげき ${m.iv.atk}・ぼうぎょ ${m.iv.def}・すばやさ ${m.iv.spd}（ぜんぶで ${mcIvSum(m)}/124）<br>わざ：${S.moves.map((k) => MB_MOVES[k].n).join("・")}　すみか：${S.biome === "any" ? "どこでも" : MC_BIOMES[S.biome]}</span></div>` },
+    { name: townSave.monFollow === m.id ? "🚶 つれて歩くのをやめる" : "🚶 いっしょに歩く", desc: "うしろをついてくるよ（友だちにも見える）", btn: "えらぶ", fn: () => { townSave.monFollow = townSave.monFollow === m.id ? null : m.id; saveTown(true); play("item"); openMonDetail(m); return false; } },
+    { name: "✏️ 名前をつける", desc: "すきな名前にできる（10文字まで）", btn: "つける", fn: () => { const n = prompt("名前を入れてね（10文字まで）", mcName(m)); if (n != null) { m.name = cleanName(n).slice(0, 10); saveTown(true); } openMonDetail(m); return false; } },
+    { name: "🍖 ごはんをあげる", desc: "けいけん +15（15🪙）", btn: "15🪙", fn: () => { if (!pay(15)) return false; mcGainXp(m, 15); saveTown(true); play("item"); openMonDetail(m); return false; } },
+    { name: "👋 にがす", desc: "島にかえしてあげる（もどってこない）", btn: "にがす", fn: () => { showMsg("👋 にがす？", `${mcName(m)} を本当ににがす？`, [{ label: "にがす", fn: () => { townSave.mons = mcBox().filter((q) => q !== m); if (townSave.monFollow === m.id) townSave.monFollow = null; saveTown(true); openMonBox(); } }, { label: "やめる", fn: () => openMonDetail(m) }]); return false; } },
+    { name: "⬅️ BOX にもどる", desc: "", btn: "もどる", fn: () => { openMonBox(); return false; } },
+  ];
+  openPanel(`🐾 ${mcName(m)}`, "", rows, () => openMonDetail(m));
+}
+function mcGainXp(m, v) {
+  m.xp += v; let up = 0;
+  while (m.lv < 100 && m.xp >= m.lv * 12) { m.xp -= m.lv * 12; m.lv++; up++; }
+  if (up) toast(`⬆️ ${mcName(m)} が Lv.${m.lv} になった！`, 2000);
+}
+
+// =====================================================================
+//  32-2. モンスターバトル（見るだけ。モンスターごとに動きがある）
+// =====================================================================
+const MB_STAGE = { x: 16, z: MI.z + MI.h - 26 };
+const mbt = { on: false, log: [], i: 0, at: 0, A: null, B: null, mySide: "A", speed: 1, end: 0, inv: null, kind: "cpu", shown: { A: 0, B: 0 }, fx: [] };
+function mbPack(m) { return { sp: m.sp, lv: m.lv, iv: m.iv, mut: m.mut || 0, name: m.name || "" }; }
+function mbFighter(m) { const S = MC_SPECIES[m.sp]; return { mon: m, S, st: mcStats(m), moves: S.moves }; }
+function mbSimulate(A, B, rng) {
+  let ha = A.st.hp, hb = B.st.hp, bA = 1, bB = 1, turn = 0; const log = [];
+  while (ha > 0 && hb > 0 && turn < 40) {
+    const order = A.st.spd > B.st.spd || (A.st.spd === B.st.spd && rng() < 0.5) ? ["A", "B"] : ["B", "A"];
+    for (const side of order) {
+      if (ha <= 0 || hb <= 0) break;
+      const F = side === "A" ? A : B, O = side === "A" ? B : A;
+      const mk = F.moves[Math.floor(rng() * F.moves.length)], mv = MB_MOVES[mk], e = { side, mv: mk };
+      if (mv.kind === "buff") { if (side === "A") bA *= 1.3; else bB *= 1.3; e.buff = true; }
+      else if (rng() > mv.acc) e.miss = true;
+      else {
+        const crit = rng() < 0.08, atk = F.st.atk * (side === "A" ? bA : bB);
+        const d = Math.max(1, Math.round(mv.pow * atk / O.st.def * 0.22 * (0.85 + rng() * 0.15) * (crit ? 1.5 : 1)));
+        e.dmg = d; e.crit = crit; if (side === "A") hb = Math.max(0, hb - d); else ha = Math.max(0, ha - d);
+      }
+      e.ha = ha; e.hb = hb; log.push(e);
+    }
+    turn++;
+  }
+  const win = ha <= 0 ? "B" : hb <= 0 ? "A" : ha / A.st.hp >= hb / B.st.hp ? "A" : "B";
+  return { log, win };
+}
+function mbStart(monA, monB, seed, mySide, kind, oppId) {
+  if (mbt.on) return;
+  closeShop(); hidePanel && hidePanel();
+  const A = mbFighter(monA), B = mbFighter(monB), sim = mbSimulate(A, B, mulberry(seed));
+  Object.assign(mbt, { on: true, A, B, log: sim.log, win: sim.win, i: 0, at: -1.2, mySide, kind, oppId, speed: 1, end: 0, shown: { A: A.st.hp, B: B.st.hp }, fx: [] });
+  for (const [side, F, x, ry] of [["A", A, MB_STAGE.x - 4, Math.PI / 2], ["B", B, MB_STAGE.x + 4, -Math.PI / 2]]) {
+    F.m = mcMakeMesh(F.mon.sp, F.mon.mut, 2.2); F.home = new V3(x, 0.3, MB_STAGE.z); F.m.position.copy(F.home); F.m.rotation.y = ry; F.ry = ry; world.add(F.m);
+  }
+  if (Math.hypot(me.pos.x - MB_STAGE.x, me.pos.z - MB_STAGE.z) < 18) { me.pos.set(MB_STAGE.x + 3, 0.1, MB_STAGE.z + 17); me.vel.set(0, 0, 0); }
+  controls = false; document.body.classList.add("mbOn"); $("mbP").hidden = false; $("mbClose").hidden = true; $("mbFast").hidden = false; $("mbSkip").hidden = false;
+  mbBars(); $("mbLog").innerHTML = `⚔️ ${mcName(A.mon)} VS ${mcName(B.mon)}！`; play("roar");
+}
+function mbBars() {
+  for (const side of ["A", "B"]) {
+    const F = mbt[side], el = $(side === "A" ? "mbL" : "mbR"), you = side === mbt.mySide;
+    el.querySelector(".mbN").innerHTML = `${you ? "🙂 " : ""}${mcTierBadge(F.S.tier)} ${mcName(F.mon)} Lv.${F.mon.lv}${F.mon.mut ? " ✨" : ""}`;
+    const p = mbt.shown[side] / F.st.hp; const bar = el.querySelector(".mbH div"); bar.style.width = Math.max(0, p * 100) + "%"; bar.style.background = p > 0.5 ? "#4ad86a" : p > 0.2 ? "#ffd84a" : "#ff4a4a";
+    el.querySelector(".mbHt").textContent = `${Math.ceil(mbt.shown[side])}/${F.st.hp}`;
+  }
+}
+const MB_DUR = { dash: 1.0, jump: 1.25, beam: 1.2, spin: 1.1, buff: 0.9, ult: 1.9 }, MB_HIT = { dash: 0.45, jump: 0.72, beam: 0.68, spin: 0.55, buff: 0.5, ult: 0.75 };
+function mbUpdate(dt) {
+  if (!mbt.on) return;
+  const A = mbt.A, B = mbt.B;
+  for (const F of [A, B]) mcAnimate(F.m, dt * mbt.speed, false);
+  for (const f of mbt.fx) { f.t -= dt; if (f.upd) f.upd(f); if (f.t <= 0) world.remove(f.m); }
+  mbt.fx = mbt.fx.filter((f) => f.t > 0);
+  if (mbt.end) {
+    mbt.end += dt;
+    const L = mbt.win === "A" ? B : A, k = Math.min(1, mbt.end / 1.2);
+    L.m.rotation.z = k * 1.5 * (L === A ? 1 : -1); L.m.position.y = L.home.y - k * 0.3;
+    return;
+  }
+  mbt.at += dt * mbt.speed;
+  if (mbt.at < 0) return;
+  const e = mbt.log[mbt.i];
+  if (!e) { mbFinish(); return; }
+  const F = mbt[e.side], O = mbt[e.side === "A" ? "B" : "A"], mv = MB_MOVES[e.mv], dur = MB_DUR[mv.kind], hitT = MB_HIT[mv.kind] * dur;
+  if (!e.started) { e.started = true; $("mbLog").innerHTML = `${mcName(F.mon)} の <b>${mv.n}</b>！`; if (mv.kind === "ult") { flashScreen && flashScreen(); play("thunder"); } else play("jump"); }
+  const t = mbt.at, k = t / dur, dir = O.home.x > F.home.x ? 1 : -1;
+  F.m.position.copy(F.home); F.m.rotation.set(0, F.ry, 0); F.m.scale.setScalar(F.m.scale.x);
+  if (mv.kind === "dash") { const p = t < hitT ? t / hitT : Math.max(0, 1 - (t - hitT) / (dur - hitT)); F.m.position.x += dir * 6.2 * p * p; }
+  else if (mv.kind === "jump") { const p = Math.min(1, t / hitT); if (t < hitT) { F.m.position.x += dir * 6 * p; F.m.position.y += Math.sin(p * Math.PI) * 3.2; } else { const q = Math.min(1, (t - hitT) / (dur - hitT)); F.m.position.x += dir * 6 * (1 - q); F.m.position.y += Math.sin(q * Math.PI) * 0.8; } }
+  else if (mv.kind === "spin") { F.m.rotation.y = F.ry + t * 22; const p = t < hitT ? t / hitT : Math.max(0, 1 - (t - hitT) / (dur - hitT)); F.m.position.x += dir * 5.5 * p; }
+  else if (mv.kind === "buff") { F.m.position.y += Math.abs(Math.sin(t * 14)) * 0.4; }
+  else if (mv.kind === "beam" || mv.kind === "ult") {
+    F.m.position.x -= dir * Math.sin(Math.min(1, t / 0.3) * Math.PI) * 0.3;
+    if (!e.shot && t > 0.25) { e.shot = true; mbShot(F, O, mv, hitT - 0.25); }
+  }
+  if (!e.hit && t >= hitT) {
+    e.hit = true;
+    if (e.buff) { popText(F.m.position.x, 3, F.m.position.z, "こうげき↑", "#ffb070"); play("roar"); }
+    else if (e.miss) { popText(O.home.x, 3, O.home.z, "はずれ！", "#ccc"); play("hmm"); }
+    else {
+      mbt.shown.A = e.ha; mbt.shown.B = e.hb; mbBars();
+      popText(O.home.x, 3.2, O.home.z, `${e.crit ? "きゅうしょ！ " : ""}-${e.dmg}`, e.crit ? "#ffd84a" : "#ff6a6a");
+      O.hitT = 0.4; play(mv.kind === "ult" ? "boom" : "punch"); shake = Math.max(shake, mv.kind === "ult" ? 0.35 : 0.12);
+      explodeFx(O.home.clone().add(new V3(0, 1, 0)), mv.kind === "ult" ? 3 : 1.2, mv.col || 0xffffff);
+    }
+  }
+  if (O.hitT > 0) { O.hitT -= dt; O.m.position.x = O.home.x + Math.sin(O.hitT * 60) * 0.15 + (O.home.x > F.home.x ? 0.4 : -0.4) * O.hitT; }
+  if (t >= dur + 0.25) { F.m.position.copy(F.home); F.m.rotation.set(0, F.ry, 0); O.m.position.copy(O.home); mbt.i++; mbt.at = 0; }
+}
+function mbShot(F, O, mv, life) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(mv.kind === "ult" ? 0.6 : 0.3, 12, 10), new THREE.MeshBasicMaterial({ color: mv.col || 0xff8ae0 }));
+  const from = F.home.clone().add(new V3(0, 1, 0)), to = O.home.clone().add(new V3(0, 1, 0));
+  m.position.copy(from); world.add(m);
+  const L = Math.max(0.1, life / mbt.speed);
+  mbt.fx.push({ m, t: L, upd: (f) => { const p = 1 - f.t / L; m.position.lerpVectors(from, to, Math.min(1, p)); m.scale.setScalar(1 + Math.sin(p * 20) * 0.15); } });
+}
+function mbFinish() {
+  if (mbt.end) return;
+  mbt.end = 0.001;
+  const iWin = mbt.win === mbt.mySide, my = mbt[mbt.mySide], op = mbt[mbt.mySide === "A" ? "B" : "A"];
+  const real = mcBox().find((m) => m.id === my.mon.id);
+  let txt = iWin ? `🏆 ${mcName(my.mon)} の勝ち！` : `😢 ${mcName(my.mon)} は負けちゃった…`;
+  if (real) { const xp = iWin ? 10 + op.mon.lv * 4 : 4 + op.mon.lv; mcGainXp(real, xp); txt += `<br>けいけん +${xp}`; }
+  if (iWin) { const c = mbt.kind === "online" ? 50 : 15 + op.mon.lv * 2; setTimeout(() => gotCoins(c, "⚔️ バトルに勝った！"), 600); play("clear"); } else play("hmm");
+  saveTown(true);
+  $("mbLog").innerHTML = txt; $("mbClose").hidden = false; $("mbFast").hidden = true; $("mbSkip").hidden = true;
+}
+function mbClose() {
+  for (const F of [mbt.A, mbt.B]) if (F && F.m) world.remove(F.m);
+  for (const f of mbt.fx) world.remove(f.m);
+  mbt.on = false; mbt.fx = []; $("mbP").hidden = true; document.body.classList.remove("mbOn"); controls = true;
+}
+function mbSkip() {
+  const last = mbt.log[mbt.log.length - 1];
+  if (last) { mbt.shown.A = last.ha; mbt.shown.B = last.hb; }
+  mbt.i = mbt.log.length; mbBars(); mbFinish();
+}
+function mbBattleCam() {
+  if (!mbt.on) return;
+  camera.up.set(0, 1, 0);
+  camera.position.set(MB_STAGE.x + Math.sin(gameTime * 0.15) * 2, 5.2, MB_STAGE.z + 14);
+  camera.lookAt(MB_STAGE.x, 1.4, MB_STAGE.z);
+}
+function mcPickMyMon() { const box = mcBox(); mcEnsureIds(); return box.find((m) => m.id === townSave.monFollow) || box.slice().sort((a, b) => b.lv - a.lv)[0]; }
+function openBattleMenu() {
+  const box = mcBox(); mcEnsureIds();
+  if (!box.length) { toast("まずは島でモンスターをつかまえよう！", 1800); return; }
+  const my = mcPickMyMon();
+  const rows = [
+    { html: `<div style="width:100%;text-align:left">戦うモンスター：${mcTierBadge(MC_SPECIES[my.sp].tier)} <b>${mcName(my)}</b> Lv.${my.lv}<br><span class="small">（BOX で「いっしょに歩く」にした子が戦うよ）</span></div>` },
+    { name: "🤖 コンピュータと戦う", desc: "同じくらいの強さのモンスターと戦う", btn: "戦う", fn: () => {
+      const tier = Math.min(11, MC_SPECIES[my.sp].tier + (Math.random() < 0.3 ? 1 : 0)), pool = MC_SPECIES.filter((s) => s.tier <= tier && s.tier >= Math.max(0, tier - 2));
+      const opp = mcNewMon(pick(pool).id, Math.max(1, my.lv + Math.round(rand(-2, 2))), Math.random() < 0.02 ? 1 + Math.floor(Math.random() * 5) : 0); opp.name = "CPU の " + MC_SPECIES[opp.sp].name;
+      mbStart(my, opp, Math.floor(Math.random() * 1e9), "A", "cpu"); return false; } },
+  ];
+  if (net.online) {
+    const others = Object.entries(net.players);
+    if (others.length) for (const [id, r] of others) rows.push({ name: `🌐 ${r.name} と対戦`, desc: "オンライン対戦をもうしこむ", btn: "もうしこむ", fn: () => { mbt.inv = { id, mon: my, t: Date.now() }; sendTo(id, { t: "mbInv", from: myName, mon: mbPack(my), fromId: net.myId }); toast(`📨 ${r.name} にバトルをもうしこんだ！`, 2500); return false; } });
+    else rows.push({ html: "<span class='small'>部屋にほかの人がいないよ</span>" });
+  } else rows.push({ html: "<span class='small'>🌐 オンライン対戦は、部屋を作るか部屋に入ると できるよ</span>" });
+  openPanel("⚔️ バトル会場", "モンスター同士で戦う！ プレイヤーは見るだけ", rows, openBattleMenu);
+}
+function onNetMon(d, conn) {
+  const from = typeof d.fromId === "string" ? d.fromId : conn && conn.peer;
+  if (d.t === "mcRare") { if (mode === "town") { mcBeacon(d.x, d.z, d.col); mcSkyFlash(d.col); play("mutant"); } return true; }
+  if (d.t === "mbInv") {
+    const name = (net.players[from] && net.players[from].name) || cleanName(d.from) || "だれか", my = mcPickMyMon();
+    if (mbt.on || !my || !mode || !d.mon || !MC_SPECIES[d.mon.sp]) { sendTo(from, { t: "mbNo", fromId: net.myId }); return true; }
+    showMsg("⚔️ バトルのもうしこみ", `${name} が モンスターバトルをもうしこんできた！<br>あいて：${mcTierBadge(MC_SPECIES[d.mon.sp].tier)} ${d.mon.name || MC_SPECIES[d.mon.sp].name} Lv.${d.mon.lv}<br>こっち：${mcName(my)} Lv.${my.lv}`, [
+      { label: "⚔️ 戦う！", fn: () => { const seed = Math.floor(Math.random() * 1e9); sendTo(from, { t: "mbAcc", seed, mon: mbPack(my), fromId: net.myId }); mbStart(d.mon, my, seed, "B", "online", from); } },
+      { label: "ことわる", fn: () => { sendTo(from, { t: "mbNo", fromId: net.myId }); controls = true; } },
+    ]);
+    return true;
+  }
+  if (d.t === "mbAcc") { if (mbt.inv && mbt.inv.id === from && d.mon && MC_SPECIES[d.mon.sp]) { const my = mbt.inv.mon; mbt.inv = null; mbStart(my, d.mon, d.seed, "A", "online", from); } return true; }
+  if (d.t === "mbNo") { if (mbt.inv && mbt.inv.id === from) { mbt.inv = null; toast("バトルはことわられちゃった", 1600); } return true; }
+  return false;
+}
+$("mbClose").onclick = mbClose;
+$("mbSkip").onclick = mbSkip;
+$("mbFast").onclick = () => { mbt.speed = mbt.speed === 1 ? 2.5 : 1; $("mbFast").textContent = mbt.speed === 1 ? "⏩ はやく" : "▶ ふつう"; };
+
 // 町モードで届いたメッセージ（onNet から呼ばれる）
 function onNetTown(d, conn) {
   if (onNetCity(d, conn)) return;
@@ -10626,6 +11279,7 @@ function updateHud() {
     }
     r += `<br>🍖 ${townSave.meat}　🥕 ${townSave.veg}${foodBag().length ? `　🍱 ${foodBag().length}` : ""}`;
     const mv = monView(); if (mv && mv.hp > 0) r += `<br><span style="color:#ff8a8a">${MON_TIER[mv.tier || 1].name}出現中！ ${mv.hp}/${mv.max}</span>`;
+    r += mcHudLine();
     if (townSave.island) r += `<br>🏝️ ${townSave.island.name}：${townSave.island.funds}🪙`;
     if (townSave.residentOf) r += `<br>🏠 ${townSave.residentOf.island}の住民`;
     setH($("hudR"), r);
@@ -10653,6 +11307,7 @@ function updateHud() {
     const s = !me.veh || me.skate ? nearSpot() : null;
     const fv = !me.veh && !me.ride ? nearFriendVehicle() : null;
     if (me.ride) ptxt = "[E] 乗り物からおりる";
+    else if (!me.veh && mcNearWild()) ptxt = mcPrompt();
     else if (s) ptxt = s.label();
     else if (!fv && !me.veh && !me.jail && nearStealable()) ptxt = "[F] 車をぬすむ（悪いこと！）";
     else if (fv) ptxt = `[E] ${net.players[fv.id].name} の${VEHICLES[net.players[fv.id].state.vh].name}に乗る`;
@@ -10821,13 +11476,16 @@ addEventListener("keydown", (e) => {
       if (me.ride) { me.ride = null; toast("乗り物からおりた", 1000); }
       else {
         const s = !me.veh || me.skate ? nearSpot() : null;
-        if (s) s.act();
+        const wm = !me.veh ? mcNearWild() : null;
+        if (wm) mcCatch(wm);
+        else if (s) s.act();
         else if (!me.veh) { const f = nearFriendVehicle(); if (f) { me.ride = f.id; me.seat = f.seat; play("car"); toast(`${net.players[f.id].name} の${VEHICLES[net.players[f.id].state.vh].name}に乗った！（E かスペースでおりる）`, 1800); } }
       }
     }
     if (e.code === "KeyR") openGive();
     if (e.code === "KeyG") { if (me.grab) grabRelease(false); else grabStart(); }
     if (e.code === "KeyB") startSlide();
+    if (e.code === "KeyN") openMonBox();
     if (e.code === "KeyF" && !me.ride) cycleVehicle();
     if (e.code === "KeyQ") { const isl = town.islands.get(myName); if (isl && Math.abs(me.pos.x - isl.X) < isl.S + 1 && Math.abs(me.pos.z - isl.Z) < isl.S + 1) openIslandMgmt(); else eatIngredient(); }
     const tool = { Digit1: "hand", Digit2: "melee", Digit3: "guns", Digit4: "peel", Digit5: "balloon" }[e.code];
@@ -10935,6 +11593,7 @@ function loop() {
       if (mode === "story") { storyUpdate(dt); chatUpdate(dt); }
       if (mode === "town") townUpdate(dt);
       updateCamera(dt);
+      mbBattleCam();
       sun.position.set(me.pos.x + 14, me.pos.y + 36, me.pos.z - 22); sun.target.position.copy(me.pos); // 影が手前（カメラがわ）に落ちるように
       updateHud();
     }
