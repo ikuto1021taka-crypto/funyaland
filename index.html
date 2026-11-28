@@ -378,6 +378,16 @@
   .fgCard.t9, .fgCard.t10, .fgCard.t11, .fgCard.t12 { box-shadow: 0 0 18px var(--c); } .fgE { font-size: 40px; } .fgNew { color: #ffd84a; font-weight: bold; }
   @keyframes fgFlip { from { transform: rotateY(90deg) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
   #pubList { display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto; } .pubRoom { font-size: 15px; }
+  /* フィギュアの立体 */
+  #fgBoard { transform: perspective(1000px) rotateX(24deg); transform-origin: 50% 60%; }
+  #fgGrid { overflow: visible; }
+  .fgU { width: 70%; height: 46%; align-self: flex-end; margin-bottom: 10%; border-width: 2px; background: rgba(70,130,255,.55); }
+  .fgU.op { background: rgba(230,70,80,.55); }
+  .fgUPic { position: absolute; left: 50%; bottom: 0; height: 420%; transform: translateX(-50%) rotateX(-24deg); transform-origin: 50% 100%; pointer-events: none; filter: drop-shadow(0 3px 2px rgba(0,0,0,.45)); }
+  .fgU.done .fgUPic { filter: grayscale(.7) brightness(.75); } .fgU.sel .fgUPic { filter: drop-shadow(0 0 6px #fff); }
+  .fgU i { bottom: -6px; } .fgU em { bottom: -10px; } .fgSt { top: auto; bottom: 170%; right: -10px; font-size: 70%; }
+  .fgCardPic { height: 120px; display: block; margin: 0 auto; } .fgRowPic { height: 42px; vertical-align: middle; margin: -10px 2px; }
+  #fgInfo .fgRowPic { height: 48px; }
 </style>
 <!-- 3D 表示の部品（Three.js）と、部屋コードで遊ぶための部品（PeerJS）。インターネットから読み込む -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1942,6 +1952,10 @@ function showWaiting() {
 }
 // 届いたメッセージ
 function onNet(d, conn) {
+  // ほかの人から来たメッセージの文字は、HTML（プログラム）として使えないようにする
+  if (!d || typeof d !== "object") return;
+  d = cleanStrings(d);
+  if (d.t === "chat" && typeof d.text === "string") d.text = d.text.replace(/&lt;br&gt;/g, "<br>");
   // （ホスト）みんなに見せるもの（弾・バナナの皮）は、ほかの人にもとどける
   if (net.isHost && conn && (["shot", "peel", "peelGone", "chat", "msg"].includes(d.t) || d.all)) for (const c of net.conns) if (c !== conn && c.open) c.send(d);
   switch (d.t) {
@@ -2045,7 +2059,7 @@ function roomActive() { return ONLINE && !!rnet.room; }
 function tinyPaint() { const cv = document.createElement("canvas"); cv.width = 48; cv.height = 24; cv.getContext("2d").drawImage(paintCv, 0, 0, 48, 24); return cv.toDataURL("image/jpeg", 0.6); }
 // ほかの人から来た文字は、HTML としては使わない
 function cleanStrings(v) {
-  if (typeof v === "string") return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  if (typeof v === "string") return v.replace(/</g, "&lt;").replace(/>/g, "&gt;");
   if (Array.isArray(v)) return v.map(cleanStrings);
   if (v && typeof v === "object") { const o = {}; for (const k in v) o[k] = cleanStrings(v[k]); return o; }
   return v;
@@ -7153,7 +7167,7 @@ function bgCpu(g, b, p, lv) { return g === "reversi" ? rvCpu(b, p, lv) : g === "
 function bgWins() { return townSave.bgWin || townSave.rvWin || 0; }
 function hidePanel() { $("shopP").hidden = true; panelReopen = null; if (slotSpin) { clearInterval(slotSpin); slotSpin = null; } }
 function openBoardCafe() {
-  openPanel("♟️ ボードゲーム＆トランプ", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい　CPUに勝った回数：${bgWins()}`, Object.entries(BGAMES).map(([g, G]) => ({ name: `${G.icon} ${G.name}`, desc: G.desc, btn: "あそぶ", fn: () => { openGameMenu(g); return false; } })).concat([{ name: "🃏 トランプ", desc: "ババ抜き・神経衰弱・ブラックジャック", btn: "あそぶ", fn: () => { openTrump(); return false; } }]), openBoardCafe);
+  openPanel("♟️ ボードゲーム＆トランプ", `持っているコイン：<b style="color:#ffd84a">${wallet}</b>まい　CPUに勝った回数：${bgWins()}`, [{ name: "🧸 フィギュア（パック・コレクション・対戦）", desc: "フィギュアを集めて、10×10のマスで戦う！", btn: "あそぶ", fn: () => { openFigShop(); return false; } }].concat(Object.entries(BGAMES).map(([g, G]) => ({ name: `${G.icon} ${G.name}`, desc: G.desc, btn: "あそぶ", fn: () => { openGameMenu(g); return false; } }))).concat([{ name: "🃏 トランプ", desc: "ババ抜き・神経衰弱・ブラックジャック", btn: "あそぶ", fn: () => { openTrump(); return false; } }]), openBoardCafe);
 }
 function openGameMenu(g) {
   const G = BGAMES[g], others = Object.entries(net.players).filter(([, r]) => r.state);
@@ -7716,6 +7730,7 @@ function openBoard() {
     { name: "🏹 怪獣ハンターをよぶ", desc: "コインでハンターをやとうと、モンスターとたたかってくれる（J キーでも呼べる）", btn: "えらぶ", fn: () => { openHunters(); return false; } },
     { name: "🗺️ 宝の地図", desc: townSave.treasure ? "持っている！ 右上のヒントをたよりにさがそう" : "町のどこかにうまっている宝箱の場所がわかる（コイン・ガチャ券・レアなぼうしなど）", btn: townSave.treasure ? "持っている" : "50🪙で買う", disabled: !!townSave.treasure, fn: () => { buyTreasureMap(); } },
     { name: "👫 フレンド・プロフィール・称号", desc: "", btn: "ひらく", fn: () => { openFriends(); return false; } },
+    { name: "💬 チャットの見えかた", desc: "みんな → フレンドだけ → 見ない の順に切りかえ（知らない人がいる部屋で安心）", btn: "切りかえ", fn: () => { cycleChatMode(); return false; } },
     { name: "🌍 部屋の公開", desc: "公開すると、コードを知らない人も「公開の部屋をさがす」から入れる（ホストだけ）", btn: "切りかえ", fn: () => { pubToggle(); return false; } },
     { name: "🧸 フィギュア", desc: "パック・コレクション・フィギュア対戦", btn: "ひらく", fn: () => { openFigShop(); return false; } },
     { name: "🐾 モンスター BOX", desc: "つかまえたモンスターを見る・育てる（N キー／🐾 ボタンでも）", btn: "ひらく", fn: () => { openMonBox(); return false; } },
@@ -7777,7 +7792,7 @@ let myFid = null;
 try { myFid = localStorage.getItem("funyaland_fid"); } catch (e) {}
 if (!/^[a-z0-9]{10}$/.test(myFid || "")) { myFid = Array.from({ length: 10 }, () => "abcdefghijkmnpqrstuvwxyz23456789"[Math.floor(Math.random() * 32)]).join(""); try { localStorage.setItem("funyaland_fid", myFid); } catch (e) {} }
 function cleanFid(f) { return typeof f === "string" && /^[a-z0-9]{10}$/.test(f) ? f : null; }
-function cleanName(n) { return String(n || "").replace(/[<>&;"']/g, "").slice(0, 12); }
+function cleanName(n) { return String(n || "").replace(/&lt;|&gt;|&amp;/g, "").replace(/[<>&;"']/g, "").slice(0, 12); }
 function friendByFid(fid) { const F = townSave.friends || {}; for (const n in F) if (F[n].fid === fid) return n; return null; }
 // 部屋のコード（いま入っている部屋）
 function myRoomCode() { return net.online && !ONLINE ? (net.isHost ? net.code : net.joinCode || null) : null; }
@@ -7946,6 +7961,8 @@ function sendChat(text) {
   text = String(text || "").replace(/\s+/g, " ").trim().slice(0, 60);
   closeChat();
   if (!text) return;
+  const ng = chatSafeCheck(text);
+  if (ng) { showMsg("🛡️ 送らなかったよ", `${ng}が入っているみたい。<br>ネットでは、<b>名前・住所・学校・電話番号</b>などは教えないでね。<br>知らない人と<b>会う約束</b>もしないでね。`, [{ label: "OK", fn: () => { if (mode) controls = true; } }]); return; }
   if (Date.now() - chat.sendT < 700) { toast("ちょっと待ってから送ってね", 1000); return; }
   chat.sendT = Date.now();
   addChatLine(myName || "あなた", text, true);
@@ -7965,7 +7982,7 @@ function drawChat() {
     const age = (now - m.t) / 1000; if (!chat.open && age > 14) continue;
     const row = document.createElement("div"); row.className = "chatRow";
     const nm = document.createElement("b"); nm.textContent = m.name + "："; nm.style.color = m.mine ? "#7cff9a" : isFriend(m.name) ? "#ffe08a" : "#8ad8ff";
-    const tx = document.createElement("span"); tx.textContent = m.text;
+    const tx = document.createElement("span"); tx.textContent = m.text.replace(/&lt;/g, "<").replace(/&gt;/g, ">");
     row.append(nm, tx); row.style.opacity = chat.open ? 1 : Math.min(1, (14 - age) / 3);
     box.appendChild(row);
   }
@@ -7973,6 +7990,7 @@ function drawChat() {
 setInterval(drawChat, 1000);
 // 頭の上のふきだし
 function chatBubble(id, text) {
+  text = String(text).replace(/&lt;/g, "<").replace(/&gt;/g, ">");
   const l = makeLabel(text.length > 18 ? text.slice(0, 18) + "…" : text, "#fff", 0.75);
   l.material.depthTest = false; l.renderOrder = 5;
   scene.add(l);
@@ -7995,8 +8013,10 @@ function onChatMsg(d, conn) {
   let id = typeof d.fromId === "string" ? d.fromId : conn && conn.peer;
   if (!net.players[id]) id = Object.keys(net.players).find((k) => net.players[k].name === d.from) || null;
   const name = id && net.players[id] ? net.players[id].name : cleanName(d.from) || "だれか";
-  addChatLine(name, text, false);
-  if (id) chatBubble(id, text);
+  if (chatMode() === "off" || (chatMode() === "friends" && !isFriend(name))) return;
+  const shown = chatSafeCheck(text) ? "🛡️（個人情報っぽいので かくしたよ）" : text;
+  addChatLine(name, shown, false);
+  if (id) chatBubble(id, shown);
 }
 $("chatIn").addEventListener("keydown", (e) => {
   e.stopPropagation();
@@ -11300,7 +11320,7 @@ function fgRules() {
 }
 function fgOpenPack() {
   const got = [fgRoll(), fgRoll(), fgRoll()], O = fgOwned();
-  const html = got.map((id, i) => { const f = FIGS[id], isNew = !O[id]; O[id] = (O[id] || 0) + 1; return `<div class="fgCard t${f.tier}" style="animation-delay:${i * 0.35}s;--c:${MC_TIERS[f.tier].col}"><div class="fgE">${FG_CLASSES[f.cls].e}</div><div>${fgBadge(f.tier)}</div><b>${f.name}</b>${isNew ? `<div class="fgNew">NEW!</div>` : ""}</div>`; }).join("");
+  const html = got.map((id, i) => { const f = FIGS[id], isNew = !O[id]; O[id] = (O[id] || 0) + 1; return `<div class="fgCard t${f.tier}" style="animation-delay:${i * 0.35}s;--c:${MC_TIERS[f.tier].col}"><div class="fgE">${fgPic(id, false, "fgCardPic")}</div><div>${fgBadge(f.tier)}</div><b>${f.name}</b>${isNew ? `<div class="fgNew">NEW!</div>` : ""}</div>`; }).join("");
   saveTown(true);
   const best = Math.max(...got.map((id) => FIGS[id].tier));
   play(best >= 9 ? "clear" : "item"); if (best >= 9) setTimeout(() => play("mutant"), 900);
@@ -11310,10 +11330,10 @@ function fgOpenPack() {
 function fgCollection() {
   const O = fgOwned(), party = fgParty();
   const ids = FIGS.filter((f) => O[f.id]).sort((a, b) => b.tier - a.tier).map((f) => f.id);
-  const rows = [{ html: `<div style="width:100%;text-align:left">パーティー：${party.length ? party.map((id) => `${FG_CLASSES[FIGS[id].cls].e}${FIGS[id].name}`).join("・") : "（まだいない）"}<br>コスト <b>${fgCost(party)}</b>/${FG_COST_MAX}　<span class="small">（5体まで。強いフィギュアほどコストが高い）</span></div>` }];
+  const rows = [{ html: `<div style="width:100%;text-align:left">パーティー：${party.length ? party.map((id) => `${fgPic(id, false, "fgRowPic")}${FIGS[id].name}`).join("・") : "（まだいない）"}<br>コスト <b>${fgCost(party)}</b>/${FG_COST_MAX}　<span class="small">（5体まで。強いフィギュアほどコストが高い）</span></div>` }];
   for (const id of ids) {
     const f = FIGS[id], C = FG_CLASSES[f.cls], inP = party.includes(id);
-    rows.push({ name: `${inP ? "✅ " : ""}${C.e} ${fgBadge(f.tier)} ${f.name} ×${O[id]}${f.evo ? "　🌟進化できる" : ""}`, desc: `${C.n}　HP ${f.hp}・こうげき ${f.atk}・いどう ${f.mv}・はんい：${C.rd}　コスト ${FG_COST[f.tier]}${f.skills.length ? `<br>スキル：${f.skills.map((s) => `${FG_SKILLS[s].n}(${Math.round(FG_SKILLS[s].p * 100)}%)`).join("・")}` : ""}`, btn: inP ? "はずす" : "入れる",
+    rows.push({ name: `${inP ? "✅ " : ""}${fgPic(id, false, "fgRowPic")} ${fgBadge(f.tier)} ${f.name} ×${O[id]}${f.evo ? "　🌟進化できる" : ""}`, desc: `${C.n}　HP ${f.hp}・こうげき ${f.atk}・いどう ${f.mv}・はんい：${C.rd}　コスト ${FG_COST[f.tier]}${f.skills.length ? `<br>スキル：${f.skills.map((s) => `${FG_SKILLS[s].n}(${Math.round(FG_SKILLS[s].p * 100)}%)`).join("・")}` : ""}`, btn: inP ? "はずす" : "入れる",
       fn: () => { const P = fgParty(); if (inP) townSave.figParty = P.filter((q) => q !== id); else { if (P.length >= 5) { toast("パーティーは5体まで", 1200); return false; } if (fgCost(P) + FG_COST[f.tier] > FG_COST_MAX) { toast(`コストオーバー！（${FG_COST_MAX}まで）`, 1400); return false; } P.push(id); townSave.figParty = P; } saveTown(true); fgCollection(); return false; } });
   }
   if (!ids.length) rows.push({ html: "<span class='small'>まだフィギュアがないよ。パックを買おう！</span>" });
@@ -11552,14 +11572,14 @@ function fgRender() {
     const isR = reach.some(([a, b]) => a === r && b === c), isT = targs.some((q) => q.r === r && q.c === c);
     let inner = gm ? `<span class="fgGem">💎</span>` : "";
     if (t) inner = `<div class="fgTot ${t.team === fg.myTeam ? "me" : "op"}">🗿<i style="width:${t.hp / t.max * 100}%"></i></div>`;
-    if (u) { const f = FIGS[u.fid]; inner = `<div class="fgU ${u.team === fg.myTeam ? "me" : "op"} ${u.acted && u.team === B.turn ? "done" : ""} ${u.uid === fg.sel ? "sel" : ""}" style="--c:${MC_TIERS[f.tier].col}">${FG_CLASSES[u.cls].e}${u.evo ? "<b class='fgEvo'>👑</b>" : ""}<i style="width:${u.hp / u.max * 100}%"></i><em style="width:${u.gauge}%"></em><span class="fgSt">${u.st.poison ? "☠️" : ""}${u.st.para ? "⚡" : ""}${u.st.sleep ? "💤" : ""}${u.gauge >= 100 ? "🔥" : ""}</span></div>`; }
+    if (u) { const f = FIGS[u.fid]; inner = `<div class="fgU ${u.team === fg.myTeam ? "me" : "op"} ${u.acted && u.team === B.turn ? "done" : ""} ${u.uid === fg.sel ? "sel" : ""}" style="--c:${MC_TIERS[f.tier].col}">${fgPic(u.fid, u.evo, "fgUPic")}<i style="width:${u.hp / u.max * 100}%"></i><em style="width:${u.gauge}%"></em><span class="fgSt">${u.st.poison ? "☠️" : ""}${u.st.para ? "⚡" : ""}${u.st.sleep ? "💤" : ""}${u.gauge >= 100 ? "🔥" : ""}</span></div>`; }
     html += `<div class="fgC ${(vr + vc) % 2 ? "d" : ""} ${isR ? "rch" : ""} ${isT ? "tg" : ""}" data-r="${r}" data-c="${c}">${inner}</div>`;
   }
   $("fgGrid").innerHTML = html;
   const myLeft = fgAlive(B, fg.myTeam).length, opLeft = fgAlive(B, 1 - fg.myTeam).length;
   $("fgHead").innerHTML = `${B.mode === "gem" ? "💎 宝石争奪戦" : "⚔️ フィギュア対戦"}　ラウンド ${B.round}　<b style="color:${mine ? "#7cf0ff" : "#ff8a8a"}">${B.over ? "おわり" : mine ? "あなたの番" : "あいての番"}</b><br><span class="small">🔵 ${B.names[fg.myTeam]} ${myLeft}体${B.mode === "gem" ? `・💎${B.gemsGot[fg.myTeam]}` : ""}　VS　🔴 ${B.names[1 - fg.myTeam]} ${opLeft}体${B.mode === "gem" ? `・💎${B.gemsGot[1 - fg.myTeam]}` : ""}</span>`;
   let info = B.log;
-  if (sel) { const f = FIGS[sel.fid]; info = `${FG_CLASSES[sel.cls].e} <b>${f.name}</b>${sel.evo ? "（進化）" : ""} HP ${sel.hp}/${sel.max} こうげき ${sel.atk} いどう ${sel.mv}${sel.dashOn ? "+2" : ""}　必殺 ${sel.gauge}%${sel.skills.length ? `<br><span class="small">スキル：${sel.skills.map((s) => FG_SKILLS[s].n + Math.round(FG_SKILLS[s].p * 100) + "%").join("・")}</span>` : ""}<br>${B.log}`; }
+  if (sel) { const f = FIGS[sel.fid]; info = `${fgPic(sel.fid, sel.evo, "fgRowPic")} <b>${f.name}</b>${sel.evo ? "（進化）" : ""} HP ${sel.hp}/${sel.max} こうげき ${sel.atk} いどう ${sel.mv}${sel.dashOn ? "+2" : ""}　必殺 ${sel.gauge}%${sel.skills.length ? `<br><span class="small">スキル：${sel.skills.map((s) => FG_SKILLS[s].n + Math.round(FG_SKILLS[s].p * 100) + "%").join("・")}</span>` : ""}<br>${B.log}`; }
   $("fgInfo").innerHTML = info;
   const canUlt = sel && sel.gauge >= 100 && (fg.phase === "attack" || fg.phase === "semiPick") && targs.length;
   $("fgUlt").hidden = !canUlt; $("fgUlt").classList.toggle("on", !!fg.ultArm);
@@ -11682,6 +11702,101 @@ function pubSearch() {
 setInterval(() => { const b = $("bPub"); if (!b) return; const show = net.online && net.isHost && !ONLINE; if (b.hidden === show) b.hidden = !show; const t = pub.peer ? "🔒 公開をやめる" : "🌍 この部屋を公開する"; if (b.textContent !== t) b.textContent = t; }, 1000);
 $("bPub").onclick = pubToggle;
 $("bPubSearch").onclick = pubSearch;
+
+// =====================================================================
+//  36. フィギュアの立体の見た目（3Dで作って、絵にして使う）・チャットの安全
+// =====================================================================
+const FG_ADJ_LOOK = {
+  "ふわふわ": { col: 0xffb0d0, sub: 0xffffff, deco: "bunny" }, "もこもこ": { col: 0xb08060, sub: 0xf0d8b8, deco: "bear" },
+  "ぷにぷに": { col: 0x9ae86a, sub: 0xe0ffc0, deco: "slime" }, "きらきら": { col: 0xc0a8ff, sub: 0xfff6a0, deco: "star" },
+  "ぴかぴか": { col: 0xffd84a, sub: 0xff6a4a, deco: "bolt" }, "ほかほか": { col: 0xff9a4a, sub: 0xffe08a, deco: "flame" },
+  "ひえひえ": { col: 0x9ad8ff, sub: 0xffffff, deco: "ice" }, "ごろごろ": { col: 0x9a9aa4, sub: 0x6a6a74, deco: "rock" },
+  "どきどき": { col: 0xff5c7a, sub: 0xffc0d0, deco: "heart" }, "ぎらぎら": { col: 0x3a2a4a, sub: 0xff3a5a, deco: "horn" },
+};
+function fgAdjOf(f) { for (const k in FG_ADJ_LOOK) if (f.name.startsWith(k)) return k; return "ふわふわ"; }
+function fgMakeModel(fid, evo) {
+  const f = FIGS[fid], g = new THREE.Group();
+  const T = (c, o = {}) => new THREE.MeshToonMaterial({ color: c, ...o });
+  const add = (geo, m, x, y, z, p = g) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); p.add(o); return o; };
+  const tierCol = new THREE.Color(MC_TIERS[f.tier].col).getHex();
+  // 台
+  add(new THREE.CylinderGeometry(0.58, 0.64, 0.14, 32), T(0x2a2a44), 0, 0.07, 0);
+  const rim = add(new THREE.TorusGeometry(0.6, 0.035, 8, 40), new THREE.MeshBasicMaterial({ color: tierCol }), 0, 0.14, 0); rim.rotation.x = Math.PI / 2;
+  if (f.tier === 12) { const n = mcMakeNekiraku(MC_SPECIES.findIndex((s) => s.tier === 12), 0, 0.95); n.position.y = 0.14; g.add(n); g.userData.neki = n; return g; }
+  const L = FG_ADJ_LOOK[fgAdjOf(f)], M = T(L.col), S2 = T(L.sub), black = T(0x161616), white = T(0xffffff), gold = T(0xffd84a), silver = T(0xd8dce8);
+  // 体と頭（ちびキャラ）
+  for (const sx of [-1, 1]) add(new THREE.SphereGeometry(0.11, 10, 8), M, sx * 0.13, 0.22, 0.04).scale.set(1, 0.7, 1.3);
+  const body = add(new THREE.SphereGeometry(0.28, 18, 14), M, 0, 0.48, 0); body.scale.set(1, 1.05, 0.9);
+  add(new THREE.SphereGeometry(0.2, 14, 10), S2, 0, 0.45, 0.12).scale.set(1, 1.1, 0.5);
+  for (const sx of [-1, 1]) add(new THREE.SphereGeometry(0.09, 10, 8), M, sx * 0.3, 0.5, 0.05);
+  const head = add(new THREE.SphereGeometry(0.36, 22, 16), M, 0, 1.02, 0); head.scale.set(1.08, 0.98, 1);
+  const eyeY = 1.0, eyeCol = L.deco === "horn" ? T(0xff3a3a) : black;
+  for (const sx of [-1, 1]) {
+    add(new THREE.SphereGeometry(0.07, 12, 10), eyeCol, sx * 0.13, eyeY, 0.31).scale.set(0.9, 1.25, 0.6);
+    add(new THREE.SphereGeometry(0.022, 8, 6), white, sx * 0.13 + 0.02, eyeY + 0.04, 0.355);
+    add(new THREE.SphereGeometry(0.05, 10, 8), T(0xff9ab8), sx * 0.24, eyeY - 0.1, 0.27).scale.set(1, 0.6, 0.4);
+  }
+  const mouth = add(new THREE.TorusGeometry(0.04, 0.012, 6, 12, Math.PI), black, 0, eyeY - 0.12, 0.33); mouth.rotation.z = Math.PI;
+  // 形容詞ごとのかざり
+  const top = 1.34;
+  if (L.deco === "bunny") for (const sx of [-1, 1]) { const e = add(new THREE.SphereGeometry(0.07, 10, 8), M, sx * 0.13, top + 0.12, -0.02); e.scale.set(1, 3, 0.7); e.rotation.z = -sx * 0.15; add(new THREE.SphereGeometry(0.04, 8, 6), T(0xff9ab8), sx * 0.13, top + 0.12, 0.03).scale.set(1, 2.6, 0.4); }
+  if (L.deco === "bear") for (const sx of [-1, 1]) { add(new THREE.SphereGeometry(0.1, 10, 8), M, sx * 0.25, top - 0.05, 0); add(new THREE.SphereGeometry(0.055, 8, 6), S2, sx * 0.25, top - 0.05, 0.05); }
+  if (L.deco === "slime") { add(new THREE.CylinderGeometry(0.015, 0.015, 0.2, 6), M, 0, top + 0.06, 0); add(new THREE.SphereGeometry(0.06, 10, 8), S2, 0, top + 0.18, 0); }
+  if (L.deco === "star") { const s = add(new THREE.OctahedronGeometry(0.12), gold, 0.15, top + 0.04, 0); s.scale.set(1, 1, 0.4); s.rotation.z = 0.4; }
+  if (L.deco === "bolt") { for (const sx of [-1, 1]) { const e = add(new THREE.ConeGeometry(0.07, 0.28, 4), M, sx * 0.2, top + 0.05, 0); e.rotation.z = -sx * 0.35; add(new THREE.ConeGeometry(0.035, 0.08, 4), black, sx * 0.24, top + 0.17, 0).rotation.z = -sx * 0.35; } }
+  if (L.deco === "flame") for (let k = 0; k < 3; k++) { const c = add(new THREE.ConeGeometry(0.07 - k * 0.012, 0.24 - k * 0.04, 8), k ? S2 : T(0xff5a2a), (k - 1) * 0.09, top + 0.05, 0); c.rotation.z = (1 - k) * 0.3; }
+  if (L.deco === "ice") for (const sx of [-1, 1]) { const c = add(new THREE.OctahedronGeometry(0.08), T(0xe0f8ff, { transparent: true, opacity: 0.85 }), sx * 0.18, top + 0.04, 0); c.scale.y = 2.2; c.rotation.z = -sx * 0.3; }
+  if (L.deco === "rock") { const h = add(new THREE.SphereGeometry(0.38, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.45), S2, 0, 1.06, -0.02); h.scale.set(1.1, 1, 1.05); }
+  if (L.deco === "heart") { add(new THREE.CylinderGeometry(0.012, 0.012, 0.18, 6), black, 0, top + 0.05, 0); for (const sx of [-1, 1]) add(new THREE.SphereGeometry(0.045, 8, 6), T(0xff3a6a), sx * 0.03, top + 0.17, 0); add(new THREE.ConeGeometry(0.06, 0.07, 8), T(0xff3a6a), 0, top + 0.12, 0).rotation.z = Math.PI; }
+  if (L.deco === "horn") for (const sx of [-1, 1]) { const c = add(new THREE.ConeGeometry(0.05, 0.24, 8), T(0xd8d0e8), sx * 0.2, top, 0.02); c.rotation.z = -sx * 0.5; }
+  // クラスの道具
+  const C = f.cls;
+  if (C === "sword") { const p = new THREE.Group(); p.position.set(0.36, 0.5, 0.15); p.rotation.z = -0.5; g.add(p); add(new THREE.BoxGeometry(0.07, 0.62, 0.02), silver, 0, 0.36, 0, p); add(new THREE.BoxGeometry(0.22, 0.04, 0.05), gold, 0, 0.04, 0, p); add(new THREE.CylinderGeometry(0.025, 0.025, 0.14, 6), T(0x6a3a2a), 0, -0.05, 0, p); }
+  if (C === "spear") { const p = new THREE.Group(); p.position.set(0.36, 0.55, 0.1); p.rotation.z = -0.15; g.add(p); add(new THREE.CylinderGeometry(0.022, 0.022, 1.25, 6), T(0x8a5a3a), 0, 0.2, 0, p); add(new THREE.ConeGeometry(0.06, 0.2, 6), silver, 0, 0.92, 0, p); }
+  if (C === "bow") { const p = new THREE.Group(); p.position.set(-0.36, 0.6, 0.12); g.add(p); add(new THREE.TorusGeometry(0.28, 0.022, 6, 20, Math.PI), T(0x9a6a3a), 0, 0, 0, p).rotation.z = Math.PI / 2; add(new THREE.CylinderGeometry(0.004, 0.004, 0.56, 4), white, 0.01, 0, 0, p); }
+  if (C === "mage") { const hat = add(new THREE.ConeGeometry(0.26, 0.5, 14), T(0x5a3aa8), 0, 1.45, -0.02); hat.rotation.x = -0.15; add(new THREE.CylinderGeometry(0.34, 0.34, 0.03, 18), T(0x5a3aa8), 0, 1.26, 0); add(new THREE.OctahedronGeometry(0.04), gold, 0.05, 1.5, 0.12); const p = new THREE.Group(); p.position.set(0.38, 0.45, 0.1); g.add(p); add(new THREE.CylinderGeometry(0.02, 0.02, 0.9, 6), T(0x8a5a3a), 0, 0.2, 0, p); add(new THREE.SphereGeometry(0.08, 12, 10), new THREE.MeshBasicMaterial({ color: 0xc08aff }), 0, 0.7, 0, p); }
+  if (C === "shield") { const sh = add(new THREE.CylinderGeometry(0.26, 0.26, 0.05, 20), T(0x3a6ad8), -0.28, 0.52, 0.22); sh.rotation.x = Math.PI / 2; sh.rotation.z = 0.25; add(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 5), gold, -0.28, 0.52, 0.25).rotation.x = Math.PI / 2; const hm = add(new THREE.SphereGeometry(0.39, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.42), silver, 0, 1.03, 0); hm.scale.set(1.08, 1, 1.04); }
+  if (C === "ninja") { const band = add(new THREE.CylinderGeometry(0.385, 0.385, 0.08, 20, 1, true), T(0x2a2a3a, { side: THREE.DoubleSide }), 0, 1.13, 0); band.scale.set(1.08, 1, 1); for (const sx of [-1, 1]) { const t = add(new THREE.BoxGeometry(0.04, 0.22, 0.02), T(0x2a2a3a), sx * 0.06, 1.05, -0.38); t.rotation.z = sx * 0.4; } const sc = add(new THREE.TorusGeometry(0.22, 0.05, 6, 16), T(0xe02a3a), 0, 0.74, 0); sc.rotation.x = Math.PI / 2; add(new THREE.BoxGeometry(0.12, 0.35, 0.03), T(0xe02a3a), 0.12, 0.55, -0.24).rotation.z = 0.3; }
+  if (C === "heal") { const h = add(new THREE.TorusGeometry(0.2, 0.025, 8, 24), new THREE.MeshBasicMaterial({ color: 0xfff08a }), 0, 1.5, 0); h.rotation.x = Math.PI / 2; const p = new THREE.Group(); p.position.set(0.38, 0.45, 0.1); g.add(p); add(new THREE.CylinderGeometry(0.02, 0.02, 0.85, 6), white, 0, 0.2, 0, p); add(new THREE.BoxGeometry(0.2, 0.06, 0.04), T(0x4ad86a), 0, 0.62, 0, p); add(new THREE.BoxGeometry(0.06, 0.2, 0.04), T(0x4ad86a), 0, 0.62, 0, p); }
+  // レア度・進化のかざり
+  if (f.tier >= 6) { const cape = add(new THREE.SphereGeometry(0.34, 12, 10, 0, Math.PI, 0, Math.PI * 0.55), T(tierCol, { side: THREE.DoubleSide }), 0, 0.78, -0.08); cape.rotation.set(Math.PI, Math.PI, 0); cape.scale.set(1, 1.5, 0.6); }
+  if (f.tier >= 9 || evo) { const cr = add(new THREE.CylinderGeometry(0.16, 0.13, 0.12, 8, 1, true), T(0xffd84a, { side: THREE.DoubleSide }), 0.02, C === "mage" ? 1.72 : 1.42, 0); for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; add(new THREE.SphereGeometry(0.025, 6, 5), T([0xff4a6a, 0x4ac0f0, 0x6bd66b][k % 3]), Math.cos(a) * 0.15 + 0.02, cr.position.y + 0.07, Math.sin(a) * 0.15); } }
+  if (f.tier >= 11) for (const sx of [-1, 1]) { const w = add(new THREE.SphereGeometry(0.22, 12, 8), T(f.tier === 11 ? 0xfff6c0 : 0xffffff), sx * 0.42, 0.85, -0.18); w.scale.set(1.5, 1, 0.18); w.rotation.z = sx * 0.5; }
+  if (evo) { const aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffe08a, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending })); aura.scale.set(2.2, 2.4, 1); aura.position.y = 0.8; g.add(aura); g.scale.setScalar(1.08); }
+  toonify(g);
+  return g;
+}
+// 3Dで作ったフィギュアを、写真（絵）にして使う
+const fgImgCache = new Map();
+let fgRen = null;
+function fgImg(fid, evo) {
+  const key = fid + (evo ? "e" : "");
+  if (fgImgCache.has(key)) return fgImgCache.get(key);
+  try {
+    if (!fgRen) {
+      const cv = document.createElement("canvas"); cv.width = 180; cv.height = 220;
+      const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setClearColor(0x000000, 0);
+      const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff, 0x8a7aa8, 0.95)); const dl = new THREE.DirectionalLight(0xffffff, 0.75); dl.position.set(1.5, 3, 2.5); sc.add(dl);
+      const cam = new THREE.PerspectiveCamera(32, 180 / 220, 0.1, 20); cam.position.set(0.8, 1.35, 2.95); cam.lookAt(0, 0.82, 0);
+      fgRen = { r, sc, cam, cv };
+    }
+    const m = fgMakeModel(fid, evo); m.rotation.y = -0.35;
+    fgRen.sc.add(m); fgRen.r.render(fgRen.sc, fgRen.cam); const url = fgRen.cv.toDataURL("image/png"); fgRen.sc.remove(m);
+    m.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    fgImgCache.set(key, url); return url;
+  } catch (e) { return ""; }
+}
+function fgPic(fid, evo, cls = "fgPic") { const u = fgImg(fid, evo); return u ? `<img class="${cls}" src="${u}" alt="">` : FG_CLASSES[FIGS[fid].cls].e; }
+
+// ---- チャットの安全 ----
+const CHAT_NG = /(住所|じゅうしょ|電話|でんわ|番号|本名|ほんみょう|学校|がっこう|小学|中学|line|ライン|インスタ|insta|メアド|メール|mail|パスワード|ぱすわーど|password|会おう|あおう|会いたい|どこに住|どこすみ)/i;
+function chatSafeCheck(text) {
+  if (/\d[\d\-\s]{6,}\d/.test(text)) return "長い数字（電話番号など）";
+  if (CHAT_NG.test(text)) return "個人情報や、会う約束につながる言葉";
+  return null;
+}
+function chatMode() { return townSave.chatMode || "all"; }
+function cycleChatMode() { townSave.chatMode = { all: "friends", friends: "off", off: "all" }[chatMode()]; saveTown(true); toast(`💬 チャット：${{ all: "みんなの文字を見る", friends: "フレンドだけ見る", off: "見ない（自分は送れる）" }[chatMode()]}`, 2000); }
 
 // 町モードで届いたメッセージ（onNet から呼ばれる）
 function onNetTown(d, conn) {
