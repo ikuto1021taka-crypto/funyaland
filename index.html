@@ -388,6 +388,21 @@
   .fgU i { bottom: -6px; } .fgU em { bottom: -10px; } .fgSt { top: auto; bottom: 170%; right: -10px; font-size: 70%; }
   .fgCardPic { height: 120px; display: block; margin: 0 auto; } .fgRowPic { height: 42px; vertical-align: middle; margin: -10px 2px; }
   #fgInfo .fgRowPic { height: 48px; }
+  /* チームがわかりやすいように */
+  .fgU.me { background: rgba(60,140,255,.95); border-color: #bfe0ff !important; box-shadow: 0 0 10px 4px rgba(74,168,255,.9); }
+  .fgU.op { background: rgba(255,60,70,.95); border-color: #ffc0c0 !important; box-shadow: 0 0 10px 4px rgba(255,74,74,.9); }
+  .fgU.op .fgUPic { transform: translateX(-50%) rotateX(-24deg) scaleX(-1); }
+  .fgU.me .fgUPic { filter: drop-shadow(0 0 2px #3a9aff) drop-shadow(0 0 3px #3a9aff) drop-shadow(0 2px 2px rgba(0,0,0,.4)); }
+  .fgU.op .fgUPic { filter: drop-shadow(0 0 2px #ff3a4a) drop-shadow(0 0 3px #ff3a4a) drop-shadow(0 2px 2px rgba(0,0,0,.4)); }
+  .fgU.done .fgUPic { opacity: .6; } .fgU.sel .fgUPic { filter: drop-shadow(0 0 4px #fff) drop-shadow(0 0 6px #fff); }
+  .fgU { width: 94% !important; height: 52% !important; }
+  #fgSide { margin-top: 24px; }
+  .fgMark { position: absolute; left: 50%; bottom: 430%; transform: translateX(-50%) rotateX(-24deg); font-size: 70%; text-shadow: 0 0 3px #000; pointer-events: none; }
+  .fgU.me .fgMark { color: #6ac0ff; } .fgU.op .fgMark { color: #ff5a5a; }
+  .fgC.zMe { background: #3f6a8a; } .fgC.zMe.d { background: #355e7c; } .fgC.zOp { background: #8a4a4a; } .fgC.zOp.d { background: #7c3f3f; }
+  .fgSideLab { position: absolute; left: 0; right: 0; text-align: center; font-weight: bold; font-size: 14px; text-shadow: 0 0 3px #000; pointer-events: none; }
+  .fgSideLab.op { top: -34px; color: #ff8a8a; } .fgSideLab.me { bottom: -24px; color: #8ac8ff; }
+  .fgTot.me { background: rgba(60,140,255,.9); border-color: #bfe0ff; } .fgTot.op { background: rgba(255,60,70,.9); border-color: #ffc0c0; }
 </style>
 <!-- 3D 表示の部品（Three.js）と、部屋コードで遊ぶための部品（PeerJS）。インターネットから読み込む -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -461,7 +476,7 @@
 <div id="tutBox" hidden><div id="tutStep"></div><div id="tutText"></div><button id="tutSkip" class="sub">スキップ</button></div>
 <div id="ateP" hidden></div>
 <div id="skHud" hidden></div>
-<div id="fgP" hidden><div id="fgBoard"><div id="fgGrid"></div><div id="fgFx"></div></div><div id="fgSide"><div id="fgHead"></div><div id="fgInfo"></div><div id="fgBtns"><button id="fgUlt" class="pink">🔥 必殺技</button><button id="fgWait" class="sub">待機</button><button id="fgEnd">ターン終了</button><button id="fgMode" class="sub">🎮 手動</button><button id="fgQuit" class="pink">やめる</button></div></div></div>
+<div id="fgP" hidden><div id="fgBoard"><div class="fgSideLab op">🔴 あいてのチーム</div><div id="fgGrid"></div><div id="fgFx"></div><div class="fgSideLab me">🔵 じぶんのチーム</div></div><div id="fgSide"><div id="fgHead"></div><div id="fgInfo"></div><div id="fgBtns"><button id="fgUlt" class="pink">🔥 必殺技</button><button id="fgWait" class="sub">待機</button><button id="fgEnd">ターン終了</button><button id="fgMode" class="sub">🎮 手動</button><button id="fgQuit" class="pink">やめる</button></div></div></div>
 <div id="mbP" hidden><div id="mbL" class="mbBar"><div class="mbN"></div><div class="mbH"><div></div></div><div class="mbHt"></div></div><div id="mbR" class="mbBar"><div class="mbN"></div><div class="mbH"><div></div></div><div class="mbHt"></div></div><div id="mbLog"></div><div id="mbBtns"><button id="mbFast" class="sub">⏩ はやく</button><button id="mbSkip" class="sub">⏭ けっかまで</button><button id="mbClose">おわる</button></div></div>
 <div id="catchBar" hidden><div class="cbT"></div><div class="cbB"><div class="cbZ"></div><div class="cbP"></div><div class="cbM"></div></div></div>
 <div id="chatLog"></div>
@@ -11268,7 +11283,16 @@ const FG_SKILLS = {
   regen: { n: "さいせい", p: 0.5, d: "ターンのはじめに15%回復" }, dash: { n: "ダッシュ", p: 0.5, d: "いどう+2" },
   dark: { n: "やみのしんぞう", p: 0.85, d: "こうげきで どく＋まひ", strong: true }, phantom: { n: "きえかけのはね", p: 0.6, d: "こうげきを よける", strong: true },
   melt: { n: "とけるて", p: 0.8, d: "ダメージ1.8倍＋どく", strong: true },
+  fire: { n: "🔥ファイア", p: 0.5, d: "こうげきで やけどにする（毎ターン ダメージ）", magic: true },
+  thunder: { n: "⚡サンダー", p: 0.35, d: "近くのべつの敵にも いなずま", magic: true },
+  meteor: { n: "☄️メテオ", p: 0.2, d: "相手のまわり2マスの敵 全員に大ダメージ", magic: true },
+  ice: { n: "🧊アイス", p: 0.35, d: "相手をこおらせて 1回休み", magic: true },
+  wind: { n: "💨ウィンド", p: 0.4, d: "相手を1マス ふきとばす", magic: true },
+  curse: { n: "🌀のろい", p: 0.35, d: "相手のこうげき力を3ターン下げる", magic: true },
+  holy: { n: "✨ホーリー", p: 0.4, d: "こうげきすると 自分となりのなかまが回復", magic: true },
+  barrier: { n: "🔰バリア", p: 0.3, d: "ターンのはじめに バリアをはる（ダメージをすいとる）", magic: true },
 };
+const FG_MAGIC_SK = ["fire", "thunder", "meteor", "ice", "wind", "curse"];
 const FG_NORMAL_SK = ["poison", "para", "sleep", "double", "crit", "guard", "counter", "drain", "regen", "dash"];
 const FIGS = (() => {
   const adj = ["ふわふわ", "もこもこ", "ぷにぷに", "きらきら", "ぴかぴか", "ほかほか", "ひえひえ", "ごろごろ", "どきどき", "ぎらぎら"];
@@ -11286,6 +11310,15 @@ const FIGS = (() => {
     f.hp = Math.round(C.hp * m * (0.92 + r() * 0.16)); f.atk = Math.round(C.atk * m * (0.92 + r() * 0.16)); f.mv = C.mv;
     list.push(f);
   } });
+  // まほうのスキル：まほう使いはまほうだけ、ヒーラーは光のまほう、ほかの子もときどき
+  const r2 = mulberry(777); let mi = 0, hi = 0;
+  const MAGIC_ORDER = ["meteor", "fire", "thunder", "ice", "curse", "wind"];
+  for (const f of list) {
+    if (f.tier === 12 || !f.skills.length) continue;
+    if (f.cls === "mage") f.skills = f.skills.map(() => MAGIC_ORDER[mi++ % MAGIC_ORDER.length]);
+    else if (f.cls === "heal") f.skills[0] = hi++ % 2 === 0 ? "holy" : "barrier";
+    else if (r2() < 0.35) f.skills[0] = ["fire", "thunder", "ice", "wind", "curse", "barrier"][Math.floor(r2() * 6)];
+  }
   return list;
 })();
 function fgOwned() { return (townSave.figs = townSave.figs || {}); }
@@ -11316,7 +11349,7 @@ function openFigShop() {
   ], openFigShop);
 }
 function fgRules() {
-  showMsg("📖 フィギュア対戦のルール", `<div style="text-align:left;font-size:14px;line-height:1.6">・10×10のマスで、5体のパーティーで戦う（コストは合計${FG_COST_MAX}まで）<br>・自分の番に、1体ずつ「うごく → こうげき」できる<br>・<b>あいてのトーテム🗿をこわす</b>か、<b>全員たおす</b>と勝ち。自分のトーテムがこわされるか全員たおされると負け<br>・ときどき<b>💎進化の宝石</b>が出る。とると60%で進化（つよくなってスキルもふえる）<br>・SSS からスキル1つ、UR から2つ、SUN は3つ。スキルは決まった確率で発動<br>・どく☠️・まひ⚡・ねむり💤 の状態異常がある<br>・こうげきしたり、こうげきされると<b>必殺ゲージ</b>がたまる。満タンで<b>必殺技</b>！<br>・<b>宝石争奪戦</b>：宝石を5こ先にとったら勝ち<br>・<b>オート</b>：ぜんぶ自動　<b>半オート</b>：いどうは自動、ねらう相手と必殺技は自分</div>`, [{ label: "OK", fn: () => openFigShop() }]);
+  showMsg("📖 フィギュア対戦のルール", `<div style="text-align:left;font-size:14px;line-height:1.6">・10×10のマスで、5体のパーティーで戦う（コストは合計${FG_COST_MAX}まで）<br>・自分の番に、1体ずつ「うごく → こうげき」できる<br>・<b>あいてのトーテム🗿をこわす</b>か、<b>全員たおす</b>と勝ち。自分のトーテムがこわされるか全員たおされると負け<br>・ときどき<b>💎進化の宝石</b>が出る。とると60%で進化（つよくなってスキルもふえる）<br>・SSS からスキル1つ、UR から2つ、SUN は3つ。スキルは決まった確率で発動<br>・どく☠️・まひ⚡・ねむり💤・やけど🔥・こおり🧊・のろい🌀 の状態異常がある<br>・まほうのスキル：ファイア・サンダー・メテオ・アイス・ウィンド・のろい・ホーリー・バリア（まほう使いは、まほうのスキルを使う）<br>・こうげきしたり、こうげきされると<b>必殺ゲージ</b>がたまる。満タン（✨）で<b>必殺技</b>！<br>・<b>宝石争奪戦</b>：宝石を5こ先にとったら勝ち<br>・<b>オート</b>：ぜんぶ自動　<b>半オート</b>：いどうは自動、ねらう相手と必殺技は自分</div>`, [{ label: "OK", fn: () => openFigShop() }]);
 }
 function fgOpenPack() {
   const got = [fgRoll(), fgRoll(), fgRoll()], O = fgOwned();
@@ -11361,9 +11394,10 @@ function fgCpuParty(diff) {
 // ---- 対戦のしくみ ----
 const fg = { B: null, sel: null, phase: "", ctrl: "manual", busy: false, inv: null, aiT: 0, myTeam: 0 };
 const FG_P0 = [[8, 1], [8, 3], [8, 4], [8, 6], [8, 8]], FG_P1 = [[1, 8], [1, 6], [1, 5], [1, 3], [1, 1]];
+function fgNoSt() { return { poison: 0, para: 0, sleep: 0, burn: 0, freeze: 0, curse: 0 }; }
 function fgMakeUnit(fid, team, r, c, uid, boost) {
   const f = FIGS[fid], C = FG_CLASSES[f.cls], m = boost || 1;
-  return { uid, fid, team, r, c, hp: Math.round(f.hp * m), max: Math.round(f.hp * m), atk: Math.round(f.atk * m), mv: f.mv, rng: C.rng, cls: f.cls, skills: f.skills.slice(), st: { poison: 0, para: 0, sleep: 0 }, gauge: 0, acted: false, evo: false, stun: false };
+  return { uid, fid, team, r, c, hp: Math.round(f.hp * m), max: Math.round(f.hp * m), atk: Math.round(f.atk * m), mv: f.mv, rng: C.rng, cls: f.cls, skills: f.skills.slice(), st: fgNoSt(), shield: 0, gauge: 0, acted: false, evo: false, stun: false };
 }
 function fgStart(o) {
   const B = { mode: o.mode, diff: o.diff || "normal", units: [], totems: [{ team: 0, r: 9, c: 4, hp: 260, max: 260 }, { team: 1, r: 0, c: 5, hp: 260, max: 260 }], gems: [], turn: 0, round: 1, gemsGot: [0, 0], over: null, log: "⚔️ バトルスタート！", online: !!o.online, names: o.names || [myName, o.online ? "あいて" : "CPU"] };
@@ -11411,8 +11445,12 @@ function fgTurnStart() {
   for (const u of fgAlive(B, team)) {
     u.acted = false; u.stun = false; u.dashOn = fgSk(u, "dash");
     if (u.st.poison > 0) { const d = Math.max(3, Math.round(u.max * 0.08)); u.hp = Math.max(0, u.hp - d); u.st.poison--; fgPop(u.r, u.c, `☠️-${d}`, "#b06aff"); }
+    if (u.st.burn > 0) { const d = Math.max(3, Math.round(u.max * 0.06)); u.hp = Math.max(0, u.hp - d); u.st.burn--; fgPop(u.r, u.c, `🔥-${d}`, "#ff8a3a"); }
+    if (u.st.curse > 0) u.st.curse--;
+    if (u.hp > 0 && fgSk(u, "barrier")) { u.shield = Math.round(u.max * 0.3); fgPop(u.r, u.c, "🔰バリア", "#9ad8ff"); }
     if (u.hp > 0 && fgSk(u, "regen")) { const h = Math.round(u.max * 0.15); u.hp = Math.min(u.max, u.hp + h); fgPop(u.r, u.c, `+${h}`, "#6bd66b"); }
-    if (u.st.sleep > 0) { u.stun = true; u.st.sleep--; }
+    if (u.st.freeze > 0) { u.stun = true; u.st.freeze--; fgPop(u.r, u.c, "🧊うごけない", "#9ad8ff"); }
+    else if (u.st.sleep > 0) { u.stun = true; u.st.sleep--; }
     else if (u.st.para > 0) { u.st.para--; if (Math.random() < 0.5) { u.stun = true; fgPop(u.r, u.c, "⚡しびれ", "#ffd84a"); } }
     if (u.stun || u.hp <= 0) u.acted = true;
   }
@@ -11424,11 +11462,13 @@ function fgDamage(att, tgt, mult, isTotem) {
   let d = att.atk * (0.9 + Math.random() * 0.2) * mult;
   if (fgSk(att, "crit")) { d *= 2; fgPop(tgt.r, tgt.c, "かいしん！", "#ffd84a"); }
   if (fgSk(att, "melt")) d *= 1.8;
+  if (att.st && att.st.curse > 0) d *= 0.75;
   if (!isTotem) {
     if (fgSk(tgt, "phantom")) { fgPop(tgt.r, tgt.c, "よけた！", "#cfe8ff"); return 0; }
     if (fgSk(tgt, "guard")) d *= 0.5;
   }
   d = Math.max(1, Math.round(d));
+  if (!isTotem && tgt.shield > 0) { const a = Math.min(tgt.shield, d); tgt.shield -= a; d -= a; fgPop(tgt.r, tgt.c, `🔰-${a}`, "#9ad8ff"); if (d <= 0) return 0; }
   tgt.hp = Math.max(0, tgt.hp - d); fgPop(tgt.r, tgt.c, `-${d}`, "#ff5a5a");
   if (!isTotem) {
     tgt.gauge = Math.min(100, tgt.gauge + 15); if (tgt.st.sleep) tgt.st.sleep = 0;
@@ -11436,6 +11476,13 @@ function fgDamage(att, tgt, mult, isTotem) {
       if (fgSk(att, "poison") || att.skills.includes("melt") && Math.random() < 0.8 || fgSk(att, "dark")) tgt.st.poison = 3;
       if (fgSk(att, "para") || att.skills.includes("dark") && Math.random() < 0.6) tgt.st.para = 2;
       if (fgSk(att, "sleep")) tgt.st.sleep = 2;
+      if (fgSk(att, "fire")) { tgt.st.burn = 3; fgPop(tgt.r, tgt.c, "🔥やけど", "#ff8a3a"); }
+      if (fgSk(att, "ice")) { tgt.st.freeze = 1; fgPop(tgt.r, tgt.c, "🧊こおった", "#9ad8ff"); }
+      if (fgSk(att, "curse")) { tgt.st.curse = 3; fgPop(tgt.r, tgt.c, "🌀のろい", "#c08aff"); }
+      if (fgSk(att, "wind")) {
+        const dr = Math.sign(tgt.r - att.r), dc = Math.sign(tgt.c - att.c), nr = tgt.r + dr, nc = tgt.c + dc;
+        if ((dr || dc) && nr >= 0 && nc >= 0 && nr < FG_N && nc < FG_N && !fgUnitAt(B, nr, nc) && !fgTotemAt(B, nr, nc)) { tgt.r = nr; tgt.c = nc; fgPop(nr, nc, "💨ふきとんだ", "#cfefff"); fgPickGem(tgt); }
+      }
     }
     if (fgSk(att, "drain")) { att.hp = Math.min(att.max, att.hp + Math.round(d / 2)); }
   }
@@ -11444,13 +11491,24 @@ function fgDamage(att, tgt, mult, isTotem) {
 function fgAttack(u, r, c, ult) {
   const B = fg.B, C = FG_CLASSES[u.cls], tgtU = fgUnitAt(B, r, c), tgtT = fgTotemAt(B, r, c);
   if (C.heal && tgtU && tgtU.team === u.team) {
-    if (ult) { for (const a of fgAlive(B, u.team)) { a.hp = Math.min(a.max, a.hp + Math.round(a.max * 0.4)); a.st = { poison: 0, para: 0, sleep: 0 }; fgPop(a.r, a.c, "+40%", "#6bd66b"); } fgSay(`✨ ${FIGS[u.fid].name} の必殺技「みんな元気になあれ」！`); }
+    if (ult) { for (const a of fgAlive(B, u.team)) { a.hp = Math.min(a.max, a.hp + Math.round(a.max * 0.4)); a.st = fgNoSt(); fgPop(a.r, a.c, "+40%", "#6bd66b"); } fgSay(`✨ ${FIGS[u.fid].name} の必殺技「みんな元気になあれ」！`); }
     else { const h = Math.round(u.atk * 1.6); tgtU.hp = Math.min(tgtU.max, tgtU.hp + h); fgPop(r, c, `+${h}`, "#6bd66b"); fgSay(`💚 ${FIGS[u.fid].name} が回復した`); }
   } else if (tgtU || tgtT) {
     const mult = (ult ? 2.5 : 1) * (tgtT ? (ult ? 0.4 : 0.6) : 1), tgt = tgtU || tgtT; // トーテムはかたい
     fgDamage(u, tgt, mult, !tgtU);
     fgSay(ult ? `💥 ${FIGS[u.fid].name} の必殺技！！` : `${C.e} ${FIGS[u.fid].name} のこうげき！`);
     if (C.splash || ult) for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const s = fgUnitAt(B, r + dr, c + dc); if (s && s.team !== u.team) fgDamage(u, s, (ult ? 1.2 : 0.5), false); }
+    if (tgtU && fgSk(u, "thunder")) {
+      const others = fgAlive(B, 1 - u.team).filter((e) => e !== tgtU && Math.abs(e.r - r) + Math.abs(e.c - c) <= 4);
+      if (others.length) { const e = pick(others); fgPop(e.r, e.c, "⚡サンダー！", "#ffe040"); fgDamage(u, e, 0.6, false); }
+    }
+    if (fgSk(u, "meteor")) {
+      fgSay(`☄️ ${FIGS[u.fid].name} のメテオ！！`); flashScreen && flashScreen();
+      for (const e of fgAlive(B, 1 - u.team)) if (e !== tgtU && Math.abs(e.r - r) + Math.abs(e.c - c) <= 2) { fgPop(e.r, e.c, "☄️", "#ff9a4a"); fgDamage(u, e, 0.8, false); }
+    }
+    if (fgSk(u, "holy")) {
+      for (const a of fgAlive(B, u.team)) if (a === u || Math.abs(a.r - u.r) + Math.abs(a.c - u.c) === 1) { const h = Math.round(a.max * (a === u ? 0.2 : 0.1)); a.hp = Math.min(a.max, a.hp + h); fgPop(a.r, a.c, `✨+${h}`, "#fff6a0"); }
+    }
     if (tgtU && tgtU.hp > 0 && !ult && fgSk(u, "double")) { fgPop(r, c, "2回め！", "#ffb070"); fgDamage(u, tgtU, 1, false); }
     if (tgtU && tgtU.hp > 0 && fgInRange(tgtU, u.r, u.c) && fgSk(tgtU, "counter")) { fgPop(u.r, u.c, "はんげき！", "#ff8a8a"); fgDamage(tgtU, u, 0.7, false); }
   }
@@ -11463,7 +11521,7 @@ function fgPickGem(u) {
   const f = FIGS[u.fid];
   if (f.evo && !u.evo && Math.random() < 0.6) {
     u.evo = true; u.max = Math.round(u.max * 1.3); u.hp = Math.min(u.max, u.hp + Math.round(u.max * 0.3)); u.atk = Math.round(u.atk * 1.3); u.mv += 1;
-    const add = FG_NORMAL_SK.filter((s) => !u.skills.includes(s)); if (add.length) u.skills.push(pick(add));
+    const add = (FIGS[u.fid].cls === "mage" ? FG_MAGIC_SK : FG_NORMAL_SK.concat(FG_MAGIC_SK, ["holy", "barrier"])).filter((s) => !u.skills.includes(s)); if (add.length) u.skills.push(pick(add));
     fgPop(u.r, u.c, "🌟進化！", "#ffd84a"); fgSay(`🌟 ${f.name} が進化した！！ つよくなってスキルもふえた！`); play("clear");
   } else { u.hp = Math.min(u.max, u.hp + Math.round(u.max * 0.3)); fgPop(u.r, u.c, f.evo && !u.evo ? "進化しっぱい…" : "💎回復", "#9ad8ff"); fgSay(`💎 ${f.name} が宝石をとった`); play("item"); }
 }
@@ -11572,8 +11630,8 @@ function fgRender() {
     const isR = reach.some(([a, b]) => a === r && b === c), isT = targs.some((q) => q.r === r && q.c === c);
     let inner = gm ? `<span class="fgGem">💎</span>` : "";
     if (t) inner = `<div class="fgTot ${t.team === fg.myTeam ? "me" : "op"}">🗿<i style="width:${t.hp / t.max * 100}%"></i></div>`;
-    if (u) { const f = FIGS[u.fid]; inner = `<div class="fgU ${u.team === fg.myTeam ? "me" : "op"} ${u.acted && u.team === B.turn ? "done" : ""} ${u.uid === fg.sel ? "sel" : ""}" style="--c:${MC_TIERS[f.tier].col}">${fgPic(u.fid, u.evo, "fgUPic")}<i style="width:${u.hp / u.max * 100}%"></i><em style="width:${u.gauge}%"></em><span class="fgSt">${u.st.poison ? "☠️" : ""}${u.st.para ? "⚡" : ""}${u.st.sleep ? "💤" : ""}${u.gauge >= 100 ? "🔥" : ""}</span></div>`; }
-    html += `<div class="fgC ${(vr + vc) % 2 ? "d" : ""} ${isR ? "rch" : ""} ${isT ? "tg" : ""}" data-r="${r}" data-c="${c}">${inner}</div>`;
+    if (u) { const f = FIGS[u.fid]; inner = `<div class="fgU ${u.team === fg.myTeam ? "me" : "op"} ${u.acted && u.team === B.turn ? "done" : ""} ${u.uid === fg.sel ? "sel" : ""}" style="--c:${MC_TIERS[f.tier].col}">${fgPic(u.fid, u.evo, "fgUPic")}<b class="fgMark">${u.team === fg.myTeam ? "▼" : "▼"}</b><i style="width:${u.hp / u.max * 100}%"></i><em style="width:${u.gauge}%"></em><span class="fgSt">${u.st.poison ? "☠️" : ""}${u.st.para ? "⚡" : ""}${u.st.sleep ? "💤" : ""}${u.st.burn ? "🔥" : ""}${u.st.freeze ? "🧊" : ""}${u.st.curse ? "🌀" : ""}${u.shield > 0 ? "🔰" : ""}${u.gauge >= 100 ? "✨" : ""}</span></div>`; }
+    html += `<div class="fgC ${(vr + vc) % 2 ? "d" : ""} ${vr >= 8 ? "zMe" : vr <= 1 ? "zOp" : ""} ${isR ? "rch" : ""} ${isT ? "tg" : ""}" data-r="${r}" data-c="${c}">${inner}</div>`;
   }
   $("fgGrid").innerHTML = html;
   const myLeft = fgAlive(B, fg.myTeam).length, opLeft = fgAlive(B, 1 - fg.myTeam).length;
